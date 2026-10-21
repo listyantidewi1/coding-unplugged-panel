@@ -4281,3 +4281,38 @@ code.beda { background: #fee2e2 !important; color: #991b1b !important; }
 .sk-kode.berlabel li > code { flex: 1; min-width: 0; }
 .sk-kode.berlabel li > .sk-label { flex: none; }
 .data-lomba .dg-jejak .sk-jejak-kode { font-size: clamp(0.65rem, 2.2cqmin, 1.2rem); }
+
+/* sma-38 Fungsi dan Ruang Lingkup */
+.fungsi-lingkup .fl-kecil { font-size: clamp(0.62rem, 2.1cqmin, 1.1rem); }
+.fungsi-lingkup .fl-isi .sk-baris span, .fungsi-lingkup .fl-isi .seg-btn { font-family: ui-monospace, monospace; }
+.fungsi-lingkup .fl-versi { flex-wrap: wrap; justify-content: center; }
+.fungsi-lingkup .fl-jejak .sk-jejak-kode { font-size: clamp(0.62rem, 2.1cqmin, 1.15rem); }
+.fungsi-lingkup .fl-tumpukan { display: flex; flex-direction: column; gap: 0.3em; font-family: ui-monospace, monospace; font-size: 0.85em; }
+.fungsi-lingkup .fl-tumpukan > small { color: var(--muted); font-family: inherit; font-weight: 700; }
+.fungsi-lingkup .fl-bingkai { display: flex; flex-direction: column; gap: 0.2em; padding: 0.35em 0.6em; border: 2px solid #7c3aed; border-radius: 0.5em; background: color-mix(in srgb, #7c3aed 8%, var(--surface)); }
+.fungsi-lingkup .fl-bingkai.atas { border-width: 3px; box-shadow: 0 0.2em 0 #7c3aed; }
+.fungsi-lingkup .fl-bingkai.global { border-color: #475569; background: color-mix(in srgb, #475569 8%, var(--surface)); }
+.fungsi-lingkup .fl-bingkai > b { color: #6d28d9; }
+.fungsi-lingkup .fl-bingkai.global > b { color: var(--muted); }
+.fungsi-lingkup .fl-bingkai > div { display: flex; flex-wrap: wrap; gap: 0.25em 0.8em; }
+.fungsi-lingkup .fl-dua { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1em; align-items: start; width: 100%; }
+.fungsi-lingkup .fl-dua > div { display: flex; flex-direction: column; gap: 0.35em; min-width: 0; }
+.fungsi-lingkup .fl-dua small { color: var(--muted); font-weight: 700; }
+.fungsi-lingkup .fl-keluaran { margin: 0; padding: 0.4em 0.8em; border-radius: 0.6em; background: #0f172a; color: #e2e8f0; font-size: clamp(0.65rem, 2cqmin, 1.05rem); white-space: pre-wrap; text-align: left; }
+.fungsi-lingkup .fl-keluaran.beda { outline: 3px solid var(--bad); }
+.fungsi-lingkup .fl-galat { margin: 0; padding: 0.3em 0.7em; border-radius: 0.5em; background: #7f1d1d; color: #fff; font-family: ui-monospace, monospace; font-size: clamp(0.65rem, 2cqmin, 1.05rem); }
+.fungsi-lingkup .fl-beres { margin: 0; color: var(--good); font-weight: 800; }
+.fungsi-lingkup .fl-bug-hasil { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 1em; align-items: start; width: 100%; }
+.fungsi-lingkup .fl-bug-hasil > div { display: flex; flex-direction: column; gap: 0.35em; min-width: 0; }
+.fungsi-lingkup .fl-kartu { display: flex; flex-direction: column; gap: 0.3em; }
+.fungsi-lingkup .fl-pilih { display: flex; flex-wrap: wrap; gap: 0.3em 0.6em; align-items: center; }
+.fungsi-lingkup .fl-pilih .seg-btn { font-family: ui-monospace, monospace; }
+.fungsi-lingkup .sk-kode li.fl-beda code { text-decoration: underline wavy #fbbf24; }
+.fungsi-lingkup .sk-kode li.fl-warna0 { background: #1e3a8a; }
+.fungsi-lingkup .sk-kode li.fl-warna1 { background: #14532d; }
+.fungsi-lingkup .sk-kode li.fl-warna2 { background: #7c2d12; }
+.fungsi-lingkup .fl-calon { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.6em; width: 100%; }
+.fungsi-lingkup .fl-calon-btn { display: flex; flex-direction: column; gap: 0.3em; padding: 0.4em; border: 2px solid var(--line); border-radius: 0.7em; background: var(--surface); color: var(--ink); text-align: left; cursor: pointer; min-width: 0; }
+.fungsi-lingkup .fl-calon.beres .fl-calon-btn { cursor: default; }
+.fungsi-lingkup .sk-kode.py code, .data-lomba .sk-kode.py code { white-space: pre-wrap; overflow-wrap: anywhere; }
+.fungsi-lingkup .sk-kode.fl-kolom2 { columns: 2; column-gap: 2em; width: min(100%, 60em); } .fungsi-lingkup .sk-kode.fl-kolom2 li { break-inside: avoid; }

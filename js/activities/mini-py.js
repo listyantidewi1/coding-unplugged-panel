@@ -133,8 +133,11 @@ export function parsePy(lines) {
       return node;
     }
     if (kw === 'else') throw new PyError('SyntaxError', 'invalid syntax', L, 'else harus tepat di bawah if dengan jorok yang sama.');
-    if (kw === 'def') { const h = header(r, 'def'); m = h.match(/^([A-Za-z_]\w*)\((.*)\)$/); if (!m) throw new PyError('SyntaxError', 'invalid syntax', L); return { t: 'def', line: L, name: m[1], params: m[2].split(',').map((x) => x.trim()).filter(Boolean), body: block(r.ind, { ind: r.ind, i: L, kw: 'function definition' }) }; }
+    if (kw === 'def') { const h = header(r, 'def'); m = h.match(/^([A-Za-z_]\w*)\((.*)\)$/); if (!m) throw new PyError('SyntaxError', 'invalid syntax', L); const params = m[2].split(',').map((x) => x.trim()).filter(Boolean); const body = block(r.ind, { ind: r.ind, i: L, kw: 'function definition' }); const glob = new Set(); const loc = new Set(params);
+      const walk = (b) => { for (const x of b) { if (x.t === 'global') x.names.forEach((n) => glob.add(n)); if ((x.t === 'set' || x.t === 'aug') && x.target.t === 'var') loc.add(x.target.name); if (x.t === 'for') loc.add(x.v); for (const c of [x.body, x.else]) if (Array.isArray(c)) walk(c); } };
+      walk(body); glob.forEach((n) => loc.delete(n)); return { t: 'def', line: L, name: m[1], params, body, locals: loc, globals: glob }; }
     if ((m = r.s.match(/^return\b\s*(.*)$/))) return { t: 'ret', line: L, e: m[1] ? parseExpr(tokenize(m[1], L), L) : null };
+    if ((m = r.s.match(/^global\s+(.+)$/))) return { t: 'global', line: L, names: m[1].split(',').map((x) => x.trim()) };
     if (r.s === 'pass') return { t: 'pass', line: L };
     if (r.s === 'break') return { t: 'break', line: L };
     if ((m = r.s.match(/^([A-Za-z_]\w*(?:\[.+\])?)\s*(\+=|-=|\*=)\s*(.+)$/))) return { t: 'aug', line: L, target: parseExpr(tokenize(m[1], L), L), op: m[2][0], e: parseExpr(tokenize(m[3], L), L) };
@@ -155,7 +158,7 @@ export function makePyRunner(lines, { builtins = {}, vars = {}, limit = 3000, in
   const B = {
     print: fn('print', (...a) => { st.out.push(a.map((x) => pyRepr(x)).join(' ')); return null; }),
     range: fn('range', (a, b, s = 1) => { const [lo, hi] = b === undefined ? [0, num(a)] : [num(a), num(b)]; const r = []; if (s > 0) for (let x = lo; x < hi; x += s) r.push(x); else for (let x = lo; x > hi; x += s) r.push(x); return r; }),
-    len: fn('len', (x) => (x instanceof PyDict ? x.size : x.length)),
+    len: fn('len', (x) => { if (x instanceof PyDict) return x.size; if (typeof x === 'string' || Array.isArray(x)) return x.length; throw new PyError('TypeError', `object of type '${pyType(x)}' has no len()`, null, 'len() hanya untuk teks, list, tuple, atau dictionary.'); }),
     list: fn('list', (x) => (typeof x === 'string' ? [...x] : x instanceof PyDict ? [...x.keys()] : [...(x || [])])),
     sum: fn('sum', (x) => x.reduce((a, b) => bin('+', a, b, null), 0)),
     max: fn('max', (...a) => { const xs = a.length === 1 && Array.isArray(a[0]) ? a[0] : a; return xs.reduce((p, q) => (num(q) > num(p) ? q : p)); }),
@@ -169,7 +172,7 @@ export function makePyRunner(lines, { builtins = {}, vars = {}, limit = 3000, in
     ...Object.fromEntries(Object.entries(builtins).map(([k, f]) => [k, fn(k, f)])),
   };
   const scope = () => (st.frames.length ? st.frames[st.frames.length - 1].vars : st.vars);
-  const look = (n, L) => { const s = scope(); if (n in s) return s[n]; if (n in st.vars) return st.vars[n]; if (n in B) return B[n]; throw new PyError('NameError', `name '${n}' is not defined`, L, `Variabel atau fungsi ${n} belum dibuat.`); };
+  const look = (n, L) => { const s = scope(); if (n in s) return s[n]; const f = st.frames[st.frames.length - 1]; if (f?.locals?.has(n)) throw new PyError('UnboundLocalError', `cannot access local variable '${n}' where it is not associated with a value`, L, `${n} diberi nilai di dalam fungsi, jadi Python menganggapnya variabel lokal, padahal belum punya nilai.`); if (n in st.vars) return st.vars[n]; if (n in B) return B[n]; throw new PyError('NameError', `name '${n}' is not defined`, L, `Variabel atau fungsi ${n} belum dibuat.`); };
   function tick(L) { st.steps++; if (st.steps > limit) throw new PyError('Batas', `Program sudah menjalankan ${limit} langkah dan belum selesai. Mungkin ada perulangan yang tidak pernah berhenti.`, L, 'batas'); }
   function bin(op, a, b, L) {
     const fl = a instanceof PyFloat || b instanceof PyFloat;
@@ -237,11 +240,11 @@ export function makePyRunner(lines, { builtins = {}, vars = {}, limit = 3000, in
   }
   function* callDef(d, args, L) {
     if (st.frames.length > 200) throw new PyError('RecursionError', 'maximum recursion depth exceeded', L, 'Fungsi memanggil dirinya terlalu dalam tanpa berhenti.');
-    st.frames.push({ name: d.name, vars: Object.fromEntries(d.params.map((p, i) => [p, args[i]])) });
+    st.frames.push({ name: d.name, vars: Object.fromEntries(d.params.map((p, i) => [p, args[i]])), locals: d.locals, globals: d.globals });
     try { const sig = yield* block(d.body); return sig && 'ret' in sig ? sig.ret : null; } finally { st.frames.pop(); }
   }
   function* assign(target, v, L) {
-    if (target.t === 'var') { scope()[target.name] = v; return; }
+    if (target.t === 'var') { const f = st.frames[st.frames.length - 1]; (f?.globals?.has(target.name) ? st.vars : scope())[target.name] = v; return; }
     if (target.t === 'idx') { const a = yield* ev(target.a, L); const i = yield* ev(target.i, L); if (a instanceof PyDict) { a.set(i, v); return; } if (isTup(a)) throw new PyError('TypeError', "'tuple' object does not support item assignment", L); if (i < 0 || i >= a.length) throw new PyError('IndexError', 'list assignment index out of range', L); a[i] = v; return; }
     throw new PyError('SyntaxError', 'cannot assign to expression', L);
   }
@@ -253,6 +256,7 @@ export function makePyRunner(lines, { builtins = {}, vars = {}, limit = 3000, in
       case 'aug': { const cur = yield* ev(s.target, L); const v = bin(s.op, cur, yield* ev(s.e, L), L); yield* assign(s.target, v, L); tick(L); yield { line: L, note: `= ${pyRepr(v, true)}` }; return null; }
       case 'expr': { const v = yield* ev(s.e, L); tick(L); yield { line: L, note: s.e.t === 'call' ? `${s.e.f.name ?? 'fungsi'}()` : v && v.py === 'fn' ? `${v.name} tidak dipanggil (tanpa tanda kurung)` : '' }; return null; }
       case 'pass': tick(L); yield { line: L, note: 'pass' }; return null;
+      case 'global': tick(L); yield { line: L, note: `${s.names.join(', ')} memakai variabel global` }; return null;
       case 'break': tick(L); yield { line: L, note: 'break' }; return { brk: true };
       case 'ret': { const v = s.e ? yield* ev(s.e, L) : null; tick(L); yield { line: L, note: `return ${pyRepr(v, true)}` }; return { ret: v }; }
       case 'def': st.vars[s.name] = { py: 'fn', name: s.name, def: s }; tick(L); yield { line: L, note: `fungsi ${s.name} dibuat` }; return null;

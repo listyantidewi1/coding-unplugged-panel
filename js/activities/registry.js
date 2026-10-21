@@ -118,6 +118,7 @@ import AplikasiKantin from './smp-42-aplikasi-kantin.js';
 import PythonKasir from './sma-35-python-kasir.js';
 import RekapBazar from './sma-36-rekap-bazar.js';
 import DataLomba from './sma-37-data-lomba.js';
+import FungsiLingkup from './sma-38-fungsi-lingkup.js';
 
 export const JENJANG = [
   { id: 'paud', label: 'PAUD', detail: '4–6 tahun' },
@@ -170,6 +171,7 @@ export const activities = [
   PythonKasir,
   RekapBazar,
   DataLomba,
+  FungsiLingkup,
 ]
   .sort((a, b) => order(a) - order(b) || a.id.localeCompare(b.id));
 

@@ -140,6 +140,7 @@ const FILES = [
   'js/activities/sma-35-python-kasir.js',
   'js/activities/sma-36-rekap-bazar.js',
   'js/activities/sma-37-data-lomba.js',
+  'js/activities/sma-38-fungsi-lingkup.js',
 ];
 
 self.addEventListener('install', (e) => {
