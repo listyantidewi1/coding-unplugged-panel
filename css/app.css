@@ -1147,3 +1147,42 @@ span.code-cell { border-style: solid; cursor: default; }
   .mesin-kartu { width: min(10cqw, 24cqh); }
   .mesin-area { grid-template-columns: 1fr 1.6fr 1fr; }
 }
+
+/* Latih Mesin */
+.buah { display: inline-block; flex: none; border: 2px solid #0003; }
+.buah.b-bulat { border-radius: 50%; aspect-ratio: 1; }
+.buah.b-lonjong { border-radius: 50%; aspect-ratio: 1.6; }
+.buah.u-kecil { height: 1.1em; } .buah.u-sedang { height: 1.6em; } .buah.u-besar { height: 2.2em; }
+.w-merah { background: #dc2626; } .w-cokelat { background: #92400e; } .w-hijau { background: #16a34a; } .w-kuning { background: #facc15; } .w-oranye { background: #f97316; } .w-ungu { background: #6b21a8; }
+.contoh-kartu { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 0.15em; min-width: 5.5em; padding: 0.35em 0.5em; border-radius: 0.8cqmin; background: #fff; border: max(2px, 0.3cqmin) solid #cbd5e1; font-size: clamp(0.55rem, 2.6cqmin, 1.25rem); cursor: pointer; touch-action: none; user-select: none; }
+.contoh-kartu small { color: #475569; font-size: 0.8em; white-space: nowrap; }
+.contoh-kartu.selected { outline: max(3px, 0.6cqmin) solid #f97316; }
+.contoh-kartu.misteri { background: #fef3c7; border-color: #d97706; border-style: dashed; cursor: default; font-size: clamp(0.7rem, 3cqmin, 1.4rem); }
+.contoh-baki { display: flex; flex-wrap: wrap; gap: 0.6cqmin; justify-content: center; align-content: flex-start; }
+.contoh-baki.kecil .contoh-kartu { font-size: clamp(0.5rem, 1.8cqmin, 0.9rem); }
+.latih-area { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr) minmax(0, 1fr); gap: 1.5cqw; width: 100%; align-items: start; }
+.otak-mesin { display: flex; flex-direction: column; align-items: center; gap: 0.6cqmin; min-height: 30cqh; padding: 1cqmin; border-radius: 1.6cqmin; background: #1e293b; color: #e2e8f0; border: max(3px, 0.5cqmin) solid #475569; font-size: clamp(0.6rem, 2.6cqmin, 1.2rem); }
+.otak-lampu { letter-spacing: 0.3em; }
+.otak-isi { display: flex; flex-wrap: wrap; gap: 0.4cqmin; justify-content: center; }
+.chip-buah { font: inherit; display: inline-flex; align-items: center; gap: 0.3em; padding: 0.1em 0.5em; border-radius: 999px; background: #334155; color: #f8fafc; border: none; font-size: 0.75em; }
+.chip-buah .buah { font-size: 0.6em; }
+button.chip-buah { cursor: pointer; }
+.tabel-ingatan { border-collapse: collapse; font-size: clamp(0.55rem, 2.3cqmin, 1.1rem); background: #fff; }
+.tabel-ingatan th, .tabel-ingatan td { border: 1px solid var(--line); padding: 0.25em 0.6em; text-align: left; }
+.tabel-ingatan th { background: #f1f5f9; }
+.tabel-ingatan .cocok { background: #fde047; font-weight: 800; border-radius: 0.2em; }
+.ingatan-wrap { overflow: auto; max-width: 100%; }
+.tebak-subjek { display: flex; gap: 2cqw; align-items: center; justify-content: center; font-size: 1rem; }
+.tebak-hasil { display: flex; gap: 2cqw; align-items: center; justify-content: center; flex-wrap: wrap; }
+.poin-buah { display: flex; flex-direction: column; gap: 0.3em; min-width: 16em; font-size: clamp(0.55rem, 2.3cqmin, 1.1rem); }
+.poin-baris { display: grid; grid-template-columns: 6em 1fr 1.5em; gap: 0.5em; align-items: center; font-weight: 700; }
+.poin-baris i { display: block; height: 1em; min-width: 2px; border-radius: 0.3em; background: #94a3b8; }
+.poin-baris.menang i { background: #2563eb; }
+.tebakan { margin: 0; font-weight: 900; }
+.latih .reveal { font-size: clamp(0.7rem, 3.2cqmin, 1.5rem); text-align: center; }
+.lab-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 2cqw; width: 100%; align-items: start; }
+.lab-kiri, .lab-kanan, .uji-panel { display: flex; flex-direction: column; gap: 1cqmin; align-items: center; min-width: 0; }
+.uji-panel .row { align-items: center; }
+.uji-daftar { display: flex; flex-wrap: wrap; gap: 1cqmin; justify-content: center; }
+.uji-baris { display: flex; align-items: center; gap: 0.6em; padding: 0.3em 0.6em; border-radius: 1cqmin; background: #dcfce7; font-weight: 800; font-size: clamp(0.55rem, 2.3cqmin, 1.1rem); }
+.uji-baris.salah { background: #fee2e2; }
