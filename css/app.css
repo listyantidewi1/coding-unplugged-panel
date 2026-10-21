@@ -1842,3 +1842,57 @@ button.ab-luar { cursor: pointer; }
   .kembalian .keys.keypad { grid-template-columns: repeat(11, min(4.5cqw, 8cqh)); }
   .kembalian .kb-laci { font-size: clamp(0.5rem, 4cqh, 1rem); }
 }
+
+/* Gerbang tol */
+.gerbang { gap: 1cqmin; }
+.gt-samping { display: flex; gap: 3cqw; align-items: center; justify-content: center; width: 100%; }
+.gt-kanan { display: flex; flex-direction: column; gap: 1cqmin; align-items: center; }
+.gt-diagram { width: min(42cqw, 52cqh, 34rem); aspect-ratio: 1; flex: none; }
+.gt-diagram svg { width: 100%; height: 100%; overflow: visible; }
+.gt-diagram circle { fill: #eff6ff; stroke: #1d4ed8; stroke-width: 0.8; }
+.gt-diagram circle.aktif { fill: #fde047; stroke: #ca8a04; stroke-width: 1.4; }
+.gt-diagram text { font-size: 4.2px; text-anchor: middle; font-weight: 800; fill: #0f172a; paint-order: stroke; stroke: #fff; stroke-width: 0.8px; }
+.gt-diagram text.nama { font-size: 3.3px; stroke: none; }
+.gt-diagram text.on { fill: #dc2626; }
+.gt-diagram path { fill: none; stroke: #475569; stroke-width: 0.7; }
+.gt-diagram path.on { stroke: #dc2626; stroke-width: 1.2; }
+.gt-diagram marker path { stroke: none; fill: #475569; }
+.gt-diagram marker path.on { fill: #dc2626; }
+.gt-tabel { font-size: clamp(0.5rem, 2.2cqmin, 1.1rem); }
+.gt-tabel td, .gt-tabel th { padding: 0.2em 0.4em; text-align: center; }
+.gt-tabel td.tetap { font-weight: 800; color: var(--muted); }
+.gt-sel { font: inherit; min-width: 6.5em; padding: 0.35em 0.5em; border-radius: 0.4em; border: 2px solid #94a3b8; background: #fff; cursor: pointer; font-weight: 800; color: #1e293b; }
+.gt-sel.kosong { color: #94a3b8; }
+.gt-sel.salah { background: #fee2e2; border-color: #dc2626; }
+.gt-urutan { display: flex; gap: 0.6em; justify-content: center; flex-wrap: wrap; margin-bottom: 1cqmin; font-size: clamp(0.55rem, 2.4cqmin, 1.2rem); }
+.gt-langkah { display: flex; flex-direction: column; align-items: center; gap: 0.2em; padding: 0.4em 0.6em; border-radius: 0.5em; background: #f1f5f9; min-width: 6em; }
+.gt-langkah.kini { outline: 3px solid #f59e0b; background: #fffbeb; }
+.gt-langkah span { font-weight: 800; color: #1d4ed8; }
+.gt-palang { position: relative; width: min(24cqw, 14rem); height: min(10cqh, 5rem); margin-top: min(16cqh, 8rem); }
+.gt-tiang { position: absolute; left: 0; bottom: 0; width: 12%; height: 100%; background: #475569; border-radius: 0.3em; }
+.gt-lengan { position: absolute; left: 10%; bottom: 60%; width: 88%; height: 18%; background: repeating-linear-gradient(90deg, #dc2626 0 12%, #fff 12% 24%); border-radius: 0.3em; transform-origin: left center; transition: transform 0.6s; }
+.gt-palang.buka .gt-lengan { transform: rotate(-60deg); }
+.gt-layar { margin: 0; padding: 0.3em 0.8em; border-radius: 0.4em; background: #0f172a; color: #4ade80; font-family: ui-monospace, monospace; font-weight: 800; font-size: clamp(0.6rem, 2.6cqmin, 1.3rem); }
+.gt-hitung { margin: 0; font-weight: 900; font-size: clamp(0.6rem, 2.6cqmin, 1.3rem); text-align: center; }
+.gt-log { font-family: ui-monospace, monospace; }
+.gt-tombol .button { min-width: 5em; }
+.gt-loker { display: flex; flex-direction: column; align-items: center; font-size: clamp(1.5rem, 9cqmin, 5rem); padding: 0.1em 0.3em; border-radius: 0.2em; background: #e2e8f0; }
+.gt-loker small { font-size: 0.25em; font-weight: 900; }
+.gt-loker.buka { background: #bbf7d0; }
+.gt-uji { display: flex; gap: 0.6em; flex-wrap: wrap; justify-content: center; align-items: center; font-size: clamp(0.5rem, 2.1cqmin, 1rem); }
+.gt-uji span { padding: 0.2em 0.5em; border-radius: 0.4em; font-family: ui-monospace, monospace; }
+.gt-uji .lulus { background: #dcfce7; }
+.gt-uji .gagal { background: #fee2e2; }
+.gt-lampu { font-size: clamp(2rem, 12cqmin, 6rem); padding: 0.1em 0.3em; border-radius: 50%; background: #1e293b; }
+.gt-lampu.nyala { background: #fef9c3; box-shadow: 0 0 1em #facc15; }
+.gt-mesin { display: flex; flex-direction: column; gap: 0.5em; align-items: center; }
+@container (max-aspect-ratio: 6/5) {
+  .gt-samping { flex-direction: column; }
+  .gt-diagram { width: min(70cqw, 40cqh); }
+}
+@container (max-height: 520px) {
+  .gerbang > .prompt, .gerbang .reveal { font-size: clamp(0.55rem, 4cqh, 1.1rem); }
+  .gerbang .gt-tabel { font-size: clamp(0.4rem, 3cqh, 0.85rem); }
+  .gerbang .gt-diagram { width: min(40cqw, 56cqh); }
+  .gerbang .gt-urutan { font-size: clamp(0.45rem, 3.4cqh, 0.9rem); }
+}
