@@ -125,6 +125,7 @@ const FILES = [
   'js/activities/smp-29-target-tabungan.js',
   'js/activities/smp-30-ongkos-kirim.js',
   'js/activities/smp-31-suhu-seminggu.js',
+  'js/activities/smp-32-mesin-konversi.js',
 ];
 
 self.addEventListener('install', (e) => {

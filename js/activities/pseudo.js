@@ -110,9 +110,9 @@ export function evalPure(node, vars = {}) {
   }
 }
 function binop(op, a, b, line = null) {
-  const num = (x) => { if (typeof x !== 'number') throw new PseudoError(`Operasi ${op} butuh bilangan, tetapi mendapat ${typeOf(x)} ${fmt(x, { quote: true })}.`, line); return x; };
+  const num = (x) => { if (x === undefined) throw new PseudoError(`Operasi ${op} tidak bisa dihitung: ada fungsi yang tidak mengembalikan nilai (tidak ada KEMBALIKAN).`, line); if (typeof x !== 'number') throw new PseudoError(`Operasi ${op} butuh bilangan, tetapi mendapat ${typeOf(x)} ${fmt(x, { quote: true })}.`, line); return x; };
   switch (op) {
-    case '+': if (typeof a === 'string' || typeof b === 'string') return fmt(a) + fmt(b); return num(a) + num(b);
+    case '+': if ((typeof a === 'string' || typeof b === 'string') && a !== undefined && b !== undefined) return fmt(a) + fmt(b); return num(a) + num(b);
     case '−': return num(a) - num(b);
     case '×': return num(a) * num(b);
     case '/': if (num(b) === 0) throw new PseudoError('Pembagian dengan nol.', line); return num(a) / b;

@@ -3860,3 +3860,35 @@ code.beda { background: #fee2e2 !important; color: #991b1b !important; }
 .sus-pilih { display: flex; flex-direction: column; gap: 0.4em; }
 .sus-sendiri { display: flex; flex-direction: column; gap: 0.3em; }
 .sus-giliran { display: flex; flex-direction: column; gap: 0.6em; align-items: center; }
+
+/* smp-32 Mesin Konversi Satuan */
+.mk-pustaka { max-width: 40em; margin: 0 auto; }
+.mk-mesin-wadah { display: flex; flex-direction: column; gap: 0.5em; align-items: flex-start; font-size: clamp(0.75rem, 2.8cqmin, 1.5rem); }
+.mk-mesin { display: flex; flex-direction: column; align-items: center; gap: 0.3em; padding: 0.4em 0.7em; border: 3px solid #475569; border-radius: 0.8em; background: #e2e8f0; color: #0f172a; }
+.mk-mesin.d2 { background: #dbeafe; border-color: #2563eb; }
+.mk-mesin.d3 { background: #fef9c3; border-color: #ca8a04; }
+.mk-mesin > b { font-family: ui-monospace, monospace; }
+.mk-dalam { display: flex; flex-direction: column; gap: 0.3em; }
+.mk-dalam:empty { display: none; }
+.mk-corong, .mk-saluran { font-family: ui-monospace, monospace; font-weight: 700; padding: 0.1em 0.6em; border-radius: 0.4em; background: #fff; }
+.mk-saluran { background: #dcfce7; color: #166534; }
+.mk-saluran.kosong { background: #fee2e2; color: #991b1b; }
+.mk-layar { display: flex; gap: 0.5em; align-items: center; padding: 0.3em 0.8em; border-radius: 0.5em; background: #0f172a; color: #e2e8f0; font-family: ui-monospace, monospace; }
+.mk-layar small { color: #94a3b8; }
+.mk-dua { display: grid; grid-template-columns: 1fr 1fr; gap: 1em; align-items: start; }
+.mk-dua > * { min-width: 0; }
+.mk-darmo { font-size: clamp(0.55rem, 1.9cqmin, 1rem); }
+.mk-keluaran { text-align: left; margin: 0.4em 0 0; padding: 0.5em 0.8em; border-radius: 0.5em; background: #0f172a; color: #e2e8f0; font-size: clamp(0.65rem, 2.2cqmin, 1.15rem); white-space: pre-wrap; }
+.mk-kerja { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1em; align-items: start; }
+.mk-kerja > div { display: flex; flex-direction: column; gap: 0.5em; min-width: 0; }
+.mk-masuk, .mk-angka, .mk-atur { display: flex; flex-wrap: wrap; gap: 0.4em; align-items: center; }
+.mk-slot { display: flex; flex-direction: column; align-items: center; padding: 0.3em 0.8em; border: 2px solid #94a3b8; border-radius: 0.6em; background: #fff; color: #111827; font-size: 1.1em; }
+.mk-slot.pilih { border-color: #f59e0b; box-shadow: 0 0 0 3px #fcd34d; }
+.mk-slot b { font-family: ui-monospace, monospace; font-size: 1.3em; }
+.mk-chip { padding: 0.3em 0.8em; border: 2px solid #2563eb; border-radius: 999px; background: #eff6ff; color: #1e3a8a; font-family: ui-monospace, monospace; font-size: 1.1em; }
+.mk-hasil { display: flex; flex-direction: column; gap: 0.5em; align-items: flex-start; }
+.mk-hasil.kosong { color: #64748b; padding: 2em; border: 2px dashed #cbd5e1; border-radius: 0.8em; align-items: center; }
+.mk-giliran { display: flex; flex-direction: column; gap: 0.7em; align-items: center; }
+.mk-log { display: flex; flex-wrap: wrap; gap: 0.4em; max-width: 30em; font-family: ui-monospace, monospace; }
+.mk-log span { padding: 0.1em 0.5em; border-radius: 0.4em; background: #fff; }
+@media (max-width: 700px) { .mk-dua, .mk-kerja { grid-template-columns: 1fr; } }
