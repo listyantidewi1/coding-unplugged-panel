@@ -174,6 +174,7 @@ const FILES = [
   'js/activities/sdl-26-daftar-belanja.js',
   'js/activities/sdl-27-syarat-wahana.js',
   'js/activities/sdl-28-segi-banyak.js',
+  'js/activities/sdl-29-kuis-buatanku.js',
 ];
 
 self.addEventListener('install', (e) => {
