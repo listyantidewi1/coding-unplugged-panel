@@ -135,6 +135,7 @@ import WebAntrean from './sma-51-web-antrean.js';
 import PakaiLibrary from './sma-52-pakai-library.js';
 import sma53DuaKasir from './sma-53-dua-kasir.js';
 import sma55GitKertas from './sma-55-git-kertas.js';
+import sma56Mikrokontroler from './sma-56-mikrokontroler.js';
 
 export const JENJANG = [
   { id: 'paud', label: 'PAUD', detail: '4–6 tahun' },
@@ -202,7 +203,7 @@ export const activities = [
   CsvJson,
   WebAntrean,
   PakaiLibrary,
-  sma53DuaKasir, sma55GitKertas,
+  sma53DuaKasir, sma55GitKertas, sma56Mikrokontroler,
 ]
   .sort((a, b) => order(a) - order(b) || a.id.localeCompare(b.id));
 

@@ -5016,7 +5016,7 @@ code.beda { background: #fee2e2 !important; color: #991b1b !important; }
 .git-kertas .gk-simpul circle { fill: var(--surface); stroke: #16a34a; stroke-width: 3; }
 .git-kertas .gk-simpul.gabung circle { stroke: #7c3aed; }
 .git-kertas .gk-simpul.on circle { fill: #fef08a; stroke-width: 4; }
-.git-kertas .gk-simpul text { font: 700 15px ui-monospace, monospace; fill: var(--text, #111827); pointer-events: none; }
+.git-kertas .gk-simpul text { font: 700 15px ui-monospace, monospace; fill: var(--ink); pointer-events: none; }
 .git-kertas .gk-label { cursor: pointer; }
 .git-kertas .gk-label rect { fill: #fde68a; stroke: #b45309; }
 .git-kertas .gk-label.utama rect { fill: #bfdbfe; stroke: #1d4ed8; }
@@ -5061,3 +5061,45 @@ code.beda { background: #fee2e2 !important; color: #991b1b !important; }
 .git-kertas .gk-fitur { display: flex; flex-wrap: wrap; gap: 0.6em; justify-content: center; width: 100%; }
 .git-kertas .gk-pilihan { display: flex; flex-direction: column; gap: 0.3em; flex: 1 1 16em; min-width: 0; padding: 0.5em; border: 2px solid var(--line); border-radius: 0.6em; background: var(--surface); cursor: pointer; font-size: clamp(0.6rem, 1.9cqmin, 1.05rem); text-align: left; }
 @container (max-width: 640px) { .git-kertas .gk-tiga, .git-kertas .gk-uji, .git-kertas .gk-dua { grid-template-columns: minmax(0, 1fr); } .git-kertas .gk-pita { grid-template-columns: repeat(4, minmax(0, 1fr)); } .git-kertas .gk-seratus { grid-template-columns: repeat(10, minmax(0, 1fr)); } }
+/* sma-56 Kode untuk Mikrokontroler */
+.mikrokontroler .mcu-kode { font-size: clamp(0.45rem, 1.5cqmin, 0.85rem); max-width: 100%; overflow-x: auto; }
+.mikrokontroler .mcu-kode.kecil { max-height: 40cqh; overflow-y: auto; }
+.mikrokontroler .mcu-mono .seg-btn { font-family: ui-monospace, monospace; }
+.mikrokontroler .mcu-ket { margin: 0.2em 0; text-align: center; color: var(--muted); font-size: clamp(0.55rem, 1.6cqmin, 0.9rem); }
+.mikrokontroler .mcu-kejadian { margin: 0.2em 0; padding: 0.3em 0.7em; border-radius: 0.5em; background: color-mix(in srgb, #16a34a 10%, var(--surface)); text-align: center; font-weight: 700; font-size: clamp(0.6rem, 1.9cqmin, 1.05rem); }
+.mikrokontroler .mcu-pantul { display: flex; flex-wrap: wrap; gap: 0.25em; justify-content: center; }
+.mikrokontroler .mcu-pantul span { display: flex; flex-direction: column; align-items: center; padding: 0.1em 0.4em; border: 1px solid var(--line); border-radius: 0.35em; font-family: ui-monospace, monospace; font-size: clamp(0.5rem, 1.5cqmin, 0.85rem); }
+.mikrokontroler .mcu-pantul span.tinggi { background: color-mix(in srgb, #dc2626 16%, var(--surface)); border-color: #dc2626; }
+.mikrokontroler .mcu-pantul small { color: var(--muted); }
+.mikrokontroler .mcu-pilih .seg-btn { font-size: clamp(0.5rem, 1.6cqmin, 0.9rem); }
+.mikrokontroler .mcu-meja { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 0.6em; width: 100%; align-items: start; }
+.mikrokontroler .mcu-papan { display: flex; flex-direction: column; gap: 0.35em; align-items: center; padding: 0.5em; border: 3px solid #15803d; border-radius: 0.8em; background: color-mix(in srgb, #16a34a 8%, var(--surface)); }
+.mikrokontroler .mcu-waktu { font-family: ui-monospace, monospace; font-size: clamp(0.7rem, 2.4cqmin, 1.3rem); }
+.mikrokontroler .mcu-alat { display: flex; gap: 1em; justify-content: center; align-items: flex-end; }
+.mikrokontroler .mcu-alat > div { display: flex; flex-direction: column; align-items: center; gap: 0.2em; }
+.mikrokontroler .mcu-alat small { color: var(--muted); font-size: clamp(0.45rem, 1.3cqmin, 0.75rem); }
+.mikrokontroler .mcu-kipas { font-size: clamp(1.6rem, 6cqmin, 3.4rem); line-height: 1; filter: grayscale(1) opacity(0.45); }
+.mikrokontroler .mcu-kipas.nyala { filter: none; animation: mcu-putar 0.6s linear infinite; }
+@keyframes mcu-putar { to { transform: rotate(360deg); } }
+.mikrokontroler .mcu-lampu { width: clamp(1.4rem, 5cqmin, 3rem); aspect-ratio: 1; border-radius: 50%; border: 3px solid #92400e; background: #57534e; }
+.mikrokontroler .mcu-lampu.nyala { background: #fbbf24; box-shadow: 0 0 1.2em #fbbf24; }
+.mikrokontroler .mcu-tombol { width: clamp(3rem, 10cqmin, 5.5rem); aspect-ratio: 1; border-radius: 50%; border: 4px solid #7f1d1d; background: #dc2626; color: #fff; font-weight: 800; font-size: clamp(0.45rem, 1.3cqmin, 0.75rem); cursor: pointer; touch-action: none; user-select: none; }
+.mikrokontroler .mcu-tombol.ditekan { transform: scale(0.9); background: #991b1b; }
+.mikrokontroler .mcu-dar { margin: 0; font-family: ui-monospace, monospace; font-weight: 800; font-size: clamp(0.6rem, 2cqmin, 1.1rem); }
+.mikrokontroler .mcu-dar.aktif { color: #7c3aed; }
+.mikrokontroler .mcu-sensor { display: flex; gap: 0.5em; align-items: center; font-size: clamp(0.5rem, 1.5cqmin, 0.85rem); }
+.mikrokontroler .mcu-papan > small { color: var(--muted); font-size: clamp(0.5rem, 1.5cqmin, 0.85rem); text-align: center; }
+.mikrokontroler .mcu-range { width: clamp(6rem, 20cqw, 16rem); accent-color: #15803d; }
+.mikrokontroler .mcu-range.lebar { width: 100%; }
+.mikrokontroler .mcu-jenis .seg-btn { font-size: clamp(0.5rem, 1.5cqmin, 0.85rem); }
+.mikrokontroler .mcu-kodebox { min-width: 0; }
+.mikrokontroler .mcu-kontrol { display: flex; flex-wrap: wrap; gap: 0.4em; justify-content: center; align-items: center; }
+.mikrokontroler .mcu-kontrol .btn { font-size: clamp(0.55rem, 1.7cqmin, 0.95rem); padding: 0.3em 0.8em; }
+.mikrokontroler .mcu-kontrol .seg-btn { font-size: clamp(0.5rem, 1.5cqmin, 0.85rem); }
+.mikrokontroler .mcu-garis { width: 100%; height: 170px; border: 1px solid var(--line); border-radius: 0.5em; background: var(--surface); }
+.mikrokontroler .mcu-atur { display: flex; flex-wrap: wrap; gap: 0.5em 1em; justify-content: center; align-items: center; }
+.mikrokontroler .mcu-tebak { display: flex; flex-direction: column; gap: 0.4em; width: 100%; }
+.mikrokontroler .mcu-baris { display: flex; flex-wrap: wrap; gap: 0.5em; justify-content: center; align-items: center; }
+.mikrokontroler .mcu-baris .seg small { align-self: center; margin-right: 0.3em; color: var(--muted); }
+.mikrokontroler .mcu-hasil { margin: 0; text-align: left; font-family: ui-monospace, monospace; font-size: clamp(0.55rem, 1.8cqmin, 1rem); }
+@container (max-width: 640px) { .mikrokontroler .mcu-meja { grid-template-columns: minmax(0, 1fr); } }
