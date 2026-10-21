@@ -4748,3 +4748,51 @@ code.beda { background: #fee2e2 !important; color: #991b1b !important; }
 .knn-kode .mg-pilih .seg-btn { font-size: clamp(0.9rem, 3cqmin, 1.6rem); padding: 0.3em 1.2em; }
 @container (max-width: 640px) { .knn-kode .mg-dua, .knn-kode .mg-dua.lebar { grid-template-columns: minmax(0, 1fr); } }
 .knn-kode .sk-jejak.mg-kecil .sk-kode { font-size: clamp(0.5rem, 1.6cqmin, 0.9rem); }
+/* sma-49 Petualangan Teks */
+.petualangan .tx-kecil { font-size: clamp(0.5rem, 1.6cqmin, 0.9rem); }
+.petualangan .sk-kode.py code { white-space: pre-wrap; overflow-wrap: anywhere; }
+.petualangan .tx-isi .seg-btn { font-size: clamp(0.56rem, 1.75cqmin, 1rem); }
+.petualangan .tx-mono .seg-btn { font-family: ui-monospace, monospace; }
+.petualangan .tx-dua { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1em; align-items: center; width: 100%; }
+.petualangan .tx-dua.lebar { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); align-items: start; }
+.petualangan .tx-dua > * { min-width: 0; }
+.petualangan .tx-diagram { position: relative; width: min(100%, 36em, 60cqh); margin: 0 auto; border: 2px solid var(--line); border-radius: 0.6em; background: var(--surface); }
+.petualangan .tx-diagram.kecil { width: min(100%, 26em, 40cqh); }
+.petualangan .tx-garis, .petualangan .tx-garis svg { position: absolute; inset: 0; width: 100%; height: 100%; color: var(--muted); }
+.petualangan .tx-garis line { stroke: currentColor; stroke-width: 2; vector-effect: non-scaling-stroke; }
+.petualangan .tx-garis line.satu { stroke: #ef4444; stroke-dasharray: 5 3; }
+.petualangan .tx-ruang { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; max-width: 30%; padding: 0.2em 0.5em; border: 2px solid var(--line); border-radius: 0.6em; background: var(--bg); color: var(--ink); font-size: clamp(0.48rem, 1.5cqmin, 0.85rem); line-height: 1.15; text-align: center; }
+.petualangan .tx-ruang small { font-size: 0.85em; color: var(--muted); }
+.petualangan .tx-ruang.awal { border-style: dashed; }
+.petualangan .tx-ruang.tujuan { border-color: #f59e0b; box-shadow: 0 0 0 2px #f59e0b; }
+.petualangan .tx-ruang.tujuan b::before { content: '⭐ '; }
+.petualangan .tx-ruang.buntu { border-color: #dc2626; background: color-mix(in srgb, #dc2626 15%, var(--bg)); }
+.petualangan .tx-ruang.jebak { border-color: #ea580c; background: color-mix(in srgb, #ea580c 15%, var(--bg)); }
+.petualangan .tx-ruang.kini { background: var(--primary); color: #fff; border-color: var(--primary); }
+.petualangan .tx-ruang.kini small { color: #fff; }
+.petualangan .tx-ruang.sorot { box-shadow: 0 0 0 3px #16a34a; }
+.petualangan .tx-ket { margin: 0.4em 0 0; color: var(--muted); text-align: center; font-size: clamp(0.55rem, 1.6cqmin, 0.9rem); }
+.petualangan .tx-layar { margin: 0; max-height: 46cqh; overflow: auto; padding: 0.6em 0.8em; border-radius: 0.6em; background: #10231a; color: #b7f7c8; font-family: ui-monospace, monospace; font-size: clamp(0.55rem, 1.7cqmin, 0.95rem); white-space: pre-wrap; overflow-wrap: anywhere; text-align: left; }
+.petualangan .tx-main { display: flex; flex-direction: column; gap: 0.5em; align-items: stretch; }
+.petualangan .tx-status { margin: 0; font-family: ui-monospace, monospace; font-size: clamp(0.55rem, 1.6cqmin, 0.9rem); text-align: center; overflow-wrap: anywhere; }
+.petualangan .tx-tombol { display: flex; flex-wrap: wrap; gap: 0.4em; justify-content: center; align-items: center; }
+.petualangan .tx-input { width: 9em; padding: 0.4em 0.6em; border: 2px solid var(--line); border-radius: 0.5em; background: var(--bg); color: var(--ink); font: inherit; font-family: ui-monospace, monospace; }
+.petualangan .tx-editor { display: flex; flex-direction: column; gap: 0.6em; min-width: 0; }
+.petualangan .tx-tabel { border-collapse: collapse; font-size: clamp(0.48rem, 1.5cqmin, 0.85rem); margin: 0 auto; }
+.petualangan .tx-tabel th, .petualangan .tx-tabel td { padding: 0.1em 0.4em; border: 1px solid var(--line); text-align: center; }
+.petualangan .tx-tabel td.nama { cursor: pointer; font-weight: 700; text-align: left; white-space: nowrap; }
+.petualangan .tx-tabel tr.pilih td { background: color-mix(in srgb, var(--primary) 15%, var(--surface)); }
+.petualangan .tx-ubah { display: flex; flex-direction: column; gap: 0.3em; }
+.petualangan .tx-baris { display: grid; grid-template-columns: 6.5em minmax(0, 1fr); gap: 0.4em; align-items: center; }
+.petualangan .tx-baris > small { color: var(--muted); text-align: right; }
+.petualangan .tx-seg { flex-wrap: wrap; }
+.petualangan .tx-seg .seg-btn { font-size: clamp(0.48rem, 1.4cqmin, 0.8rem); padding: 0.15em 0.5em; }
+.petualangan .tx-atur { display: flex; flex-wrap: wrap; gap: 0.5em; align-items: center; justify-content: center; }
+.petualangan .tx-lapor { display: flex; flex-direction: column; gap: 0.1em; margin-top: 0.4em; font-size: clamp(0.55rem, 1.6cqmin, 0.9rem); }
+.petualangan .tx-lapor p { margin: 0; }
+.petualangan .tx-lapor p.good { color: #15803d; }
+.petualangan .tx-lapor p.bad { color: #dc2626; }
+@container (max-width: 640px) { .petualangan .tx-dua, .petualangan .tx-dua.lebar { grid-template-columns: minmax(0, 1fr); } }
+.petualangan .sk-jejak.tx-kecil .sk-kode { font-size: clamp(0.5rem, 1.6cqmin, 0.9rem); }
+.petualangan .sk-jejak.tx-kecil .sk-jejak-samping { font-size: clamp(0.6rem, 2cqmin, 1.1rem); }
+.petualangan .tx-editor .btn, .petualangan .tx-main .btn { font-size: clamp(0.6rem, 2cqmin, 1.1rem); padding: 0.3em 0.9em; }

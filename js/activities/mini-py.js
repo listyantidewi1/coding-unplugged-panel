@@ -178,6 +178,7 @@ export function parsePy(lines) {
     if ((m = r.s.match(/^assert\s+(.+)$/))) { const e = parseExpr(tokenize(m[1], L), L); return e.t === 'tuple' && e.items.length === 2 ? { t: 'assert', line: L, c: e.items[0], msg: e.items[1] } : { t: 'assert', line: L, c: e, msg: null }; }
     if (kw === 'class') { const h = header(r, 'class'); m = h.match(/^([A-Za-z_]\w*)\s*(?:\(\s*([A-Za-z_]\w*)?\s*\))?$/); if (!m) throw new PyError('SyntaxError', 'invalid syntax', L); return { t: 'class', line: L, name: m[1], base: m[2] || null, body: block(r.ind, { ind: r.ind, i: L, kw }) }; }
     if (r.s === 'pass') return { t: 'pass', line: L };
+    if ((m = r.s.match(/^del\s+(.+)$/))) return { t: 'del', line: L, target: parseExpr(tokenize(m[1], L), L) };
     if ((m = r.s.match(/^from\s+([A-Za-z_]\w*)\s+import\s+([A-Za-z_]\w*(?:\s*,\s*[A-Za-z_]\w*)*)$/))) return { t: 'from', line: L, mod: m[1], names: m[2].split(',').map((x) => x.trim()) };
     if ((m = r.s.match(/^import\s+([A-Za-z_]\w*)$/))) return { t: 'import', line: L, name: m[1] };
     if (r.s === 'break') return { t: 'break', line: L };
@@ -360,6 +361,7 @@ export function makePyRunner(lines, { builtins = {}, vars = {}, limit = 3000, in
       case 'assert': { const c = truthy(yield* ev(s.c, L)); tick(L); if (!c) { const msg = s.msg ? pyRepr(yield* ev(s.msg, L)) : ''; throw new PyError('AssertionError', msg, L, 'Kondisi uji bernilai False.'); } yield { line: L, note: 'assert lulus' }; return null; }
       case 'global': tick(L); yield { line: L, note: `${s.names.join(', ')} memakai variabel global` }; return null;
       case 'break': tick(L); yield { line: L, note: 'break' }; return { brk: true };
+      case 'del': { const tg = s.target; if (tg.t === 'idx') { const a = yield* ev(tg.a, L); let i = yield* ev(tg.i, L); if (a instanceof PyDict) { if (!a.has(i)) throw new PyError('KeyError', pyRepr(i, true), L, 'Kunci itu tidak ada di dictionary.'); a.delete(i); } else if (Array.isArray(a) && !isTup(a)) { if (i < 0) i += a.length; if (i < 0 || i >= a.length) throw new PyError('IndexError', 'list assignment index out of range', L); a.splice(i, 1); } else throw new PyError('TypeError', `'${pyType(a)}' object doesn't support item deletion`, L); } else if (tg.t === 'var') { const sc = scope(); if (!(tg.name in sc)) throw new PyError('NameError', `name '${tg.name}' is not defined`, L); delete sc[tg.name]; } else throw new PyError('SyntaxError', 'cannot delete expression', L); tick(L); yield { line: L, note: 'del' }; return null; }
       case 'continue': tick(L); yield { line: L, note: 'continue' }; return { cont: true };
       case 'ret': { const v = s.e ? yield* ev(s.e, L) : null; tick(L); yield { line: L, note: `return ${pyRepr(v, true)}` }; return { ret: v }; }
       case 'class': { const base = s.base ? look(s.base, L) : null; if (s.base && (!base || base.py !== 'class')) throw new PyError('TypeError', 'base must be a class', L); const cls = { py: 'class', name: s.name, base, methods: {}, attrs: {} };
