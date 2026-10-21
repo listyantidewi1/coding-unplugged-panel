@@ -2048,3 +2048,28 @@ button.kk-kotak { cursor: pointer; }
   .jadwal .aj-hp { width: min(20cqw, 36cqh); font-size: clamp(0.35rem, 2.4cqh, 0.7rem); }
   .jadwal .aj-uji .aj-hp { width: min(24cqw, 44cqh); }
 }
+
+/* Penyiram kebun */
+.penyiram { gap: 1.2cqmin; }
+.penyiram .reveal { font-size: clamp(0.6rem, 3cqmin, 1.5rem); }
+.penyiram .ab-lapisan { font-size: clamp(0.6rem, 3.2cqmin, 1.6rem); }
+.penyiram .seg-btn { padding: 0.3em 0.7em; }
+.ps-samping { display: flex; gap: 2cqw; align-items: flex-start; justify-content: center; width: 100%; }
+.ps-tabel-wadah { max-width: 100%; overflow: auto; }
+.ps-tabel { font-size: clamp(0.45rem, 2.7cqmin, 1.3rem); }
+.ps-tabel td, .ps-tabel th { padding: 0.06em 0.5em; white-space: nowrap; }
+.ps-tabel td small { color: #64748b; font-size: 0.75em; }
+.ps-tabel tr.ps-cocok td:last-child { background: #dcfce7; }
+.ps-tabel tr.ps-meleset td { background: #fee2e2; }
+.ps-tabel tr[data-h], .ps-tabel td[data-c] { cursor: pointer; }
+.ps-tabel td.hi { background: #fef08a; font-weight: 900; }
+.ps-tabel td.kedip { animation: ps-kedip 1s infinite alternate; }
+@keyframes ps-kedip { to { background: #fdba74; } }
+.ps-skor { font-size: clamp(0.6rem, 3.2cqmin, 1.6rem); }
+.ps-atur { display: flex; gap: 0.6em 1em; align-items: center; justify-content: center; flex-wrap: wrap; font-size: clamp(0.55rem, 2.8cqmin, 1.4rem); }
+.ps-geser { display: flex; gap: 0.6em; align-items: center; font-weight: 800; }
+.ps-geser span { min-width: 6.5em; }
+.ps-range { width: clamp(6rem, 22cqw, 18rem); height: 2em; accent-color: #16a34a; }
+.ab-lap-baris.menang { background: #dcfce7; border-color: #16a34a; }
+@container (max-height: 520px) { .ps-tabel td small { display: none; } .ps-tabel { font-size: clamp(0.4rem, 2.2cqmin, 1rem); } }
+@container (max-aspect-ratio: 6/5) { .ps-samping { flex-direction: column; align-items: center; } }

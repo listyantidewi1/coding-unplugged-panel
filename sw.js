@@ -71,6 +71,7 @@ const FILES = [
   'js/activities/smp-17-komputer-kertas.js',
   'js/activities/smp-18-sandi-geser.js',
   'js/activities/smp-19-aplikasi-jadwal.js',
+  'js/activities/smp-20-penyiram.js',
 ];
 
 self.addEventListener('install', (e) => {
