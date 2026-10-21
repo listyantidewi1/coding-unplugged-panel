@@ -141,6 +141,7 @@ const FILES = [
   'js/activities/sma-36-rekap-bazar.js',
   'js/activities/sma-37-data-lomba.js',
   'js/activities/sma-38-fungsi-lingkup.js',
+  'js/activities/sma-39-rekursi-memo.js',
 ];
 
 self.addEventListener('install', (e) => {
