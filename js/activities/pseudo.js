@@ -23,9 +23,9 @@ export function fmt(v, { quote = false } = {}) {
   if (typeof v === 'string') return quote ? `"${v}"` : v;
   if (typeof v === 'number') {
     // Programs print plain numbers (8000, not 8.000) with a decimal comma.
-    if (Number.isInteger(v)) return String(v);
+    if (Number.isInteger(v)) return String(v).replace('-', '−');
     const r = Math.round(v * 100) / 100;
-    const s = String(r).replace('.', ',');
+    const s = String(r).replace('.', ',').replace('-', '−');
     return Math.abs(r - v) > 1e-9 ? `${s}…` : s;
   }
   return String(v);
@@ -292,7 +292,7 @@ export function makeRunner(lines, { vars = {}, input = {}, builtins = {}, limit 
       case 'idx': {
         const a = yield* ev(n.a, line); const i = yield* ev(n.i, line);
         if (typeof a !== 'string' && !Array.isArray(a)) throw new PseudoError(`${exprText(n.a)} bukan larik atau teks.`, line);
-        if (!Number.isInteger(i) || i < 1 || i > a.length) throw new PseudoError(`Indeks ${fmt(i)} di luar ${exprText(n.a)} (1 sampai ${a.length}).`, line);
+        if (!Number.isInteger(i) || i < 1 || i > a.length) throw new PseudoError(`Indeks ${fmt(i)} di luar batas larik ${exprText(n.a)} (1 sampai ${a.length}).`, line);
         return a[i - 1];
       }
       case 'bin': {
@@ -328,7 +328,7 @@ export function makeRunner(lines, { vars = {}, input = {}, builtins = {}, limit 
     if (target.t === 'idx') {
       const arr = yield* ev(target.a, line); const i = yield* ev(target.i, line);
       if (!Array.isArray(arr)) throw new PseudoError(`${exprText(target.a)} bukan larik.`, line);
-      if (!Number.isInteger(i) || i < 1 || i > arr.length) throw new PseudoError(`Indeks ${fmt(i)} di luar ${exprText(target.a)} (1 sampai ${arr.length}).`, line);
+      if (!Number.isInteger(i) || i < 1 || i > arr.length) throw new PseudoError(`Indeks ${fmt(i)} di luar batas larik ${exprText(target.a)} (1 sampai ${arr.length}).`, line);
       arr[i - 1] = v; return;
     }
     throw new PseudoError('Sisi kiri ← harus nama variabel.', line);
