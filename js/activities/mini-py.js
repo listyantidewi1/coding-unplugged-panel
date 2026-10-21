@@ -91,7 +91,10 @@ function parseExpr(toks, line) {
 
 // ---- program parser ----
 export function parsePy(lines) {
-  const rows = lines.map((raw, i) => ({ raw, i, ind: raw.match(/^ */)[0].length, s: raw.replace(/#.*$/, '').trim() })).filter((r) => r.s);
+  const rows0 = lines.map((raw, i) => ({ raw, i, ind: raw.match(/^ */)[0].length, s: raw.replace(/#.*$/, '').trim() })).filter((r) => r.s);
+  // Join lines inside open brackets (a list written over several lines).
+  const depth = (t) => { let d = 0; let q = null; for (const c of t) { if (q) { if (c === q) q = null; } else if (c === '"' || c === "'") q = c; else if ('([{'.includes(c)) d++; else if (')]}'.includes(c)) d--; } return d; };
+  const rows = []; for (let j = 0; j < rows0.length; j++) { const r = { ...rows0[j] }; while (depth(r.s) > 0 && j + 1 < rows0.length) { j++; r.s += ` ${rows0[j].s}`; } rows.push(r); }
   let k = 0;
   function block(ind, header) {
     const body = [];
@@ -136,7 +139,7 @@ export function parsePy(lines) {
 }
 
 // ---- runner ----
-export function makePyRunner(lines, { builtins = {}, vars = {}, limit = 3000, input = [] } = {}) {
+export function makePyRunner(lines, { builtins = {}, vars = {}, limit = 3000, input = [], loopLimit = 0 } = {}) {
   const st = { vars: { ...vars }, frames: [], out: [], steps: 0, done: false, error: null, calls: [] };
   let prog = []; let parseErr = null;
   try { prog = parsePy(lines); } catch (e) { if (!(e instanceof PyError)) throw e; parseErr = e; }
@@ -146,6 +149,10 @@ export function makePyRunner(lines, { builtins = {}, vars = {}, limit = 3000, in
     print: fn('print', (...a) => { st.out.push(a.map((x) => pyRepr(x)).join(' ')); return null; }),
     range: fn('range', (a, b, s = 1) => { const [lo, hi] = b === undefined ? [0, num(a)] : [num(a), num(b)]; const r = []; if (s > 0) for (let x = lo; x < hi; x += s) r.push(x); else for (let x = lo; x > hi; x += s) r.push(x); return r; }),
     len: fn('len', (x) => x.length),
+    list: fn('list', (x) => (typeof x === 'string' ? [...x] : [...(x || [])])),
+    sum: fn('sum', (x) => x.reduce((a, b) => bin('+', a, b, null), 0)),
+    max: fn('max', (...a) => { const xs = a.length === 1 && Array.isArray(a[0]) ? a[0] : a; return xs.reduce((p, q) => (num(q) > num(p) ? q : p)); }),
+    min: fn('min', (...a) => { const xs = a.length === 1 && Array.isArray(a[0]) ? a[0] : a; return xs.reduce((p, q) => (num(q) < num(p) ? q : p)); }),
     str: fn('str', (x) => pyRepr(x)),
     int: fn('int', (x) => { if (typeof x === 'string') { if (!/^\s*[-+]?\d+\s*$/.test(x)) throw new PyError('ValueError', `invalid literal for int() with base 10: '${x}'`, null, 'Teks itu bukan bilangan bulat.'); return parseInt(x, 10); } return Math.trunc(num(x)); }),
     float: fn('float', (x) => new PyFloat(Number(typeof x === 'string' ? x : num(x)))),
@@ -219,7 +226,7 @@ export function makePyRunner(lines, { builtins = {}, vars = {}, limit = 3000, in
       case 'ret': { const v = s.e ? yield* ev(s.e, L) : null; tick(L); yield { line: L, note: `return ${pyRepr(v, true)}` }; return { ret: v }; }
       case 'def': st.vars[s.name] = { py: 'fn', name: s.name, def: s }; tick(L); yield { line: L, note: `fungsi ${s.name} dibuat` }; return null;
       case 'if': { const c = truthy(yield* ev(s.c, L)); tick(L); yield { line: L, note: `syarat → ${c ? 'True' : 'False'}`, cond: c }; if (c) return yield* block(s.body); if (s.else) return yield* block(s.else); return null; }
-      case 'while': { for (;;) { const c = truthy(yield* ev(s.c, L)); tick(L); yield { line: L, note: `syarat → ${c ? 'True' : 'False'}`, cond: c }; if (!c) return null; const sig = yield* block(s.body); if (sig?.brk) return null; if (sig) return sig; } }
+      case 'while': { for (let rounds = 0; ; rounds++) { const c = truthy(yield* ev(s.c, L)); tick(L); if (c && loopLimit && rounds >= loopLimit) throw new PyError('Batas', `Perulangan tidak berhenti: sudah ${loopLimit} putaran dan syaratnya masih True.`, L, 'batas'); yield { line: L, note: `syarat → ${c ? 'True' : 'False'}`, cond: c }; if (!c) return null; const sig = yield* block(s.body); if (sig?.brk) return null; if (sig) return sig; } }
       case 'for': { const it = yield* ev(s.it, L); const list = typeof it === 'string' ? [...it] : it; if (!Array.isArray(list)) throw new PyError('TypeError', `'${pyType(it)}' object is not iterable`, L); for (const x of list) { scope()[s.v] = x; tick(L); yield { line: L, note: `${s.v} = ${pyRepr(x, true)}` }; const sig = yield* block(s.body); if (sig?.brk) return null; if (sig) return sig; } return null; }
       default: return null;
     }

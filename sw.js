@@ -138,6 +138,7 @@ const FILES = [
   'js/activities/smp-41-ular-tangga.js',
   'js/activities/smp-42-aplikasi-kantin.js',
   'js/activities/sma-35-python-kasir.js',
+  'js/activities/sma-36-rekap-bazar.js',
 ];
 
 self.addEventListener('install', (e) => {

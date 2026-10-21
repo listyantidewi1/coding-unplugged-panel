@@ -117,18 +117,18 @@ export function numOpts(right, wrong, ctx) {
 }
 
 // Python listing with indentation guides (one guide per 4 spaces).
-export function pyCode(lines, { hl = [], warn = [], cls = '', onLine = null } = {}) {
+export function pyCode(lines, { hl = [], warn = [], cls = '', onLine = null, counts = null } = {}) {
   return el('ol', { class: `sk-kode py ${cls}` }, lines.map((t, i) => {
     const sp = (t.match(/^ */) || [''])[0].length; const lv = Math.floor(sp / 4);
-    const li = el('li', { class: `${hl.includes(i) ? 'hl' : ''} ${warn.includes(i) ? 'warn' : ''}` }, el('code', null, ...Array.from({ length: lv }, () => el('span', { class: 'py-jorok' }, '    ')), ' '.repeat(sp % 4) + t.slice(sp) || ' '));
+    const li = el('li', { class: `${hl.includes(i) ? 'hl' : ''} ${warn.includes(i) ? 'warn' : ''}` }, el('code', null, ...Array.from({ length: lv }, () => el('span', { class: 'py-jorok' }, '    ')), ' '.repeat(sp % 4) + t.slice(sp) || ' '), counts && counts[i] ? el('span', { class: 'sk-hitung' }, `×${counts[i]}`) : null);
     if (onLine) onTap(li, () => onLine(i));
     return li;
   }));
 }
 // Step player for mini-py programs (same buttons as tracer).
 import { makePyRunner, pyRepr, pyType } from './mini-py.js';
-export function pyTracer(lines, { opts = {}, onEnd = null, onStep = null, speed = 450, hideVars = [], extra = null, cls = '' } = {}) {
-  let r; let last = null; let timer = null; let prev = {};
+export function pyTracer(lines, { opts = {}, onEnd = null, onStep = null, speed = 450, hideVars = [], extra = null, cls = '', counts: showCounts = false } = {}) {
+  let r; let last = null; let timer = null; let prev = {}; let counts = {};
   const host = el('div', { class: `sk-jejak ${cls}` });
   const draw = () => {
     const st = r.state; const vars = st.frames.length ? { ...st.vars, ...st.frames[st.frames.length - 1].vars } : st.vars;
@@ -138,7 +138,7 @@ export function pyTracer(lines, { opts = {}, onEnd = null, onStep = null, speed 
     const msg = e ? el('div', { class: `sk-galat ${e.type === 'Batas' ? 'batas' : ''}` }, e.type === 'Batas' ? `⏱ ${e.message}` : `⚠ Baris ${e.line + 1} · ${e.type}: ${e.message}`, e.type !== 'Batas' && e.penjelasan ? el('small', { class: 'sk-penjelasan' }, e.penjelasan) : null)
       : st.done ? el('p', { class: 'sk-beres' }, `✓ Program selesai (${st.steps} langkah).`) : null;
     host.replaceChildren(
-      el('div', { class: 'sk-jejak-kode' }, pyCode(lines, { hl: last && !st.done && !e ? [last.line] : [], warn: e && e.line != null ? [e.line] : [] })),
+      el('div', { class: 'sk-jejak-kode' }, pyCode(lines, { hl: last && !st.done && !e ? [last.line] : [], warn: e && e.line != null ? [e.line] : [], counts: showCounts ? counts : null })),
       el('div', { class: 'sk-jejak-samping' },
         el('div', { class: 'sk-tombol' }, button('▶ Langkah', () => go(1), 'primary'), button(timer ? '⏸ Berhenti' : '⏩ Otomatis', toggle), button('⏭ Sampai selesai', () => { stop(); go(100000); }), button('↺ Ulang', reset)),
         el('p', { class: 'sk-catatan' }, last ? `Baris ${last.line + 1}: ${last.note.length > 90 ? `${last.note.slice(0, 88)}…` : last.note}` : 'Ketuk Langkah untuk menjalankan baris pertama.'),
@@ -149,14 +149,14 @@ export function pyTracer(lines, { opts = {}, onEnd = null, onStep = null, speed 
     prev = JSON.parse(JSON.stringify(vars, (k, v) => (v && v.py === 'fn' ? undefined : v)));
   };
   function go(k) {
-    for (let i = 0; i < k; i++) { const g = r.gen.next(); if (g.done) break; last = g.value; onStep?.(last, r.state); if (r.state.done || r.state.error) break; }
+    for (let i = 0; i < k; i++) { const g = r.gen.next(); if (g.done) break; last = g.value; counts[last.line] = (counts[last.line] || 0) + 1; onStep?.(last, r.state); if (r.state.done || r.state.error) break; }
     draw();
     if (r.state.done || r.state.error) { stop(); onEnd?.(r.state); }
   }
   function stop() { if (timer) { clearInterval(timer); timer = null; } }
   function toggle() { if (timer) { stop(); draw(); } else { timer = setInterval(() => go(1), speed); draw(); } }
-  function reset() { stop(); const o = typeof opts === 'function' ? opts() : opts; r = makePyRunner(lines, o); last = null; onStep?.(null, r.state); prev = {}; draw(); }
-  host.stop = stop; host.reset = reset;
+  function reset() { stop(); const o = typeof opts === 'function' ? opts() : opts; r = makePyRunner(lines, o); last = null; counts = {}; onStep?.(null, r.state); prev = {}; draw(); }
+  host.stop = stop; host.reset = reset; host.setLines = (ls) => { lines = ls; reset(); };
   reset();
   return host;
 }
