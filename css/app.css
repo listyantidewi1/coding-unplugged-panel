@@ -2664,3 +2664,25 @@ button.kk-kotak { cursor: pointer; }
 .pn-baris .pn-diagram { flex: 1 1 0; min-width: 0; }
 .pn-samping { display: flex; flex-direction: column; align-items: center; gap: 0.3cqmin; max-width: 45%; }
 .pn-samping:empty { display: none; }
+
+/* sma-18 Satu Koki */
+.sk-papan { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 0.8cqmin; }
+.sk-pesanan { display: flex; flex-wrap: wrap; gap: 0.8cqmin; justify-content: center; }
+.sk-kartu { display: flex; flex-direction: column; align-items: center; min-width: 8em; padding: 0.3em 0.6em; border: 3px solid var(--w); border-top-width: 0.6em; border-radius: 0.6em; background: #fff; color: #111827; font: inherit; font-size: clamp(0.6rem, 2.5cqmin, 1.35rem); cursor: pointer; }
+.sk-kartu b { font-size: 1.2em; }
+.sk-kartu small { color: #475569; }
+.sk-kartu.selesai { opacity: 0.4; }
+.sk-gantt { display: flex; flex-direction: column; gap: 2px; max-width: 100%; overflow-x: auto; }
+.sk-gantt-baris { display: flex; gap: 2px; }
+.sk-gantt-baris span { width: clamp(1.4rem, 5cqmin, 3.2rem); text-align: center; font-weight: 800; font-size: clamp(0.6rem, 2.6cqmin, 1.4rem); }
+.sk-sel { height: clamp(1.4rem, 5cqmin, 3rem); line-height: clamp(1.4rem, 5cqmin, 3rem); border: 1px solid #cbd5e1; border-radius: 0.2em; background: #f8fafc; color: #111827; }
+.sk-gantt-baris.angka span { font-weight: 500; color: #64748b; font-size: clamp(0.5rem, 1.8cqmin, 1rem); text-align: left; }
+.sk-tabel { border-collapse: collapse; font-size: clamp(0.6rem, 2.4cqmin, 1.3rem); background: #fff; color: #111827; font-variant-numeric: tabular-nums; }
+.sk-tabel th, .sk-tabel td { border: 1px solid #cbd5e1; padding: 0.1em 0.7em; text-align: center; }
+.sk-tabel th { background: #f1f5f9; }
+.sk-antre { font-size: clamp(0.7rem, 3cqmin, 1.6rem); font-weight: 700; color: #111827; }
+.sk-cocok { display: flex; gap: 2cqmin; width: 100%; justify-content: center; }
+.sk-kolom { display: flex; flex-direction: column; gap: 0.5cqmin; flex: 1 1 0; min-width: 0; max-width: 32em; }
+.sk-item { text-align: left; padding: 0.3em 0.7em; border: 2px solid #cbd5e1; border-radius: 0.5em; background: #fff; color: #111827; font: inherit; font-size: clamp(0.7rem, 3.2cqmin, 1.7rem); cursor: pointer; }
+.sk-item.pilih { border-color: #2563eb; background: #dbeafe; }
+.sk-item.cocok { border-color: #16a34a; background: #dcfce7; opacity: 0.7; }
