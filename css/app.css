@@ -1650,3 +1650,45 @@ button.bit-sel { cursor: pointer; }
   .gotong .tumpuk.hasil { font-size: clamp(0.6rem, 5.5cqh, 1.2rem); }
   .gotong .pohon .tumpuk { font-size: clamp(0.4rem, 3cqh, 0.8rem); }
 }
+
+/* Rute ojek */
+.ojek { gap: 1cqmin; }
+.ojek-samping { display: flex; gap: 2cqw; align-items: center; justify-content: center; width: 100%; }
+.ojek-peta { position: relative; width: min(64cqw, 100cqh, 52rem); aspect-ratio: 100 / 60; max-width: 100%; flex: none; }
+.ojek-samping .ojek-peta { width: min(56cqw, 100cqh, 48rem); }
+.ojek-garis, .ojek-garis svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.ojek-garis path, .ojek-garis line { fill: none; stroke: #94a3b8; vector-effect: non-scaling-stroke; stroke-width: max(3px, 0.6cqmin); stroke-linecap: round; }
+.ojek-garis .panah { stroke: #60a5fa; }
+.ojek-garis .rute { stroke: #f59e0b; stroke-width: max(6px, 1.2cqmin); }
+.ojek-garis .pakai { stroke: #16a34a; stroke-width: max(6px, 1.2cqmin); }
+.ojek-garis .tutup { stroke: #dc2626; stroke-dasharray: 6 6; opacity: 0.7; }
+.ojek-menit, .ojek-tempat { position: absolute; transform: translate(-50%, -50%); font: inherit; cursor: pointer; padding: 0; color: #1e293b; }
+.ojek-menit { min-width: 1.7em; height: 1.7em; border-radius: 0.5em; border: 2px solid #94a3b8; background: #fffbeb; font-weight: 900; font-size: clamp(0.5rem, 2.4cqmin, 1.15rem); }
+.ojek-menit.tutup { background: #fee2e2; border-color: #dc2626; color: #b91c1c; }
+.ojek-menit.pakai { background: #dcfce7; border-color: #16a34a; }
+.ojek-tempat { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 4.2em; height: 4.2em; border-radius: 50%; border: max(3px, 0.5cqmin) solid #1d4ed8; background: #eff6ff; font-size: clamp(0.45rem, 2cqmin, 1rem); line-height: 1.05; }
+.ojek-tempat b { font-size: 1.7em; }
+.ojek-tempat small { font-size: 0.75em; font-weight: 700; max-width: 5.5em; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.ojek-tempat small.angka { font-size: 1.05em; font-weight: 900; color: #b45309; }
+.ojek-tempat.selesai { background: #dcfce7; border-color: #16a34a; }
+.ojek-tempat.hi { outline: max(3px, 0.6cqmin) solid #f59e0b; outline-offset: 2px; }
+.ojek-tempat.ganjil { background: #fde68a; border-color: #ca8a04; }
+.ojek-tempat.di-sini { background: #fed7aa; border-color: #ea580c; }
+.ojek-tabel-wadah { max-width: 44cqw; overflow-x: auto; }
+.ojek-tabel { font-size: clamp(0.45rem, 1.9cqmin, 0.95rem); }
+.ojek-tabel td, .ojek-tabel th { padding: 0.2em 0.35em; white-space: nowrap; }
+.ojek-tabel td.ganti { background: #fef3c7; font-weight: 800; }
+.ojek-tabel td.lewat { color: var(--muted); }
+.ojek-jejak { margin: 0; font-weight: 800; text-align: center; font-size: clamp(0.6rem, 2.6cqmin, 1.25rem); }
+@container (max-aspect-ratio: 6/5) {
+  .ojek-samping { flex-direction: column; }
+  .ojek-samping .ojek-peta { width: min(92cqw, 60cqh); }
+  .ojek-tabel-wadah { max-width: 96cqw; }
+}
+@container (max-height: 520px) {
+  .ojek > .prompt, .ojek .reveal { font-size: clamp(0.55rem, 4cqh, 1.1rem); }
+  .ojek .ojek-peta, .ojek .ojek-samping .ojek-peta { width: min(80cqw, 118cqh); }
+  .ojek .ojek-tabel-wadah { display: none; }
+  .ojek .ojek-tempat, .ojek .ojek-menit { font-size: clamp(0.4rem, 2.6cqh, 0.9rem); }
+  .ojek .keys.keypad { grid-template-columns: repeat(10, min(5cqw, 9cqh)); }
+}
