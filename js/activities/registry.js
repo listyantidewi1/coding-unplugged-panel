@@ -131,6 +131,7 @@ import OopPerpustakaan from './sma-47-oop-perpustakaan.js';
 import KnnKode from './sma-48-knn-kode.js';
 import PetualanganTeks from './sma-49-petualangan-teks.js';
 import CsvJson from './sma-50-csv-json.js';
+import WebAntrean from './sma-51-web-antrean.js';
 
 export const JENJANG = [
   { id: 'paud', label: 'PAUD', detail: '4–6 tahun' },
@@ -196,6 +197,7 @@ export const activities = [
   KnnKode,
   PetualanganTeks,
   CsvJson,
+  WebAntrean,
 ]
   .sort((a, b) => order(a) - order(b) || a.id.localeCompare(b.id));
 

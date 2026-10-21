@@ -153,6 +153,7 @@ const FILES = [
   'js/activities/sma-48-knn-kode.js',
   'js/activities/sma-49-petualangan-teks.js',
   'js/activities/sma-50-csv-json.js',
+  'js/activities/sma-51-web-antrean.js',
 ];
 
 self.addEventListener('install', (e) => {
