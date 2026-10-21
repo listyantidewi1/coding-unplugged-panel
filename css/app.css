@@ -2806,3 +2806,72 @@ button.kk-kotak { cursor: pointer; }
 .ht-penyadap small { color: #94a3b8; font-family: system-ui, sans-serif; }
 .ht-tutup { color: #4ade80; letter-spacing: 0.05em; }
 @container (max-aspect-ratio: 1/1) { .ht-lab { flex-direction: column; } .ht-kartu-kartu { grid-template-columns: 1fr; } .ht-sadap-baris { grid-template-columns: minmax(0, 1fr) 6em 6em; } }
+
+/* sma-21 Sandi Berkunci */
+.sv-kode { display: block; white-space: pre-wrap; overflow-wrap: anywhere; font-family: ui-monospace, monospace; font-weight: 800; font-size: clamp(0.7rem, 3cqmin, 1.6rem); letter-spacing: 0.08em; color: #0f172a; background: #f1f5f9; padding: 0.3em 0.7em; border-radius: 0.5em; }
+.sv-kode.kecil { font-size: clamp(0.55rem, 2.1cqmin, 1.1rem); font-weight: 600; }
+.sv-grid { display: flex; flex-direction: column; gap: 2px; max-width: 100%; overflow-x: auto; }
+.sv-grid-baris { display: flex; gap: 2px; align-items: center; }
+.sv-grid-baris b { width: 4.2em; font-size: clamp(0.55rem, 2.2cqmin, 1.1rem); }
+.sv-grid-baris span { display: grid; place-items: center; width: clamp(1.3rem, 4.4cqmin, 2.6rem); height: clamp(1.3rem, 4.4cqmin, 2.6rem); border: 1px solid #cbd5e1; border-radius: 0.25em; background: #fff; color: #111827; font-family: ui-monospace, monospace; font-weight: 800; font-size: clamp(0.6rem, 2.6cqmin, 1.4rem); }
+.sv-grid-baris span.kini { border: 3px solid #2563eb; background: #dbeafe; }
+.sv-grid-baris span.diberi { color: #64748b; }
+.sv-bantu { display: flex; flex-direction: column; align-items: center; gap: 0.4cqmin; }
+.sv-catat { margin: 0; font-weight: 700; font-size: clamp(0.6rem, 2.4cqmin, 1.3rem); }
+.sv-strip { display: flex; flex-direction: column; gap: 2px; max-width: 100%; overflow-x: auto; }
+.sv-baris { display: flex; gap: 2px; align-items: center; }
+.sv-baris b { width: 4.4em; font-size: clamp(0.5rem, 2cqmin, 1rem); }
+.sv-baris span, .sv-sel { box-sizing: border-box; display: grid; place-items: center; width: clamp(1.1rem, 3.3cqmin, 2.4rem); height: clamp(1.3rem, 4cqmin, 2.6rem); font-family: ui-monospace, monospace; font-weight: 800; font-size: clamp(0.55rem, 2.3cqmin, 1.3rem); }
+.sv-baris.atas span { color: #64748b; }
+.sv-sel { padding: 0; border: 2px solid #94a3b8; border-radius: 0.3em; background: #fff; color: #111827; cursor: pointer; }
+.sv-sandi { display: flex; flex-direction: column; gap: 2px; font-family: ui-monospace, monospace; }
+.sv-sb { display: flex; align-items: center; gap: 1px; }
+.sv-sb small { width: 5.2em; font-size: clamp(0.45rem, 1.7cqmin, 0.9rem); color: #64748b; }
+.sv-h { width: clamp(1rem, 3.2cqmin, 2.3rem); height: clamp(1.1rem, 3.5cqmin, 2.4rem); padding: 0; border: 1px solid #e2e8f0; border-radius: 0.2em; background: #fff; color: #111827; font: inherit; font-weight: 800; font-size: clamp(0.5rem, 2.3cqmin, 1.3rem); cursor: pointer; }
+.sv-h.akhir { margin-right: 0.4em; }
+.sv-h.kena { background: #fde047; border-color: #ca8a04; }
+.sv-h.lama { background: #bfdbfe; border-color: #60a5fa; }
+.sv-dua { display: flex; gap: 2cqmin; align-items: flex-start; justify-content: center; width: 100%; }
+.sv-jejak { display: flex; flex-direction: column; gap: 0.4cqmin; min-width: 0; font-size: clamp(0.55rem, 2.1cqmin, 1.1rem); }
+.sv-jejak-baris { display: grid; grid-template-columns: minmax(0, 1fr) 7em 3.5em; gap: 0.5em; padding: 0.2em 0.5em; border-radius: 0.4em; background: #fff; color: #111827; border: 1px solid #e2e8f0; }
+.sv-jejak-baris code { overflow-wrap: anywhere; font-weight: 800; }
+.sv-jejak-baris.kepala { background: #1e293b; color: #fff; }
+.sv-jejak-baris.kini { border: 2px solid #ca8a04; background: #fefce8; }
+.sv-kolom-kolom { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18em), 1fr)); gap: 1cqmin; width: 100%; }
+.sv-kolom { display: flex; flex-direction: column; gap: 0.3em; padding: 0.4em; border: 2px solid #cbd5e1; border-radius: 0.6em; background: #fff; color: #111827; font-size: clamp(0.55rem, 2.1cqmin, 1.1rem); }
+.sv-kolom.beres { border-color: #16a34a; background: #f0fdf4; }
+.sv-kol-atas { display: flex; align-items: center; justify-content: space-between; gap: 0.5em; }
+.sv-batang { display: grid; grid-template-columns: repeat(26, minmax(0, 1fr)); gap: 1px; height: clamp(4rem, 14cqh, 9rem); }
+.sv-bt { position: relative; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; padding: 0 0 1.1em; border: none; background: transparent; font: inherit; cursor: inherit; }
+button.sv-bt { cursor: pointer; }
+.sv-bt i { display: block; width: 100%; background: #3b82f6; border-radius: 2px 2px 0 0; }
+.sv-bt i.ref { position: absolute; left: 15%; right: 15%; bottom: 1.1em; width: auto; background: none; border-top: 3px solid #f97316; border-radius: 0; }
+.sv-bt.tanda i:not(.ref) { background: #16a34a; }
+.sv-bt small { position: absolute; bottom: 0; font-size: 0.8em; font-weight: 800; color: #334155; }
+.sv-cocok { display: flex; gap: 2cqmin; width: 100%; justify-content: center; }
+.sv-kol { display: flex; flex-direction: column; gap: 0.5cqmin; flex: 1 1 0; min-width: 0; max-width: 34em; }
+.sv-item { text-align: left; padding: 0.35em 0.7em; border: 2px solid #cbd5e1; border-radius: 0.5em; background: #fff; color: #111827; font: inherit; font-size: clamp(0.65rem, 2.8cqmin, 1.5rem); cursor: pointer; }
+.sv-item.pilih { border-color: #2563eb; background: #dbeafe; }
+.sv-item.cocok { border-color: #16a34a; background: #dcfce7; opacity: 0.7; }
+.sv-tabel-wadah { display: flex; gap: 2cqmin; width: 100%; align-items: flex-start; }
+.sv-tabel { display: flex; flex-direction: column; gap: 0; font-family: ui-monospace, monospace; font-size: clamp(0.4rem, 1.55cqmin, 0.95rem); flex: none; max-width: 100%; overflow-x: auto; }
+.sv-tb { display: grid; grid-template-columns: repeat(27, 1.75em); }
+.sv-tb span, .sv-tc { display: grid; place-items: center; height: 1.6em; }
+.sv-tb span.garis { background: #e0f2fe; }
+.sv-tb span.x { background: #f97316; color: #fff; font-weight: 900; border-radius: 0.2em; }
+.sv-tc { padding: 0; border: none; background: #e2e8f0; color: #0f172a; font: inherit; font-weight: 900; cursor: pointer; }
+.sv-tc.on { background: #2563eb; color: #fff; }
+.sv-ketik { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 0.8cqmin; }
+.sv-label { display: flex; flex-direction: column; gap: 0.2em; font-weight: 800; font-size: clamp(0.6rem, 2.3cqmin, 1.2rem); }
+.sv-masuk { font: inherit; font-family: ui-monospace, monospace; font-size: clamp(0.8rem, 3cqmin, 1.6rem); padding: 0.3em 0.5em; border: 2px solid #94a3b8; border-radius: 0.5em; text-transform: uppercase; width: 100%; box-sizing: border-box; }
+.sv-masuk.pendek { max-width: 12em; }
+.sv-pecah { display: flex; flex-direction: column; gap: 0.8cqmin; width: 100%; }
+.sv-n { font-weight: 800; align-self: center; }
+.sv-pad { display: flex; flex-direction: column; gap: 0.4em; align-items: center; }
+.sv-pad-baris { display: flex; gap: 0.3em; align-items: center; }
+.sv-pad-baris b { width: 4em; font-size: clamp(0.6rem, 2.4cqmin, 1.2rem); }
+.sv-pad-baris span { display: grid; place-items: center; width: clamp(2rem, 7cqmin, 4rem); height: clamp(2rem, 7cqmin, 4rem); border: 2px solid #94a3b8; border-radius: 0.4em; background: #fff; color: #111827; font-family: ui-monospace, monospace; font-weight: 900; font-size: clamp(1rem, 4cqmin, 2.2rem); }
+.sv-pad-baris span.kunci { border-color: #f97316; background: #fff7ed; }
+.sv-abjad { display: flex; flex-wrap: wrap; gap: 0.3em; justify-content: center; }
+@container (max-aspect-ratio: 1/1) { .sv-dua, .sv-tabel-wadah, .sv-cocok { flex-direction: column; } }
+.sv-kolom-kolom.dua { grid-template-columns: repeat(2, minmax(0, 1fr)); }
