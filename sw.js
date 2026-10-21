@@ -69,6 +69,7 @@ const FILES = [
   'js/activities/smp-15-kembalian.js',
   'js/activities/smp-16-gerbang-tol.js',
   'js/activities/smp-17-komputer-kertas.js',
+  'js/activities/smp-18-sandi-geser.js',
 ];
 
 self.addEventListener('install', (e) => {
