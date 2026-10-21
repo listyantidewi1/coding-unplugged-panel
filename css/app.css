@@ -1469,3 +1469,41 @@ button.bit-sel { cursor: pointer; }
   .tebak-huruf .prov-wilayah > small { font-size: clamp(0.45rem, 3.4cqh, 0.8rem); }
   .tebak-huruf > .prompt, .tebak-huruf > .reveal { font-size: clamp(0.55rem, 4.2cqh, 1.2rem); }
 }
+
+/* Koperasi */
+.koperasi { gap: 1cqmin; }
+.kop-dua { display: flex; gap: 2cqw; align-items: flex-start; justify-content: center; }
+.kop-dua > div { display: flex; flex-direction: column; gap: 0.3em; align-items: center; }
+.kop-dua small { font-weight: 800; color: var(--muted); font-size: clamp(0.5rem, 2cqmin, 0.9rem); }
+.kop-tabel { border-collapse: collapse; font-size: clamp(0.5rem, 2.2cqmin, 1.05rem); background: #fff; }
+.kop-tabel th, .kop-tabel td { border: 1px solid #cbd5e1; padding: 0.12em 0.5em; text-align: center; }
+.kop-tabel th { background: #f1f5f9; }
+.kop-tabel tr.kolom th { background: #e2e8f0; color: #475569; font-size: 0.8em; }
+.kop-tabel tbody th { background: #e2e8f0; color: #475569; font-size: 0.8em; }
+.kop-tabel tr.hi td { background: #fef08a; }
+.kop-tabel.pilih tbody tr { cursor: pointer; }
+.kop-tabel tr.pilih-on td { background: #bfdbfe; font-weight: 800; }
+.kop-dua.ringkas .kop-tabel { font-size: clamp(0.45rem, 1.9cqmin, 0.95rem); }
+.kop-kode { font: inherit; font-weight: 800; padding: 0 0.4em; border-radius: 0.3em; border: 1px solid #7c3aed; background: #f5f3ff; color: #5b21b6; cursor: pointer; }
+.kop-tabel.pendapatan { font-size: clamp(0.55rem, 2.6cqmin, 1.2rem); }
+.kop-tabel tr.total td { font-weight: 900; background: #f8fafc; }
+.kop-tabel tr.berubah td { background: #fef3c7; }
+.ck-isi.lebar { width: 5.5em; }
+.kop-samping { display: flex; gap: 3cqw; align-items: center; justify-content: center; }
+.kop-kanan { display: flex; flex-direction: column; gap: 1.2cqmin; align-items: center; max-width: 40cqw; }
+.kop-kanan .reveal { font-size: clamp(0.6rem, 2.8cqmin, 1.3rem); text-align: center; }
+.kop-jawab { display: flex; gap: 2cqw; justify-content: center; }
+.kop-kotak { display: flex; align-items: center; gap: 0.5em; font-weight: 800; font-size: clamp(0.65rem, 3cqmin, 1.4rem); }
+.kop-kotak .ck-isi { width: 3.5em; }
+.catatan-lama { display: flex; flex-direction: column; gap: 0.5cqmin; padding: 1cqmin 2cqw; background: #fffbeb; border-radius: 1cqmin; background-image: repeating-linear-gradient(transparent 0 calc(1.9em - 1px), #bfdbfe calc(1.9em - 1px) 1.9em); }
+.catatan-baris { font: inherit; text-align: left; display: flex; gap: 0.6em; padding: 0.15em 0.6em; border-radius: 0.5em; border: 2px solid transparent; background: transparent; cursor: pointer; font-family: 'Comic Sans MS', 'Segoe Print', cursive; font-size: clamp(0.65rem, 3.2cqmin, 1.5rem); color: #1e293b; }
+.catatan-baris.on { border-color: #dc2626; background: #fee2e2; }
+.harga-ubah { display: inline-flex; align-items: center; gap: 0.4em; }
+.kop-pisah { width: 1px; align-self: stretch; background: #cbd5e1; }
+@container (max-height: 520px) {
+  .koperasi .kop-dua .kop-tabel { font-size: clamp(0.4rem, 3cqh, 0.8rem); }
+  .koperasi .kop-tabel.pendapatan { font-size: clamp(0.45rem, 3.4cqh, 0.9rem); }
+  .koperasi > .prompt { font-size: clamp(0.55rem, 4cqh, 1.2rem); }
+  .koperasi .catatan-baris { font-size: clamp(0.6rem, 5cqh, 1.2rem); }
+  .koperasi .keys.keypad { grid-template-columns: repeat(11, min(4.5cqw, 8cqh)); }
+}

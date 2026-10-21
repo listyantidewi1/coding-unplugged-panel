@@ -143,7 +143,7 @@ function compressRound(wrap, ctx, { lines, prefix = [], title, done, team }) {
     const t = tokens();
     const c = cost(t);
     out.textContent = show(t);
-    meter.replaceChildren(el('span', null, `Sebelum ${before}`), el('span', null, `Sesudah ${c}`), el('span', null, `Hemat ${before - c} (${Math.round((100 * (before - c)) / before)}%)`), team ? null : el('span', { class: 'biaya-target' }, `Target ${target}`));
+    meter.replaceChildren(...[el('span', null, `Sebelum ${before}`), el('span', null, `Sesudah ${c}`), el('span', null, `Hemat ${before - c} (${Math.round((100 * (before - c)) / before)}%)`), team ? null : el('span', { class: 'biaya-target' }, `Target ${target}`)].filter(Boolean));
   }
   function tap(i) {
     if (finished) return;
