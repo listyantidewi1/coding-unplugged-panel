@@ -129,6 +129,7 @@ const FILES = [
   'js/activities/smp-33-olah-teks.js',
   'js/activities/smp-34-uji-program.js',
   'js/activities/smp-35-kode-gelembung.js',
+  'js/activities/smp-36-cari-biner-kode.js',
 ];
 
 self.addEventListener('install', (e) => {

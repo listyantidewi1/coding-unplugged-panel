@@ -3966,3 +3966,22 @@ code.beda { background: #fee2e2 !important; color: #991b1b !important; }
 .kg-batang i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0.4em; background: #60a5fa; transition: width 0.3s; }
 .kg-batang b { position: relative; padding-left: 0.5em; line-height: 1.8em; color: #0f172a; }
 .kg-giliran { display: flex; flex-direction: column; gap: 0.6em; align-items: center; }
+
+/* smp-36 Cari Biner dalam Kode */
+.bk-kartu-baris { display: flex; flex-wrap: wrap; gap: 0.25em; justify-content: center; }
+.bk-kartu { display: flex; flex-direction: column; align-items: center; min-width: 4.4em; padding: 0.2em 0.3em; border: 2px solid #94a3b8; border-radius: 0.5em; background: #fff; color: #111827; font-size: clamp(0.6rem, 2cqmin, 1.1rem); transition: opacity 0.2s; }
+.bk-kartu small { font-size: 0.75em; color: #64748b; }
+.bk-kartu b { font-family: ui-monospace, monospace; }
+.bk-kartu i { font-style: normal; font-size: 0.75em; color: #475569; }
+.bk-kartu.buang { opacity: 0.35; background: #e2e8f0; }
+.bk-kartu.tengah { border-color: #f59e0b; background: #fef3c7; box-shadow: 0 0 0 3px #fcd34d; }
+.bk-tanda { min-height: 1em; font-size: 0.65em; font-weight: 800; color: #1d4ed8; }
+.bk-ekstra { display: flex; flex-direction: column; gap: 0.5em; align-items: center; }
+.bk-tabel { border-collapse: collapse; font-size: clamp(0.6rem, 1.9cqmin, 1rem); }
+.bk-tabel th, .bk-tabel td { border: 1px solid #cbd5e1; padding: 0.1em 0.45em; text-align: center; }
+.bk-pilih .seg-btn { font-family: ui-monospace, monospace; }
+.bk-atur { display: flex; flex-wrap: wrap; gap: 0.8em; align-items: center; justify-content: center; }
+.bk-giliran { display: flex; flex-direction: column; gap: 0.6em; align-items: center; }
+.bk-umum { margin: 0; font-size: clamp(0.8rem, 2.6cqmin, 1.4rem); font-family: ui-monospace, monospace; }
+.cari-biner-kode .sk-tumpukan { display: none; }
+.bk-giliran .bk-kartu { font-size: clamp(0.7rem, 2.4cqmin, 1.3rem); }
