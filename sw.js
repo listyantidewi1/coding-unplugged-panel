@@ -120,6 +120,7 @@ const FILES = [
   'js/activities/smp-kit.js',
   'js/activities/smp-26-diagram-alir.js',
   'js/activities/pseudo.js',
+  'js/activities/mini-py.js',
   'js/activities/smp-27-nilai-rapor.js',
   'js/activities/smp-28-iuran-kas.js',
   'js/activities/smp-29-target-tabungan.js',
@@ -131,6 +132,7 @@ const FILES = [
   'js/activities/smp-35-kode-gelembung.js',
   'js/activities/smp-36-cari-biner-kode.js',
   'js/activities/smp-37-simulasi-dadu.js',
+  'js/activities/smp-38-blok-ke-teks.js',
 ];
 
 self.addEventListener('install', (e) => {
