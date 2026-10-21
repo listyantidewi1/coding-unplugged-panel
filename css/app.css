@@ -4490,3 +4490,43 @@ code.beda { background: #fee2e2 !important; color: #991b1b !important; }
 .pesan-galat .sk-baris.pg-baris-salah { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 8%, var(--surface)); }
 .pesan-galat .sk-baris b.pg-benar { color: var(--good); }
 .pesan-galat .sk-baris b.pg-salah { color: var(--bad); }
+
+/* sma-43 Percepat Kode */
+.percepat-kode .pk-kecil { font-size: clamp(0.58rem, 1.9cqmin, 1rem); }
+.percepat-kode .sk-kode.py code { white-space: pre-wrap; overflow-wrap: anywhere; }
+.percepat-kode .pk-isi .seg-btn { font-size: clamp(0.62rem, 1.9cqmin, 1rem); }
+.percepat-kode .pk-dua { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1em; align-items: start; width: 100%; }
+.percepat-kode .pk-empat { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.6em; align-items: start; width: 100%; }
+.percepat-kode .pk-dua > *, .percepat-kode .pk-empat > * { min-width: 0; }
+.percepat-kode .pk-empat .pk-kecil { font-size: clamp(0.5rem, 1.5cqmin, 0.85rem); }
+.percepat-kode .pk-tabel { border-collapse: collapse; font-size: clamp(0.6rem, 1.9cqmin, 1rem); }
+.percepat-kode .pk-tabel th, .percepat-kode .pk-tabel td { padding: 0.25em 0.55em; border: 1px solid var(--line); text-align: right; }
+.percepat-kode .pk-tabel th:first-child, .percepat-kode .pk-tabel td:first-child { text-align: left; }
+.percepat-kode .pk-tabel td { display: table-cell; }
+.percepat-kode .pk-besar-tabel { font-size: clamp(0.8rem, 2.8cqmin, 1.5rem); }
+.percepat-kode .pk-versi { flex-wrap: wrap; justify-content: center; }
+.percepat-kode .pk-versi .seg-btn[style] { border-color: var(--c); }
+.percepat-kode .pk-versi .seg-btn[style].on { background: var(--c); color: #fff; }
+.percepat-kode .pk-hitung { display: flex; flex-direction: column; align-items: center; gap: 0.1em; padding: 0.5em 1em; border-radius: 0.8em; background: color-mix(in srgb, var(--primary) 10%, var(--surface)); border: 2px solid var(--primary); }
+.percepat-kode .pk-hitung small { color: var(--muted); font-weight: 800; }
+.percepat-kode .pk-hitung b { font-size: clamp(1.2rem, 4.5cqmin, 2.6rem); color: var(--primary); font-variant-numeric: tabular-nums; }
+.percepat-kode .pk-besar { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 1em; align-items: center; width: 100%; }
+.percepat-kode .pk-grafik { width: min(100%, 56em); height: auto; }
+.percepat-kode .pk-grid { stroke: var(--line); stroke-width: 1; }
+.percepat-kode .pk-sumbu { fill: var(--muted); font-size: 12px; font-family: ui-monospace, monospace; }
+.percepat-kode .pk-label { font-size: 13px; font-weight: 800; }
+.percepat-kode .pk-ket { margin: 0; text-align: center; color: var(--muted); font-size: clamp(0.65rem, 2cqmin, 1rem); }
+.percepat-kode .pk-bank { display: grid; grid-template-columns: repeat(auto-fit, minmax(11em, 1fr)); gap: 0.6em; width: 100%; }
+.percepat-kode .pk-kartu { padding: 0.8em; border: 2px solid var(--line); border-radius: 0.8em; background: var(--surface); color: var(--ink); font: inherit; cursor: pointer; }
+.percepat-kode .pk-kartu b { color: var(--primary); }
+.percepat-kode .sk-baris b.pk-benar { color: var(--good); }
+.percepat-kode .sk-baris b.pk-salah { color: var(--bad); }
+.percepat-kode .sk-baris.pk-baris-salah { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 8%, var(--surface)); }
+.percepat-kode .pk-samping { display: flex; flex-direction: column; gap: 0.5em; align-items: stretch; min-width: 0; }
+.percepat-kode .pk-potongan { display: flex; flex-direction: column; gap: 0.3em; }
+.percepat-kode .pk-pot { text-align: left; padding: 0.3em 0.6em; border: 2px solid var(--line); border-radius: 0.5em; background: var(--surface); color: var(--ink); font: inherit; cursor: pointer; }
+.percepat-kode .pk-pot code { font-size: clamp(0.6rem, 1.9cqmin, 1rem); white-space: pre; }
+.percepat-kode .sk-beres { display: none; }
+.percepat-kode .pk-kecil-wrap { display: flex; flex-direction: column; gap: 0.6em; align-items: center; width: 100%; }
+.percepat-kode .pk-potongan { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.3em; }
+.percepat-kode .pk-pot { padding: 0.2em 0.5em; }

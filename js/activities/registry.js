@@ -123,6 +123,7 @@ import RekursiMemo from './sma-39-rekursi-memo.js';
 import RimaPantun from './sma-40-rima-pantun.js';
 import KasusUji from './sma-41-kasus-uji.js';
 import PesanGalat from './sma-42-pesan-galat.js';
+import PercepatKode from './sma-43-percepat-kode.js';
 
 export const JENJANG = [
   { id: 'paud', label: 'PAUD', detail: '4–6 tahun' },
@@ -180,6 +181,7 @@ export const activities = [
   RimaPantun,
   KasusUji,
   PesanGalat,
+  PercepatKode,
 ]
   .sort((a, b) => order(a) - order(b) || a.id.localeCompare(b.id));
 

@@ -12,6 +12,25 @@ export class PyError extends Error {
 export class PyFloat { constructor(v) { this.v = v; } }
 // dict keeps insertion order like Python 3.7+; tuples are arrays marked tup.
 export class PyDict extends Map { toJSON() { return { dict: [...this] }; } }
+// set keeps CPython's slot order for small non-negative ints (hash = the int,
+// table of 8 slots, 9 linear probes then perturbation, resize at 3/5 full);
+// other keys fall back to insertion order.
+export class PySet {
+  constructor(items = []) { this.order = []; this.tab = new Array(8).fill(undefined); this.fill = 0; this.plain = false; for (const x of items) this.add(x); }
+  static ok(x) { return Number.isInteger(x) && x >= 0 && x < 2 ** 30; }
+  static slot(tab, h) { const mask = tab.length - 1; let perturb = h; let i = h & mask; for (;;) { const probes = i + 9 <= mask ? 9 : 0; for (let j = 0; j <= probes; j++) if (tab[i + j] === undefined) return i + j; perturb = Math.floor(perturb / 32); i = (i * 5 + 1 + perturb) & mask; } }
+  has(x) { return this.order.some((y) => y === x || (typeof y === 'object' && JSON.stringify(y) === JSON.stringify(x))); }
+  add(x) {
+    if (this.has(x)) return; this.order.push(x);
+    if (this.plain || !PySet.ok(x)) { this.plain = true; return; }
+    this.tab[PySet.slot(this.tab, x)] = x; this.fill++;
+    const mask = this.tab.length - 1;
+    if (this.fill * 5 >= mask * 3) { const used = this.fill; const min = used > 50000 ? used * 2 : used * 4; let n = 8; while (n <= min) n *= 2; const old = this.tab; this.tab = new Array(n).fill(undefined); for (const k of old) if (k !== undefined) this.tab[PySet.slot(this.tab, k)] = k; }
+  }
+  get size() { return this.order.length; }
+  items() { return this.plain ? [...this.order] : this.tab.filter((k) => k !== undefined); }
+  toJSON() { return { set: this.items() }; }
+}
 export const tuple = (a) => { Object.defineProperty(a, 'tup', { value: true }); return a; };
 const isTup = (v) => Array.isArray(v) && v.tup === true;
 const isNum = (x) => typeof x === 'number' || x instanceof PyFloat;
@@ -27,11 +46,12 @@ export function pyRepr(v, inner = false) {
   if (typeof v === 'string') { if (!inner) return v; const q = v.includes("'") && !v.includes('"') ? '"' : "'"; return q + v.replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/\t/g, '\\t').replace(q === "'" ? /'/g : /(?!)/g, "\\'") + q; }
   if (isTup(v)) return v.length === 1 ? `(${pyRepr(v[0], true)},)` : `(${v.map((x) => pyRepr(x, true)).join(', ')})`;
   if (Array.isArray(v)) return `[${v.map((x) => pyRepr(x, true)).join(', ')}]`;
+  if (v instanceof PySet) return v.size ? `{${v.items().map((x) => pyRepr(x, true)).join(', ')}}` : 'set()';
   if (v instanceof PyDict) return `{${[...v].map(([k, x]) => `${pyRepr(k, true)}: ${pyRepr(x, true)}`).join(', ')}}`;
   if (v && v.py === 'fn') return `<function ${v.name}>`;
   return String(v);
 }
-export const pyType = (v) => (v === null || v === undefined ? 'NoneType' : typeof v === 'boolean' ? 'bool' : v instanceof PyFloat ? 'float' : typeof v === 'number' ? 'int' : typeof v === 'string' ? 'str' : isTup(v) ? 'tuple' : Array.isArray(v) ? 'list' : v instanceof PyDict ? 'dict' : 'function');
+export const pyType = (v) => (v === null || v === undefined ? 'NoneType' : typeof v === 'boolean' ? 'bool' : v instanceof PyFloat ? 'float' : typeof v === 'number' ? 'int' : typeof v === 'string' ? 'str' : isTup(v) ? 'tuple' : Array.isArray(v) ? 'list' : v instanceof PyDict ? 'dict' : v instanceof PySet ? 'set' : 'function');
 
 // ---- tokenizer ----
 function tokenize(src, line) {
@@ -45,14 +65,14 @@ function tokenize(src, line) {
     if (/[A-Za-z_]/.test(c)) { let j = i; while (j < src.length && /\w/.test(src[j])) j++; const w = src.slice(i, j); t.push(['and', 'or', 'not', 'in', 'True', 'False', 'None'].includes(w) ? { k: 'kw', v: w } : { k: 'name', v: w }); i = j; continue; }
     const two = src.slice(i, i + 2);
     if (['==', '!=', '<=', '>=', '//', '+=', '-=', '*=', '**'].includes(two)) { t.push({ k: 'op', v: two }); i += 2; continue; }
-    if ('+-*/%<>=(),:[].{}'.includes(c)) { t.push({ k: 'op', v: c }); i++; continue; }
+    if ('+-*/%<>=(),:[].{}&'.includes(c)) { t.push({ k: 'op', v: c }); i++; continue; }
     throw new PyError('SyntaxError', 'invalid syntax', line, `Tanda "${c}" tidak dikenal.`);
   }
   return t;
 }
 
 // ---- expression parser (precedence climbing) ----
-const PREC = { or: 1, and: 2, not: 3, '==': 4, '!=': 4, '<': 4, '>': 4, '<=': 4, '>=': 4, in: 4, '+': 5, '-': 5, '*': 6, '/': 6, '//': 6, '%': 6, '**': 8 };
+const PREC = { or: 1, and: 2, not: 3, '==': 4, '!=': 4, '<': 4, '>': 4, '<=': 4, '>=': 4, in: 4, '+': 5, '-': 5, '*': 6, '/': 6, '//': 6, '%': 6, '**': 8, '&': 4.5 };
 function parseExpr(toks, line) {
   let p = 0;
   const peek = () => toks[p]; const next = () => toks[p++];
@@ -171,8 +191,10 @@ export function makePyRunner(lines, { builtins = {}, vars = {}, limit = 3000, in
   const B = {
     print: fn('print', (...a) => { st.out.push(a.map((x) => pyRepr(x)).join(' ')); return null; }),
     range: fn('range', (a, b, s = 1) => { const [lo, hi] = b === undefined ? [0, num(a)] : [num(a), num(b)]; const r = []; if (s > 0) for (let x = lo; x < hi; x += s) r.push(x); else for (let x = lo; x > hi; x += s) r.push(x); return r; }),
-    len: fn('len', (x) => { if (x instanceof PyDict) return x.size; if (typeof x === 'string' || Array.isArray(x)) return x.length; throw new PyError('TypeError', `object of type '${pyType(x)}' has no len()`, null, 'len() hanya untuk teks, list, tuple, atau dictionary.'); }),
-    list: fn('list', (x) => (typeof x === 'string' ? [...x] : x instanceof PyDict ? [...x.keys()] : [...(x || [])])),
+    len: fn('len', (x) => { if (x instanceof PyDict || x instanceof PySet) return x.size; if (typeof x === 'string' || Array.isArray(x)) return x.length; throw new PyError('TypeError', `object of type '${pyType(x)}' has no len()`, null, 'len() hanya untuk teks, list, tuple, atau dictionary.'); }),
+    list: fn('list', (x) => iter(x)),
+    set: fn('set', (x) => new PySet(x === undefined ? [] : iter(x))),
+    sorted: fn('sorted', (...a) => { const kw = kwOf(a); const xs = [...iter(a[0])]; xs.sort(truthy(kw.reverse) ? (x, y) => pyCmp(y, x) : pyCmp); return xs; }),
     sum: fn('sum', (x) => x.reduce((a, b) => bin('+', a, b, null), 0)),
     max: fn('max', (...a) => { const xs = a.length === 1 && Array.isArray(a[0]) ? a[0] : a; return xs.reduce((p, q) => (num(q) > num(p) ? q : p)); }),
     min: fn('min', (...a) => { const xs = a.length === 1 && Array.isArray(a[0]) ? a[0] : a; return xs.reduce((p, q) => (num(q) < num(p) ? q : p)); }),
@@ -184,6 +206,7 @@ export function makePyRunner(lines, { builtins = {}, vars = {}, limit = 3000, in
     input: fn('input', () => (inputs.length ? inputs.shift() : '')),
     ...Object.fromEntries(Object.entries(builtins).map(([k, f]) => [k, fn(k, f)])),
   };
+  function iter(x) { if (typeof x === 'string') return [...x]; if (x instanceof PyDict) return [...x.keys()]; if (x instanceof PySet) return x.items(); if (Array.isArray(x)) return [...x]; throw new PyError('TypeError', `'${pyType(x)}' object is not iterable`, null); }
   const scope = () => (st.frames.length ? st.frames[st.frames.length - 1].vars : st.vars);
   const look = (n, L) => { const s = scope(); if (n in s) return s[n]; const f = st.frames[st.frames.length - 1]; if (f?.locals?.has(n)) throw new PyError('UnboundLocalError', `cannot access local variable '${n}' where it is not associated with a value`, L, `${n} diberi nilai di dalam fungsi, jadi Python menganggapnya variabel lokal, padahal belum punya nilai.`); if (n in st.vars) return st.vars[n]; if (n in B) return B[n]; throw new PyError('NameError', `name '${n}' is not defined`, L, `Variabel atau fungsi ${n} belum dibuat.`); };
   function tick(L) { st.steps++; if (st.steps > limit) throw new PyError('Batas', `Program sudah menjalankan ${limit} langkah dan belum selesai. Mungkin ada perulangan yang tidak pernah berhenti.`, L, 'batas'); }
@@ -201,8 +224,9 @@ export function makePyRunner(lines, { builtins = {}, vars = {}, limit = 3000, in
       case '**': return mk(num(a) ** num(b));
       case '==': return eq(a, b); case '!=': return !eq(a, b);
       case '<': case '>': case '<=': case '>=': { if (isNum(a) && isNum(b)) { const x = num(a); const y = num(b); return op === '<' ? x < y : op === '>' ? x > y : op === '<=' ? x <= y : x >= y; } if (typeof a === 'string' && typeof b === 'string') return op === '<' ? a < b : op === '>' ? a > b : op === '<=' ? a <= b : a >= b; if (Array.isArray(a) && Array.isArray(b) && !!a.tup === !!b.tup) { const c = pyCmp(a, b); return op === '<' ? c < 0 : op === '>' ? c > 0 : op === '<=' ? c <= 0 : c >= 0; } throw new PyError('TypeError', `'${op}' not supported between instances of '${pyType(a)}' and '${pyType(b)}'`, L, 'Kedua nilai tidak bisa dibandingkan.'); }
-      case 'in': if (b instanceof PyDict) return b.has(a); return Array.isArray(b) ? b.some((x) => eq(x, a)) : String(b).includes(a);
-      case 'not in': if (b instanceof PyDict) return !b.has(a); return !(Array.isArray(b) ? b.some((x) => eq(x, a)) : String(b).includes(a));
+      case '&': if (a instanceof PySet && b instanceof PySet) { const [big, small] = b.size > a.size ? [b, a] : [a, b]; const r = new PySet(); for (const x of small.items()) if (big.has(x)) r.add(x); return r; } if (Number.isInteger(a) && Number.isInteger(b)) return a & b; return bad();
+      case 'in': if (b instanceof PyDict || b instanceof PySet) return b.has(a); return Array.isArray(b) ? b.some((x) => eq(x, a)) : String(b).includes(a);
+      case 'not in': if (b instanceof PyDict || b instanceof PySet) return !b.has(a); return !(Array.isArray(b) ? b.some((x) => eq(x, a)) : String(b).includes(a));
       default: throw new PyError('SyntaxError', 'invalid syntax', L);
     }
   }
@@ -218,6 +242,10 @@ export function makePyRunner(lines, { builtins = {}, vars = {}, limit = 3000, in
     }
     if (Array.isArray(o) && name === 'index') return (x) => { const i = o.findIndex((y) => eq(y, x)); if (i < 0) throw new PyError('ValueError', `${pyRepr(x, true)} is not in list`, L); return i; };
     if (Array.isArray(o) && name === 'count') return (x) => o.filter((y) => eq(y, x)).length;
+    if (o instanceof PySet) {
+      if (name === 'add') return (x) => { o.add(x); return null; };
+      if (name === 'copy') return () => new PySet(o.items());
+    }
     if (o instanceof PyDict) {
       if (name === 'get') return (k, d = null) => (o.has(k) ? o.get(k) : d);
       if (name === 'keys') return () => [...o.keys()];
@@ -228,7 +256,7 @@ export function makePyRunner(lines, { builtins = {}, vars = {}, limit = 3000, in
     return null;
   }
   const eq = (a, b) => (isNum(a) && isNum(b) ? num(a) === num(b) : JSON.stringify(a) === JSON.stringify(b));
-  const truthy = (v) => !(v === false || v === null || v === undefined || v === 0 || v === '' || (Array.isArray(v) && !v.length) || (v instanceof PyDict && !v.size) || (v instanceof PyFloat && v.v === 0));
+  const truthy = (v) => !(v === false || v === null || v === undefined || v === 0 || v === '' || (Array.isArray(v) && !v.length) || ((v instanceof PyDict || v instanceof PySet) && !v.size) || (v instanceof PyFloat && v.v === 0));
   function* ev(n, L) {
     switch (n.t) {
       case 'val': return n.v;
@@ -287,7 +315,7 @@ export function makePyRunner(lines, { builtins = {}, vars = {}, limit = 3000, in
       case 'def': st.vars[s.name] = { py: 'fn', name: s.name, def: s }; tick(L); yield { line: L, note: `fungsi ${s.name} dibuat` }; return null;
       case 'if': { const c = truthy(yield* ev(s.c, L)); tick(L); yield { line: L, note: `syarat → ${c ? 'True' : 'False'}`, cond: c }; if (c) return yield* block(s.body); if (s.else) return yield* block(s.else); return null; }
       case 'while': { for (let rounds = 0; ; rounds++) { const c = truthy(yield* ev(s.c, L)); tick(L); if (c && loopLimit && rounds >= loopLimit) throw new PyError('Batas', `Perulangan tidak berhenti: sudah ${loopLimit} putaran dan syaratnya masih True.`, L, 'batas'); yield { line: L, note: `syarat → ${c ? 'True' : 'False'}`, cond: c }; if (!c) return null; const sig = yield* block(s.body); if (sig?.brk) return null; if (sig) return sig; } }
-      case 'for': { const it = yield* ev(s.it, L); const list = typeof it === 'string' ? [...it] : it instanceof PyDict ? [...it.keys()] : it; if (!Array.isArray(list)) throw new PyError('TypeError', `'${pyType(it)}' object is not iterable`, L); for (const x of list) { if (s.v.includes(',')) yield* assign({ t: 'unpack', names: s.v.split(',').map((q) => q.trim()) }, x, L); else scope()[s.v] = x; tick(L); yield { line: L, note: `${s.v} = ${pyRepr(x, true)}` }; const sig = yield* block(s.body); if (sig?.brk) return null; if (sig) return sig; } return null; }
+      case 'for': { const it = yield* ev(s.it, L); const list = typeof it === 'string' ? [...it] : it instanceof PyDict ? [...it.keys()] : it instanceof PySet ? it.items() : it; if (!Array.isArray(list)) throw new PyError('TypeError', `'${pyType(it)}' object is not iterable`, L); for (const x of list) { if (s.v.includes(',')) yield* assign({ t: 'unpack', names: s.v.split(',').map((q) => q.trim()) }, x, L); else scope()[s.v] = x; tick(L); yield { line: L, note: `${s.v} = ${pyRepr(x, true)}` }; const sig = yield* block(s.body); if (sig?.brk) return null; if (sig) return sig; } return null; }
       default: return null;
     }
   }
