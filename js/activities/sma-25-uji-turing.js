@@ -83,7 +83,7 @@ function ruleRound(wrap, ctx, { msgs, done }) {
   const draw = (hi = -1) => {
     const m = msgs[k];
     host.replaceChildren(rulebook(hi), el('div', { class: 'tu-kanan' }, log, m ? el('div', null, el('p', { class: 'tu-tanya' }, `Pesan ${m[0]}: aturan nomor berapa?`), el('div', { class: 'seg tu-nomor' }, RULES.map((_, i) => onTap(el('button', { class: 'seg-btn', type: 'button' }, i + 1), () => {
-      if (i !== m[2]) { ctx.mistake(); shake(host); const first = RULES.findIndex((r, j) => j > i && false); void first; say(msg, 'bad', i < m[2] ? `Aturan ${i + 1} tidak cocok: pesannya tidak memuat ${ruleText(RULES[i])}.` : `Aturan ${i + 1} memang cocok, tetapi ada aturan di atasnya yang cocok lebih dulu.`); return; }
+      if (i !== m[2]) { ctx.mistake(); shake(host); const fits = !RULES[i].keys.length || RULES[i].keys.some((x) => keyMatch(m[1], x)); say(msg, 'bad', fits ? `Aturan ${i + 1} memang cocok, tetapi ada aturan di atasnya yang cocok lebih dulu.` : `Aturan ${i + 1} tidak cocok: pesannya tidak memuat ${ruleText(RULES[i])}.`); return; }
       const s = sekar(m[1]); log.append(chatLine('Pengunjung', m[1], 'kiri'), chatLine(`Sekar · aturan ${i + 1}`, s.reply, 'kanan')); ctx.sound.tap();
       say(msg, '', m[0] === 'c' ? 'Pesan c juga memuat "?", tetapi aturan 6 lebih dulu cocok.' : m[0] === 'e' ? 'Aturan tidak mengerti kata "tidak": Sekar salah paham.' : m[0] === 'f' ? 'Ditanya nama guru, Sekar menjawab namanya sendiri.' : m[0] === 'g' ? 'Tidak ada aturan yang cocok, jadi Sekar tidak bisa bercerita.' : 'Tepat.');
       k++; draw(i); if (k === msgs.length) setTimeout(done, 1800);
