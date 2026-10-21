@@ -122,6 +122,7 @@ const FILES = [
   'js/activities/pseudo.js',
   'js/activities/smp-27-nilai-rapor.js',
   'js/activities/smp-28-iuran-kas.js',
+  'js/activities/smp-29-target-tabungan.js',
 ];
 
 self.addEventListener('install', (e) => {

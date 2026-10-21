@@ -3784,3 +3784,28 @@ code.beda { background: #fee2e2 !important; color: #991b1b !important; }
 .ik-pilih .sk-baris { width: 100%; box-sizing: border-box; }
 .ik-banding { display: flex; gap: 2em; justify-content: center; font-size: clamp(0.75rem, 2.6cqmin, 1.4rem); text-align: left; }
 .iuran-kas .sk-jejak-kode { font-size: clamp(0.75rem, 2.6cqmin, 1.45rem); }
+
+/* smp-29 Target Tabungan Sepeda (tt-) */
+.tt-ekstra { display: flex; flex-direction: column; gap: 0.5em; }
+.tt-celengan { display: flex; align-items: center; gap: 0.6em; }
+.tt-celengan span { font-size: 2em; line-height: 1; }
+.tt-celengan b { font-family: ui-monospace, monospace; font-size: 1.4em; color: #be185d; }
+.tt-celengan small { color: #475569; }
+.tt-grafik { width: 100%; max-width: 36em; height: auto; background: #fff; border: 2px solid #e2e8f0; border-radius: 0.6em; }
+.tt-grafik .sumbu { stroke: #94a3b8; stroke-width: 2; }
+.tt-grafik .harga { stroke: #dc2626; stroke-width: 2.5; stroke-dasharray: 8 6; }
+.tt-grafik .label-harga { fill: #b91c1c; font: 700 15px ui-sans-serif, system-ui, sans-serif; }
+.tt-grafik .label { fill: #475569; font: 13px ui-sans-serif, system-ui, sans-serif; }
+.tt-grafik .garis { fill: none; stroke: #db2777; stroke-width: 3; }
+.tt-grafik .titik { fill: #fff; stroke: #db2777; stroke-width: 3; }
+.tt-grafik .titik.cukup { fill: #16a34a; stroke: #15803d; }
+.tt-cek { display: flex; flex-wrap: wrap; gap: 0.2em; align-items: center; }
+.tt-cek i { display: inline-grid; place-items: center; width: 1.3em; height: 1.3em; border-radius: 0.3em; font-style: normal; font-weight: 900; color: #fff; font-size: 0.85em; }
+.tt-cek i.ya { background: #16a34a; } .tt-cek i.tidak { background: #dc2626; }
+.tt-pilih { display: flex; flex-wrap: wrap; gap: 1em; justify-content: center; align-items: center; }
+.tt-dua { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2cqmin; width: 100%; font-size: clamp(0.8rem, 2.8cqmin, 1.5rem); text-align: left; }
+.tt-dua > div { display: flex; flex-direction: column; gap: 0.6em; align-items: flex-start; }
+.tt-hasil { margin: 0; padding: 0.3em 0.7em; border-radius: 0.5em; background: #0f172a; color: #86efac; font-family: ui-monospace, monospace; font-size: 1.2em; }
+.subject .tt-grafik { width: min(36em, 70cqw); }
+.target-tabungan .sk-jejak-kode { font-size: clamp(0.75rem, 2.6cqmin, 1.45rem); }
+.target-tabungan .sk-jejak .tt-grafik { max-width: 25em; }
