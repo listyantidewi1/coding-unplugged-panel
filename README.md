@@ -47,6 +47,7 @@ Komponen bersama yang bisa dipakai ulang:
 
 - `js/core/kit.js`: soal pilihan (`choice`), seret-atau-ketuk (`dnd`), papan urutan (`orderBoard`).
 - `js/core/peta.js`: peta kisi yang dijalankan dengan program panah (dipakai peta kampung `sda-03` dan `sda-07`).
+- `js/core/kisi.js`: kisi warna yang bisa diwarnai (`paintGrid`) dan pemilih warna (`swatches`), dipakai aktivitas piksel dan anyaman SD Lanjut.
 - `js/activities/bit-sum.js`: mesin bilangan biner (`sda-08` anak timbangan, `sdl-01` lampu gapura).
 
 ## Atribusi

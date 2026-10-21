@@ -166,7 +166,7 @@ function createMeter(root, ctx) {
       el('div', { class: 'sandi-baris' }, el('b', null, 'Jenis karakter'), el('span', null, Object.entries(a.sets).map(([k, on]) => el('span', { class: on ? 'ada' : 'tidak' }, `${on ? '✓' : '·'} ${k}`)))),
       el('div', { class: 'sandi-baris' }, el('b', null, 'Banyak kemungkinan'), el('span', null, a.length ? `${a.pool}^${a.length} = ${sayNumber(a.log10)}` : '–')),
       el('p', { class: `reveal ${a.level === 3 ? '' : a.level ? 'bad' : 'info'}` }, ['Ketik contoh kata sandi.', 'Lemah', 'Sedang', 'Kuat: panjang dan sulit ditebak'][a.level]),
-      a.warn.length ? el('ul', { class: 'tanda-daftar' }, a.warn.map((w) => el('li', null, `⚠️ ${w}`))) : null);
+      el('ul', { class: 'tanda-daftar' }, a.warn.map((w) => el('li', null, `⚠️ ${w}`))));
   };
   input.addEventListener('input', show);
   const examples = el('div', { class: 'row wrap' }, ['123456', 'rina2015', 'kucing', 'PayungKodok7SendokPelangi!'].map((x) => button(x, () => { input.value = x; show(); }, 'small ghost')),
