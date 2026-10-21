@@ -133,6 +133,7 @@ const FILES = [
   'js/activities/smp-36-cari-biner-kode.js',
   'js/activities/smp-37-simulasi-dadu.js',
   'js/activities/smp-38-blok-ke-teks.js',
+  'js/activities/smp-39-menara-hanoi.js',
 ];
 
 self.addEventListener('install', (e) => {

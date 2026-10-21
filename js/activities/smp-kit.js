@@ -70,7 +70,7 @@ export const varView = (vars, changed = []) => el('div', { class: 'sk-var' }, va
 // boxes coloured by data type, output, and a clear message when the step
 // limit is reached. opts are passed to makeRunner (vars, input, builtins, limit).
 import { makeRunner, fmt, typeOf, flat } from './pseudo.js';
-export function tracer(lines, { opts = {}, title = '', onEnd = null, onStep = null, speed = 450, showTypes = true, hideVars = [], extra = null, cls = '', counts: showCounts = false } = {}) {
+export function tracer(lines, { opts = {}, title = '', onEnd = null, onStep = null, speed = 450, showTypes = true, hideVars = [], extra = null, cls = '', counts: showCounts = false, fmtOut = (t) => t } = {}) {
   let r; let last = null; let timer = null; let prev = {}; let counts = {};
   const host = el('div', { class: `sk-jejak ${cls}` });
   const draw = () => {
@@ -87,7 +87,7 @@ export function tracer(lines, { opts = {}, title = '', onEnd = null, onStep = nu
         msg,
         el('div', { class: 'sk-var' }, names.map((n) => el('div', { class: `${changed.includes(n) ? 'ubah' : ''} t-${typeOf(vars[n]).replace('/', '-')}` }, el('small', null, n), el('b', null, fmt(vars[n], { quote: true })), showTypes ? el('i', null, typeOf(vars[n])) : null))),
         st.frames.length ? el('p', { class: 'sk-tumpukan' }, `Tumpukan: ${st.frames.map((f) => `${f.name}(${f.args.map((a) => fmt(a, { quote: true })).join(', ')})`).join(' → ')}`) : null,
-        el('div', { class: 'sk-keluaran' }, el('small', null, 'Keluaran'), el('pre', null, [...st.out, ...(st.row.length ? [st.row.join(' ')] : [])].join('\n') || ' ')),
+        el('div', { class: 'sk-keluaran' }, el('small', null, 'Keluaran'), el('pre', null, [...st.out, ...(st.row.length ? [st.row.join(' ')] : [])].map(fmtOut).join('\n') || ' ')),
         extra ? extra(st) : null));
     prev = JSON.parse(JSON.stringify(vars));
   };
@@ -100,7 +100,7 @@ export function tracer(lines, { opts = {}, title = '', onEnd = null, onStep = nu
   function toggle() { if (timer) { stop(); draw(); } else { timer = setInterval(() => go(1), speed); draw(); } }
   function reset(newOpts) { stop(); if (newOpts && !newOpts.type) opts = { ...opts, ...newOpts }; r = makeRunner(lines, opts); last = null; counts = {}; onStep?.(null, r.state); prev = { ...r.state.vars }; draw(); }
   reset();
-  host.stop = stop; host.reset = reset; host.setLines = (ls) => { lines = ls; reset(); };
+  host.stop = stop; host.reset = reset; host.play = () => { if (!timer) toggle(); }; host.setLines = (ls) => { lines = ls; reset(); };
   return host;
 }
 

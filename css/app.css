@@ -4062,3 +4062,31 @@ code.beda { background: #fee2e2 !important; color: #991b1b !important; }
 .kc-opt .sk-kode { margin: 0; font-size: clamp(0.75rem, 2.7cqmin, 1.4rem); }
 .sk-kode.besar { font-size: clamp(0.9rem, 3cqmin, 1.6rem); }
 @media (max-width: 700px) { .kc-dua, .kc-pilihan { grid-template-columns: 1fr; } }
+
+/* smp-39 Menara Hanoi */
+.menara-hanoi .hn-main { display: flex; flex-direction: column; gap: 0.5em; width: 100%; touch-action: none; user-select: none; }
+.menara-hanoi .hn-info, .menara-hanoi .hn-atur { display: flex; flex-wrap: wrap; gap: 0.6em 1.2em; align-items: center; justify-content: center; font-size: clamp(0.8rem, 2.6cqmin, 1.4rem); }
+.menara-hanoi .hn-tiang-tiang { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.6em; width: 100%; }
+.menara-hanoi .hn-tiang { display: flex; flex-direction: column; align-items: stretch; padding: 0.3em; border: 3px solid transparent; border-radius: 0.8em; cursor: pointer; }
+.menara-hanoi .hn-tiang.pilih { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 10%, transparent); }
+.menara-hanoi .hn-tumpuk { position: relative; display: flex; flex-direction: column-reverse; align-items: center; justify-content: flex-start; gap: 0.15em; min-height: clamp(7rem, 30cqmin, 16rem); padding-bottom: 0.2em; }
+.menara-hanoi .kecil .hn-tumpuk { min-height: clamp(4rem, 15cqmin, 8rem); }
+.menara-hanoi .hn-batang { position: absolute; bottom: 0; left: 50%; width: 0.45em; height: 100%; transform: translateX(-50%); border-radius: 0.3em 0.3em 0 0; background: #a16207; }
+.menara-hanoi .hn-cakram { position: relative; display: block; height: clamp(1.1rem, 4.2cqmin, 2.2rem); border-radius: 0.6em; color: #fff; font-weight: 900; text-align: center; line-height: clamp(1.1rem, 4.2cqmin, 2.2rem); font-size: clamp(0.7rem, 2.4cqmin, 1.2rem); box-shadow: inset 0 -0.2em 0 rgba(0, 0, 0, 0.2); }
+.menara-hanoi .kecil .hn-cakram { height: clamp(0.8rem, 2.6cqmin, 1.4rem); line-height: clamp(0.8rem, 2.6cqmin, 1.4rem); }
+.menara-hanoi .hn-cakram.c1 { background: #dc2626; } .menara-hanoi .hn-cakram.c2 { background: #ea580c; } .menara-hanoi .hn-cakram.c3 { background: #ca8a04; }
+.menara-hanoi .hn-cakram.c4 { background: #16a34a; } .menara-hanoi .hn-cakram.c5 { background: #2563eb; } .menara-hanoi .hn-cakram.c6 { background: #7c3aed; }
+.menara-hanoi .hn-alas { display: block; padding: 0.1em; border-radius: 0.4em; background: #78350f; color: #fff; text-align: center; font-size: clamp(0.8rem, 2.6cqmin, 1.3rem); }
+.menara-hanoi .hn-catat, .menara-hanoi .hn-ket { margin: 0; text-align: center; color: var(--muted); font-size: clamp(0.7rem, 2.2cqmin, 1.1rem); }
+.menara-hanoi .hn-main.beres .hn-tiang[data-t="C"] { background: color-mix(in srgb, var(--good) 14%, transparent); }
+.menara-hanoi .hn-ekstra { display: flex; flex-direction: column; gap: 0.4em; }
+.menara-hanoi .hn-pohon { overflow: auto; max-height: 26em; padding: 0.3em; border: 1px solid var(--line); border-radius: 0.7em; }
+.menara-hanoi .hn-simpul { display: flex; flex-direction: column; align-items: center; gap: 0.35em; }
+.menara-hanoi .hn-anak { display: flex; gap: 0.35em; align-items: flex-start; justify-content: center; }
+.menara-hanoi .hn-kotak { display: flex; flex-direction: column; align-items: center; padding: 0.2em 0.45em; border: 2px solid var(--line); border-radius: 0.5em; background: var(--surface); white-space: nowrap; font-size: clamp(0.6rem, 1.9cqmin, 1rem); }
+.menara-hanoi .hn-kotak b { font-family: ui-monospace, monospace; }
+.menara-hanoi .hn-kotak small { color: var(--muted); }
+.menara-hanoi .hn-kotak.aktif { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 16%, var(--surface)); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 30%, transparent); }
+.menara-hanoi .hn-dalam { margin: 0; color: #b45309; font-weight: 800; font-size: clamp(0.6rem, 1.9cqmin, 1rem); }
+.menara-hanoi .hn-isi .sk-baris span { font-family: ui-monospace, monospace; }
+.menara-hanoi .sk-tumpukan { display: none; }
