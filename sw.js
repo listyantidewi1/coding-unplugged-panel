@@ -109,6 +109,7 @@ const FILES = [
   'js/activities/sma-25-uji-turing.js',
   'js/activities/sma-26-seleksi-beasiswa.js',
   'js/activities/sma-27-rancang-prompt.js',
+  'js/activities/sma-28-baca-lateral.js',
 ];
 
 self.addEventListener('install', (e) => {

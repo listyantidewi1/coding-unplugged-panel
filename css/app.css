@@ -3208,3 +3208,64 @@ code.beda { background: #fee2e2 !important; color: #991b1b !important; }
 .rp-d-baris .seg-btn { font-size: 1em; }
 .rp-d-baris b.ya { color: #15803d; } .rp-d-baris b.tidak { color: #b91c1c; }
 @container (max-aspect-ratio: 1/1) { .rp-kartu-kartu { grid-template-columns: 1fr; } }
+
+/* sma-28 Cek Dulu Sebelum Sebar */
+.bl-bar { display: flex; gap: 1em; align-items: center; justify-content: flex-end; width: 100%; font-weight: 800; color: #b91c1c; font-size: clamp(0.75rem, 3.2cqmin, 1.62rem); }
+.bl-bagikan { padding: 0.3em 0.9em; border: 2px solid #16a34a; border-radius: 999px; background: #22c55e; color: #fff; font: inherit; font-weight: 900; cursor: pointer; }
+.bl-artikel { display: flex; flex-direction: column; gap: 0.4em; flex: 1 1 34em; min-width: 0; max-width: 60em; padding: 0.7em 1em; border: 2px solid #cbd5e1; border-radius: 0.8em; background: #fff; color: #111827; text-align: left; font-size: clamp(0.75rem, 3.4cqmin, 1.82rem); }
+.bl-artikel h3 { margin: 0; font-size: 1.3em; }
+.bl-artikel p { margin: 0; }
+.bl-kepala { display: flex; flex-direction: column; gap: 0.1em; padding-bottom: 0.3em; border-bottom: 3px solid #dc2626; }
+.bl-a { border-radius: 0.3em; padding: 0 0.15em; cursor: pointer; }
+.bl-a.situs { font-weight: 900; color: #b91c1c; }
+.bl-a.url { font-family: ui-monospace, monospace; font-size: 0.8em; color: #475569; }
+.bl-a.bagikan { font-weight: 900; color: #dc2626; }
+.bl-a.tentang { font-size: 0.85em; font-style: italic; color: #475569; }
+.bl-a.ket { font-size: 0.85em; font-style: italic; }
+.bl-a.curiga { background: #fecaca; outline: 2px solid #dc2626; }
+.bl-a.aman { background: #e2e8f0; text-decoration: line-through; text-decoration-color: #94a3b8; }
+.bl-meta { color: #475569; font-size: 0.9em; }
+.bl-foto-kecil { display: flex; gap: 0.6em; align-items: center; }
+.bl-foto { width: 100%; max-width: 40em; border-radius: 0.6em; border: 3px solid #1e293b; }
+.bl-foto.kecil { width: 9em; flex: none; border-width: 2px; }
+.bl-hot { cursor: pointer; }
+.bl-hot.ketemu { outline: none; filter: drop-shadow(0 0 6px #facc15) drop-shadow(0 0 3px #f59e0b); }
+.bl-foto-wadah { display: flex; flex-direction: column; gap: 0.4em; flex: 1 1 30em; max-width: 44em; font-size: clamp(0.70rem, 2.9cqmin, 1.49rem); }
+.bl-bayang { width: 100%; max-width: 20em; border-radius: 0.5em; }
+.bl-dua { display: flex; gap: 2cqmin; align-items: flex-start; justify-content: center; width: 100%; flex-wrap: wrap; }
+.bl-kanan { display: flex; flex-direction: column; gap: 0.8cqmin; flex: 1 1 22em; max-width: 36em; font-size: clamp(0.75rem, 3.2cqmin, 1.62rem); text-align: left; }
+.bl-kanan .kartu { padding: 0.4em 0.7em; border-radius: 0.6em; background: #fef3c7; color: #111827; border: 2px solid #f59e0b; }
+.bl-temuan { display: flex; flex-direction: column; gap: 0.3em; }
+.bl-temuan > div { padding: 0.3em 0.6em; border-radius: 0.5em; background: #f1f5f9; color: #64748b; }
+.bl-temuan > div.ya { background: #dcfce7; color: #14532d; font-weight: 700; }
+.bl-peramban { display: flex; flex-direction: column; width: 100%; border: 3px solid #475569; border-radius: 0.8em; overflow: hidden; background: #fff; }
+.bl-tabbar { display: flex; flex-wrap: wrap; gap: 0.2em; padding: 0.3em 0.4em 0; background: #cbd5e1; font-size: clamp(0.70rem, 2.9cqmin, 1.49rem); width: 100%; }
+.bl-tabk { padding: 0.2em 0.8em; border-radius: 0.5em 0.5em 0 0; background: #e2e8f0; color: #111827; font-weight: 800; cursor: pointer; }
+.bl-tabk.aktif { background: #fff; }
+.bl-tabk.lemah { background: #fecaca; } .bl-tabk.netral { background: #e5e7eb; } .bl-tabk.dukung { background: #bbf7d0; }
+.bl-isi { display: flex; gap: 1.5cqmin; padding: 0.8em; flex-wrap: wrap; }
+.bl-menu { display: flex; flex-direction: column; gap: 0.3em; flex: 0 1 18em; font-size: clamp(0.75rem, 3.2cqmin, 1.62rem); text-align: left; }
+.bl-menu .seg-btn { text-align: left; font-size: 1em; }
+.bl-buka { display: flex; flex-direction: column; gap: 0.8cqmin; flex: 1 1 26em; min-width: 0; font-size: clamp(0.80rem, 3.6cqmin, 1.89rem); text-align: left; }
+.bl-buka.kosong { color: #64748b; justify-content: center; align-items: center; min-height: 6em; }
+.bl-tab { padding: 0.6em 0.9em; border: 2px solid #94a3b8; border-radius: 0.6em; background: #f8fafc; color: #111827; }
+.bl-tab p { margin: 0.3em 0 0; }
+.bl-tab-kepala { display: flex; gap: 0.6em; align-items: baseline; }
+.bl-tab.dinilai.lemah { border-color: #dc2626; } .bl-tab.dinilai.netral { border-color: #64748b; }
+.bl-alasan { margin: 0; font-weight: 800; color: #14532d; }
+.bl-transkrip { display: flex; flex-direction: column; gap: 0.3em; flex: 1 1 26em; max-width: 44em; padding: 0.6em 0.9em; border: 2px solid #94a3b8; border-radius: 0.8em; background: #fff; color: #111827; text-align: left; font-size: clamp(0.75rem, 3.4cqmin, 1.76rem); }
+.bl-transkrip.klip { flex: 0 1 20em; background: #1e293b; color: #f8fafc; }
+.bl-transkrip p { margin: 0; }
+.bl-baris { padding: 0.2em 0.4em; border-radius: 0.4em; cursor: pointer; }
+.bl-baris.potong { background: #fde68a; text-decoration: underline wavy #b45309; }
+.bl-pasang { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2cqmin; width: 100%; }
+.bl-kol { display: flex; flex-direction: column; gap: 0.5cqmin; }
+.bl-item { display: flex; gap: 0.5em; align-items: baseline; padding: 0.35em 0.7em; border: 2px solid #94a3b8; border-radius: 0.5em; background: #fff; color: #111827; font: inherit; font-size: clamp(0.75rem, 3.2cqmin, 1.69rem); text-align: left; cursor: pointer; }
+.bl-item b { flex: none; display: inline-grid; place-items: center; min-width: 1.6em; height: 1.6em; border-radius: 50%; background: #475569; color: #fff; }
+.bl-item.pilih { outline: 4px solid #f59e0b; }
+.bl-item.beres { border-color: #16a34a; background: #f0fdf4; }
+.bl-bukti { display: flex; flex-direction: column; gap: 0.3em; }
+.bl-kartu-cek { display: flex; flex-direction: column; gap: 0.3em; flex: 0 1 22em; padding: 0.8em 1em; border-radius: 1em; background: #0f766e; color: #f0fdfa; text-align: left; font-size: clamp(0.75rem, 3.2cqmin, 1.62rem); }
+.bl-kartu-cek p, .bl-kartu-cek ol { margin: 0; }
+.bl-kartu-cek > b { font-size: 1.3em; }
+@container (max-aspect-ratio: 1/1) { .bl-pasang { grid-template-columns: 1fr; } }

@@ -91,6 +91,7 @@ import BankSampah from './sma-24-bank-sampah.js';
 import UjiTuring from './sma-25-uji-turing.js';
 import SeleksiBeasiswa from './sma-26-seleksi-beasiswa.js';
 import RancangPrompt from './sma-27-rancang-prompt.js';
+import BacaLateral from './sma-28-baca-lateral.js';
 
 export const JENJANG = [
   { id: 'paud', label: 'PAUD', detail: '4–6 tahun' },
@@ -116,6 +117,7 @@ export const activities = [
   UjiTuring,
   SeleksiBeasiswa,
   RancangPrompt,
+  BacaLateral,
 ]
   .sort((a, b) => order(a) - order(b) || a.id.localeCompare(b.id));
 
