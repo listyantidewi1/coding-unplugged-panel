@@ -32,6 +32,22 @@ function tone(freq, start, dur, type = 'sine', gain = 0.15) {
   osc.stop(t0 + dur);
 }
 
+// Short burst of noise, used for a hand clap.
+function noise(dur, gain) {
+  const a = audio();
+  if (!a) return;
+  const len = Math.floor(a.sampleRate * dur);
+  const buf = a.createBuffer(1, len, a.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / len) ** 3;
+  const src = a.createBufferSource();
+  const g = a.createGain();
+  g.gain.value = gain;
+  src.buffer = buf;
+  src.connect(g).connect(a.destination);
+  src.start();
+}
+
 export const sound = {
   get muted() { return muted; },
   setMuted(v) {
@@ -41,6 +57,12 @@ export const sound = {
   tap() { if (!muted) tone(660, 0, 0.06, 'triangle', 0.08); },
   good() { if (!muted) { tone(523, 0, 0.12); tone(784, 0.1, 0.18); } },
   bad() { if (!muted) tone(180, 0, 0.25, 'square', 0.06); },
+  clap() { if (!muted) noise(0.12, 0.5); },
+  stomp() { if (!muted) { tone(90, 0, 0.18, 'sine', 0.5); tone(60, 0, 0.25, 'triangle', 0.3); } },
+  spin() {
+    if (muted) return;
+    [440, 554, 659, 880].forEach((f, i) => tone(f, i * 0.06, 0.12, 'sine', 0.08));
+  },
   win() {
     if (muted) return;
     [523, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.12, 0.25, 'triangle', 0.12));
