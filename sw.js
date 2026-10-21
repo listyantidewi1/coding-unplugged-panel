@@ -49,6 +49,7 @@ const FILES = [
   'js/activities/sdl-13-kurir-kampung.js',
   'js/activities/sdl-14-merpati-pos.js',
   'js/activities/sdl-15-mesin-kantin.js',
+  'js/activities/sdl-16-mesin-cerdas.js',
 ];
 
 self.addEventListener('install', (e) => {

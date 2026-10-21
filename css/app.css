@@ -1097,3 +1097,53 @@ span.code-cell { border-style: solid; cursor: default; }
 .tutup-layar { display: flex; flex-direction: column; gap: 2cqmin; align-items: center; justify-content: center; flex: 1; }
 .tim-label { font-size: clamp(0.7rem, 3cqmin, 1.4rem); color: var(--accent, #2563eb); }
 .props { min-height: 6cqh; }
+
+/* Mesin Cerdas */
+.mesin-area { display: grid; grid-template-columns: 1fr 1.3fr 1fr; gap: 1.5cqw; width: 100%; align-items: stretch; flex: 1; min-height: 0; }
+.mesin-baki { display: flex; flex-wrap: wrap; gap: 0.8cqmin; justify-content: center; align-content: flex-start; }
+.mesin-kotak { display: flex; flex-direction: column; gap: 0.8cqmin; padding: 1cqmin; border-radius: 1.4cqmin; border: max(3px, 0.5cqmin) dashed; font-size: clamp(0.65rem, 2.8cqmin, 1.3rem); text-align: center; }
+.mesin-kotak.cerdas { background: #ede9fe; border-color: #7c3aed; } .mesin-kotak.biasa { background: #f1f5f9; border-color: #64748b; }
+.mesin-isi { display: flex; flex-wrap: wrap; gap: 0.6cqmin; justify-content: center; }
+.mesin-kartu { display: flex; flex-direction: column; align-items: center; gap: 0.2em; width: min(13cqw, 22cqh); padding: 0.4em; border-radius: 1cqmin; background: #fff; border: max(2px, 0.3cqmin) solid #cbd5e1; font-size: clamp(0.5rem, 1.9cqmin, 0.95rem); text-align: center; cursor: grab; touch-action: none; user-select: none; }
+.mesin-kartu small { font-size: 0.85em; color: #475569; line-height: 1.15; }
+.mesin-kartu.selected { outline: max(3px, 0.6cqmin) solid #f97316; }
+.mesin-kartu.locked { cursor: default; width: auto; padding: 0.2em 0.5em; }
+.mesin-kartu.locked small { display: none; }
+.mesin-ikon { font-size: 2em; line-height: 1; }
+.cerdas > .reveal { font-size: clamp(0.7rem, 3.2cqmin, 1.5rem); text-align: center; }
+.indra-area { display: flex; gap: 3cqw; align-items: center; justify-content: center; width: 100%; }
+.indra-kolom { display: flex; flex-direction: column; gap: 1.2cqmin; }
+.indra-baris { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); grid-template-rows: auto auto; align-items: center; gap: 0.2em 1em; padding: 0.5em 0.9em; border-radius: 1cqmin; background: #fff; border: max(2px, 0.3cqmin) solid #cbd5e1; font-size: clamp(0.65rem, 3cqmin, 1.4rem); }
+.indra-baris.pas { background: #dcfce7; border-color: #16a34a; }
+.indra-slot { padding: 0.2em 0.6em; border: max(2px, 0.3cqmin) dashed #94a3b8; border-radius: 0.6em; text-align: center; font-weight: 800; }
+.indra-alat { grid-column: 1 / -1; color: #475569; font-size: 0.7em; }
+.sensor-baki { display: flex; flex-direction: column; gap: 1.2cqmin; }
+.sensor-kartu { padding: 0.5em 0.9em; border-radius: 1cqmin; background: #fef3c7; border: max(2px, 0.3cqmin) solid #d97706; font-weight: 800; font-size: clamp(0.65rem, 3cqmin, 1.4rem); cursor: grab; touch-action: none; user-select: none; }
+.sensor-kartu.selected { outline: max(3px, 0.6cqmin) solid #f97316; }
+.kucing-angka { display: flex; gap: 2cqw; align-items: center; }
+.kucing-kisi { display: grid; grid-template-columns: repeat(8, min(4.5cqw, 4.5cqh)); gap: 1px; font-size: clamp(0.4rem, 1.5cqmin, 0.8rem); font-weight: 700; }
+.kucing-kisi span { display: grid; place-items: center; aspect-ratio: 1; background: #e5e7eb; color: #374151; }
+.kucing-kisi span.gelap { background: #374151; color: #f9fafb; }
+.kucing-ikon { font-size: clamp(1rem, 5cqmin, 2.5rem); }
+.cerita-kartu { max-width: 80cqw; padding: 1em 1.4em; border-radius: 1.6cqmin; background: #fffbeb; border: max(3px, 0.5cqmin) solid #f59e0b; font-size: clamp(0.8rem, 4cqmin, 2rem); font-weight: 700; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 0.3em; }
+.cerita-kartu p { margin: 0; }
+.btn.pilih-btn { font-size: clamp(0.8rem, 4cqmin, 2rem); padding: 0.5em 1em; }
+.pilih-B { background: #16a34a; color: #fff; } .pilih-R { background: #dc2626; color: #fff; } .pilih-H { background: #f59e0b; color: #111827; }
+.suara-grafik { display: flex; flex-direction: column; gap: 0.8cqmin; width: min(80cqw, 900px); }
+.suara-baris { display: grid; grid-template-columns: 12em 1fr 3em; gap: 1em; align-items: center; font-size: clamp(0.65rem, 2.8cqmin, 1.3rem); font-weight: 800; }
+.suara-baris i { display: block; height: 1.4em; border-radius: 0.4em; min-width: 2px; }
+.tim-skor { padding: 0.3em 0.8em; border-radius: 999px; background: #e2e8f0; font-weight: 800; font-size: clamp(0.7rem, 3cqmin, 1.4rem); }
+.tim-skor.giliran { background: #2563eb; color: #fff; }
+.suara-grafik .reveal { font-size: clamp(0.7rem, 3cqmin, 1.4rem); }
+.cerdas > .reveal.info { font-size: clamp(0.6rem, 2.6cqmin, 1.2rem); }
+@container (max-aspect-ratio: 3/2) {
+  .mesin-area { grid-template-columns: 1fr 1fr; grid-template-rows: auto 1fr; }
+  .mesin-baki { grid-column: 1 / -1; order: -1; }
+  .mesin-kartu { width: min(17cqw, 15cqh); }
+  .mesin-kartu small { display: none; }
+}
+@container (max-height: 560px) {
+  .mesin-kartu small { display: none; }
+  .mesin-kartu { width: min(10cqw, 24cqh); }
+  .mesin-area { grid-template-columns: 1fr 1.6fr 1fr; }
+}

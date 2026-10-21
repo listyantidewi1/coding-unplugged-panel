@@ -36,6 +36,7 @@ import sdlKancil from './sdl-12-kancil.js';
 import sdlKurirKampung from './sdl-13-kurir-kampung.js';
 import sdlMerpatiPos from './sdl-14-merpati-pos.js';
 import sdlMesinKantin from './sdl-15-mesin-kantin.js';
+import sdlMesinCerdas from './sdl-16-mesin-cerdas.js';
 
 export const JENJANG = [
   { id: 'paud', label: 'PAUD', detail: '4–6 tahun' },
@@ -51,7 +52,7 @@ export const activities = [
   paudPola, paudKelompok, paudLangkah, paudAntarAyam, paudKacangHijau,
   paudGerakUlang, paudJikaLampu, paudAyamTersesat, paudYaTidak, paudTombol,
   sdaMotifBatik, sdaRumahAdat, sdaRumahNenek, sdaResep, sdaSenamPagi, sdaJikaHujan, sdaRuteSalah, sdaTimbangan, sdaGambarRahasia, sdaTabelHewan, sdaCariHalaman, sdaBarisUpacara, sdaTombolLift,
-  sdlLampuGapura, sdlPikselWarna, sdlSandiSenter, sdlHematKuota, sdlAnyamanRusak, sdlKartuData, sdlCariRumah, sdlRakBuku, sdlRelKereta, sdlCariKata, sdlGulaKurang, sdlKancil, sdlKurirKampung, sdlMerpatiPos, sdlMesinKantin,
+  sdlLampuGapura, sdlPikselWarna, sdlSandiSenter, sdlHematKuota, sdlAnyamanRusak, sdlKartuData, sdlCariRumah, sdlRakBuku, sdlRelKereta, sdlCariKata, sdlGulaKurang, sdlKancil, sdlKurirKampung, sdlMerpatiPos, sdlMesinKantin, sdlMesinCerdas,
 ]
   .sort((a, b) => order(a) - order(b) || a.id.localeCompare(b.id));
 
