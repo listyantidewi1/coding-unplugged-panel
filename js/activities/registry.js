@@ -22,6 +22,23 @@ import sdaTabelHewan from './sda-10-tabel-hewan.js';
 import sdaCariHalaman from './sda-11-cari-halaman.js';
 import sdaBarisUpacara from './sda-12-baris-upacara.js';
 import sdaTombolLift from './sda-13-tombol-lift.js';
+import sdlPikselWarna from './sdl-02-piksel-warna.js';
+import sdlSandiSenter from './sdl-03-sandi-senter.js';
+import sdlHematKuota from './sdl-04-hemat-kuota.js';
+import sdlAnyamanRusak from './sdl-05-anyaman-rusak.js';
+import sdlKartuData from './sdl-06-kartu-data.js';
+import sdlCariRumah from './sdl-07-cari-rumah.js';
+import sdlRakBuku from './sdl-08-rak-buku.js';
+import sdlRelKereta from './sdl-09-rel-kereta.js';
+import sdlCariKata from './sdl-10-cari-kata.js';
+import sdlGulaKurang from './sdl-11-gula-kurang.js';
+import sdlKancil from './sdl-12-kancil.js';
+import sdlKurirKampung from './sdl-13-kurir-kampung.js';
+import sdlMerpatiPos from './sdl-14-merpati-pos.js';
+import sdlMesinKantin from './sdl-15-mesin-kantin.js';
+import sdlMesinCerdas from './sdl-16-mesin-cerdas.js';
+import sdlLatihMesin from './sdl-17-latih-mesin.js';
+import sdlDataPribadi from './sdl-18-data-pribadi.js';
 
 export const JENJANG = [
   { id: 'paud', label: 'PAUD', detail: '4–6 tahun' },
@@ -37,7 +54,7 @@ export const activities = [
   paudPola, paudKelompok, paudLangkah, paudAntarAyam, paudKacangHijau,
   paudGerakUlang, paudJikaLampu, paudAyamTersesat, paudYaTidak, paudTombol,
   sdaMotifBatik, sdaRumahAdat, sdaRumahNenek, sdaResep, sdaSenamPagi, sdaJikaHujan, sdaRuteSalah, sdaTimbangan, sdaGambarRahasia, sdaTabelHewan, sdaCariHalaman, sdaBarisUpacara, sdaTombolLift,
-  sdlLampuGapura,
+  sdlLampuGapura, sdlPikselWarna, sdlSandiSenter, sdlHematKuota, sdlAnyamanRusak, sdlKartuData, sdlCariRumah, sdlRakBuku, sdlRelKereta, sdlCariKata, sdlGulaKurang, sdlKancil, sdlKurirKampung, sdlMerpatiPos, sdlMesinKantin, sdlMesinCerdas, sdlLatihMesin, sdlDataPribadi,
 ]
   .sort((a, b) => order(a) - order(b) || a.id.localeCompare(b.id));
 

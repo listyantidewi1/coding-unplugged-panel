@@ -113,7 +113,7 @@ function bitSum({ values, skin, opening, prompt, readPrompt, freePrompt, extraMo
     maxPlayers: 4,
     extraModes: [
       ...extraModes.map((m) => ({ ...m, create: practice(m.values || values, m.kind, m.min) })),
-      { id: 'kreasi', icon: '🔎', label: 'Jelajah Bebas', desc: 'Coba sendiri, lihat angkanya', create: createFree },
+      { id: 'kreasi', icon: '🔎', label: 'Jelajah Bebas', desc: 'Coba sendiri, atau tekan Hitung dan amati polanya', create: createFree },
     ],
     create(root, ctx) {
       const wrap = el('div', { class: 'act bitsum' });
@@ -131,18 +131,41 @@ function bitSum({ values, skin, opening, prompt, readPrompt, freePrompt, extraMo
     },
   };
 
+  // Free play, plus "Hitung": the row counts by itself from 0 to the top so
+  // the pattern of each item shows.
   function createFree(root, ctx) {
     const wrap = el('div', { class: 'act bitsum' });
     const total = el('div', { class: 'target' }, '0');
-    const row = makeRow(values, skin, () => {
-      ctx.sound.tap();
+    const showTotal = () => {
       total.textContent = skin.unit ? `${row.sum()} ${skin.unit}` : row.sum();
       view.update?.(row.sum());
-    });
+    };
+    const row = makeRow(values, skin, () => { stop(); ctx.sound.tap(); showTotal(); });
     const view = scene(row, null);
-    wrap.append(el('p', { class: 'prompt' }, freePrompt), total, view.node || view, row.bits);
+    let timer = null;
+    const count = el('button', { class: 'btn', type: 'button' }, '▶ Hitung');
+    function stop() {
+      clearInterval(timer);
+      timer = null;
+      count.textContent = '▶ Hitung';
+    }
+    onTap(count, () => {
+      if (timer) { stop(); return; }
+      let n = 0;
+      count.textContent = '⏸ Berhenti';
+      const tick = () => {
+        row.show(n);
+        showTotal();
+        ctx.sound.tap();
+        if (++n > max) stop();
+      };
+      tick();
+      timer = setInterval(tick, 900);
+    });
+    wrap.append(el('p', { class: 'prompt' }, freePrompt), total, view.node || view, row.bits, el('div', { class: 'row' }, count));
     root.append(wrap);
     view.update?.(0);
+    return { destroy: stop };
   }
 }
 
@@ -210,10 +233,15 @@ export const sdlLampuGapura = bitSum({
   source: { name: 'CS Unplugged: Binary Numbers', url: 'https://www.csunplugged.org/en/topics/binary-numbers/' },
   values: [16, 8, 4, 2, 1],
   skin: lampSkin,
-  opening: [17, 8],
-  rounds: 5,
+  // The worksheet: 17 and 8, then 5, 12, 20, 31, then read three codes.
+  opening: [17, 8, 5, 12, 20, 31, { baca: 0b01011 }, { baca: 0b10110 }, { baca: 0b11001 }],
+  rounds: 9,
   prompt: 'Nyalakan lampu gapura sampai jumlah nilainya tepat:',
   readPrompt: 'Lampu mana yang menyala? Angka berapa yang tampil?',
-  freePrompt: 'Nyalakan dan matikan lampu. Angka berapa yang tampil?',
+  freePrompt: 'Nyalakan dan matikan lampu, atau tekan Hitung dan amati lampu mana yang paling sering berganti.',
+  extraModes: [
+    { id: 'kebalikan', icon: '🔁', label: 'Baca Kode', desc: 'Lampu sudah menyala, tebak bilangannya', kind: 'baca' },
+    { id: 'tantangan', icon: '➕', label: 'Lampu Keenam', desc: 'Pak RT menambah lampu 32: tampilkan 32 sampai 63', values: [32, 16, 8, 4, 2, 1], min: 32 },
+  ],
   goal: 'Lima lampu gapura bernilai 16, 8, 4, 2, 1. Anak menyalakan lampu untuk menampilkan tanggal 17 dan bulan 8, lalu menulis kodenya dengan 0 dan 1.',
 });
