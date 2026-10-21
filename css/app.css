@@ -1994,3 +1994,57 @@ button.kk-kotak { cursor: pointer; }
   .sandi .sg-pesan { font-size: clamp(0.45rem, 3cqh, 0.9rem); }
   .sandi .keys { font-size: clamp(0.45rem, 3cqh, 0.9rem); }
 }
+
+/* Aplikasi jadwal */
+.jadwal { gap: 1cqmin; }
+.aj-samping { display: flex; gap: 2.5cqw; align-items: flex-start; justify-content: center; width: 100%; }
+.aj-dua { display: flex; gap: 1.5cqw; align-items: flex-start; justify-content: center; }
+.aj-dua > div { display: flex; flex-direction: column; align-items: center; gap: 0.3em; font-weight: 800; color: var(--muted); font-size: clamp(0.5rem, 1.8cqmin, 0.9rem); }
+.aj-kanan { display: flex; flex-direction: column; gap: 0.8cqmin; align-items: center; min-width: 0; max-width: 38cqw; }
+.aj-hp { position: relative; display: flex; flex-direction: column; gap: 0.35em; width: min(24cqw, 40cqh, 20rem); aspect-ratio: 9 / 17; padding: 0.7em 0.6em; border-radius: 1.4em; border: 0.45em solid #1e293b; background: #fff; color: #111827; font-size: clamp(0.45rem, 2cqmin, 1rem); overflow: hidden; text-align: left; }
+.aj-hp.butawarna { filter: url(#aj-deutan); }
+.aj-atas { display: flex; justify-content: space-between; align-items: center; gap: 0.4em; border-bottom: 1px solid #e5e7eb; padding-bottom: 0.3em; }
+.aj-judul { font-size: 1.1em; }
+.aj-ikon, .aj-menu, .aj-tambah { cursor: pointer; user-select: none; }
+.aj-menu { font-size: 1.3em; line-height: 1; }
+.aj-menu-isi { padding: 0.4em; border-radius: 0.4em; background: #f1f5f9; display: flex; flex-direction: column; gap: 0.3em; }
+.aj-hari { display: flex; align-items: center; gap: 0.4em; padding: 0.35em 0.3em; border-radius: 0.4em; cursor: pointer; border: 1px solid #f1f5f9; }
+.aj-titik { flex: none; width: 1.1em; height: 1.1em; border-radius: 50%; }
+.aj-hp.kecil .aj-pel { color: #cbd5e1; font-size: 0.75em; }
+.aj-hp.besar .aj-pel { color: #111827; font-size: 0.95em; font-weight: 600; }
+.aj-hari .aj-pel { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.aj-tombol { display: flex; gap: 0.4em; margin-top: auto; }
+.aj-hp .btn { font-size: 0.9em; padding: 0.4em 0.6em; min-height: 0; min-width: 0; border-radius: 0.5em; }
+.aj-tombol .btn { flex: 1; }
+.aj-hp .aj-biru { background: #2563eb; color: #fff; border-color: #2563eb; }
+.aj-hp .aj-bahaya { background: #dc2626; color: #fff; border-color: #dc2626; }
+.aj-hp .aj-abu { background: #e5e7eb; color: #111827; }
+.aj-dialog { position: absolute; inset: 30% 6% auto; padding: 0.8em; border-radius: 0.6em; background: #fff; box-shadow: 0 0.3em 1.2em #0005; display: flex; flex-direction: column; gap: 0.5em; font-weight: 800; }
+.aj-dialog > div { display: flex; gap: 0.4em; }
+.aj-jam-daftar { display: flex; flex-direction: column; gap: 0.15em; overflow: auto; }
+.aj-jam { display: flex; gap: 0.5em; align-items: baseline; padding: 0.15em 0.3em; border-radius: 0.3em; cursor: pointer; }
+.aj-jam small { flex: none; width: 3em; color: #64748b; }
+.aj-jam.pilih { background: #fef3c7; }
+.aj-pilihan { position: absolute; inset: auto 0.4em 0.4em; display: flex; flex-wrap: wrap; gap: 0.25em; padding: 0.4em; border-radius: 0.5em; background: #1e293b; }
+.aj-subj { padding: 0.2em 0.4em; border-radius: 0.3em; background: #fff; cursor: pointer; font-size: 0.85em; }
+.aj-tambah { color: #2563eb; font-weight: 700; }
+.aj-pesan { padding: 0.4em; border-radius: 0.4em; background: #fee2e2; color: #991b1b; font-weight: 800; }
+.aj-hitung { margin: 0; font-weight: 900; text-align: center; font-size: clamp(0.55rem, 2.3cqmin, 1.15rem); }
+.aj-prinsip { display: grid; grid-template-columns: 1fr 1fr; gap: 0.3em; font-size: clamp(0.5rem, 2cqmin, 1rem); }
+.aj-temuan { margin: 0; padding-left: 1.4em; font-size: clamp(0.45rem, 1.8cqmin, 0.9rem); text-align: left; }
+.aj-data { font-size: clamp(0.5rem, 2.1cqmin, 1.05rem); }
+.aj-data td, .aj-data th { padding: 0.15em 0.6em; text-align: center; }
+.aj-uji { display: flex; flex-direction: column; gap: 0.6cqmin; align-items: center; }
+.aj-uji .aj-hp { width: min(24cqw, 40cqh, 22rem); }
+.aj-legenda { text-align: center; }
+.jadwal .ab-lapisan { font-size: clamp(0.5rem, 2.2cqmin, 1.1rem); }
+@container (max-aspect-ratio: 6/5) {
+  .aj-samping { flex-direction: column; align-items: center; }
+  .aj-hp { width: min(40cqw, 30cqh); }
+  .aj-kanan { max-width: 96cqw; }
+}
+@container (max-height: 520px) {
+  .jadwal > .prompt, .jadwal .reveal { font-size: clamp(0.55rem, 4cqh, 1.1rem); }
+  .jadwal .aj-hp { width: min(20cqw, 36cqh); font-size: clamp(0.35rem, 2.4cqh, 0.7rem); }
+  .jadwal .aj-uji .aj-hp { width: min(24cqw, 44cqh); }
+}
