@@ -49,9 +49,10 @@ export function pyRepr(v, inner = false) {
   if (v instanceof PySet) return v.size ? `{${v.items().map((x) => pyRepr(x, true)).join(', ')}}` : 'set()';
   if (v instanceof PyDict) return `{${[...v].map(([k, x]) => `${pyRepr(k, true)}: ${pyRepr(x, true)}`).join(', ')}}`;
   if (v && v.py === 'fn') return `<function ${v.name}>`;
+  if (v && v.py === 'mod') return `<module '${v.name}'>`;
   return String(v);
 }
-export const pyType = (v) => (v === null || v === undefined ? 'NoneType' : typeof v === 'boolean' ? 'bool' : v instanceof PyFloat ? 'float' : typeof v === 'number' ? 'int' : typeof v === 'string' ? 'str' : isTup(v) ? 'tuple' : Array.isArray(v) ? 'list' : v instanceof PyDict ? 'dict' : v instanceof PySet ? 'set' : 'function');
+export const pyType = (v) => (v === null || v === undefined ? 'NoneType' : typeof v === 'boolean' ? 'bool' : v instanceof PyFloat ? 'float' : typeof v === 'number' ? 'int' : typeof v === 'string' ? 'str' : isTup(v) ? 'tuple' : Array.isArray(v) ? 'list' : v instanceof PyDict ? 'dict' : v instanceof PySet ? 'set' : v && v.py === 'mod' ? 'module' : 'function');
 
 // ---- tokenizer ----
 function tokenize(src, line) {
@@ -161,6 +162,7 @@ export function parsePy(lines) {
     if ((m = r.s.match(/^global\s+(.+)$/))) return { t: 'global', line: L, names: m[1].split(',').map((x) => x.trim()) };
     if ((m = r.s.match(/^assert\s+(.+)$/))) { const e = parseExpr(tokenize(m[1], L), L); return e.t === 'tuple' && e.items.length === 2 ? { t: 'assert', line: L, c: e.items[0], msg: e.items[1] } : { t: 'assert', line: L, c: e, msg: null }; }
     if (r.s === 'pass') return { t: 'pass', line: L };
+    if ((m = r.s.match(/^import\s+([A-Za-z_]\w*)$/))) return { t: 'import', line: L, name: m[1] };
     if (r.s === 'break') return { t: 'break', line: L };
     if ((m = r.s.match(/^([A-Za-z_]\w*(?:\[.+\])?)\s*(\+=|-=|\*=)\s*(.+)$/))) return { t: 'aug', line: L, target: parseExpr(tokenize(m[1], L), L), op: m[2][0], e: parseExpr(tokenize(m[3], L), L) };
     if ((m = r.s.match(/^([A-Za-z_]\w*(?:\s*,\s*[A-Za-z_]\w*)+)\s*=(?!=)\s*(.+)$/))) return { t: 'set', line: L, target: { t: 'unpack', names: m[1].split(',').map((x) => x.trim()) }, e: parseExpr(tokenize(m[2], L), L) };
@@ -207,6 +209,10 @@ export function makePyRunner(lines, { builtins = {}, vars = {}, limit = 3000, in
     ...Object.fromEntries(Object.entries(builtins).map(([k, f]) => [k, fn(k, f)])),
   };
   function iter(x) { if (typeof x === 'string') return [...x]; if (x instanceof PyDict) return [...x.keys()]; if (x instanceof PySet) return x.items(); if (Array.isArray(x)) return [...x]; throw new PyError('TypeError', `'${pyType(x)}' object is not iterable`, null); }
+  // Standard-library modules available to `import`.
+  const seqLen = (a) => { if (!Array.isArray(a)) throw new PyError('TypeError', `object of type '${pyType(a)}' has no len()`, null, 'bisect memerlukan list yang urut.'); return a.length; };
+  const bisectAt = (a, x, right) => { let lo = 0; let hi = seqLen(a); while (lo < hi) { const mid = Math.floor((lo + hi) / 2); if (right ? pyCmp(x, a[mid]) < 0 : pyCmp(a[mid], x) < 0) { if (right) hi = mid; else lo = mid + 1; } else if (right) lo = mid + 1; else hi = mid; } return lo; };
+  const MODS = { bisect: { bisect_left: (a, x) => bisectAt(a, x, false), bisect_right: (a, x) => bisectAt(a, x, true), bisect: (a, x) => bisectAt(a, x, true), insort: (a, x) => { a.splice(bisectAt(a, x, true), 0, x); return null; }, insort_left: (a, x) => { a.splice(bisectAt(a, x, false), 0, x); return null; }, insort_right: (a, x) => { a.splice(bisectAt(a, x, true), 0, x); return null; } } };
   const scope = () => (st.frames.length ? st.frames[st.frames.length - 1].vars : st.vars);
   const look = (n, L) => { const s = scope(); if (n in s) return s[n]; const f = st.frames[st.frames.length - 1]; if (f?.locals?.has(n)) throw new PyError('UnboundLocalError', `cannot access local variable '${n}' where it is not associated with a value`, L, `${n} diberi nilai di dalam fungsi, jadi Python menganggapnya variabel lokal, padahal belum punya nilai.`); if (n in st.vars) return st.vars[n]; if (n in B) return B[n]; throw new PyError('NameError', `name '${n}' is not defined`, L, `Variabel atau fungsi ${n} belum dibuat.`); };
   function tick(L) { st.steps++; if (st.steps > limit) throw new PyError('Batas', `Program sudah menjalankan ${limit} langkah dan belum selesai. Mungkin ada perulangan yang tidak pernah berhenti.`, L, 'batas'); }
@@ -233,6 +239,7 @@ export function makePyRunner(lines, { builtins = {}, vars = {}, limit = 3000, in
   const pyCmp = (a, b) => { if (isNum(a) && isNum(b)) return num(a) - num(b); if (typeof a === 'string' && typeof b === 'string') return a < b ? -1 : a > b ? 1 : 0; if (Array.isArray(a) && Array.isArray(b)) { for (let i = 0; i < Math.min(a.length, b.length); i++) { const c = pyCmp(a[i], b[i]); if (c) return c; } return a.length - b.length; } throw new PyError('TypeError', `'<' not supported between instances of '${pyType(a)}' and '${pyType(b)}'`, null); };
   const kwOf = (args) => (args.length && args.at(-1) && args.at(-1).kwargs ? args.pop().kwargs : {});
   function methods(o, name, L) {
+    if (o && o.py === 'mod') { if (o.f[name]) return o.f[name]; throw new PyError('AttributeError', `module '${o.name}' has no attribute '${name}'`, L); }
     if (Array.isArray(o) && !isTup(o)) {
       if (name === 'append') return (x) => { o.push(x); return null; };
       if (name === 'sort') return (...a) => { const kw = kwOf(a); o.sort(truthy(kw.reverse) ? (x, y) => pyCmp(y, x) : pyCmp); return null; };
@@ -308,6 +315,7 @@ export function makePyRunner(lines, { builtins = {}, vars = {}, limit = 3000, in
       case 'aug': { const cur = yield* ev(s.target, L); const v = bin(s.op, cur, yield* ev(s.e, L), L); yield* assign(s.target, v, L); tick(L); yield { line: L, note: `= ${pyRepr(v, true)}` }; return null; }
       case 'expr': { const v = yield* ev(s.e, L); tick(L); yield { line: L, note: s.e.t === 'call' ? `${s.e.f.name ?? 'fungsi'}()` : v && v.py === 'fn' ? `${v.name} tidak dipanggil (tanpa tanda kurung)` : '' }; return null; }
       case 'pass': tick(L); yield { line: L, note: 'pass' }; return null;
+      case 'import': { const mod = MODS[s.name]; if (!mod) throw new PyError('ModuleNotFoundError', `No module named '${s.name}'`, L, 'Modul itu tidak tersedia di layar ini.'); scope()[s.name] = { py: 'mod', name: s.name, f: mod }; tick(L); yield { line: L, note: `modul ${s.name} siap dipakai` }; return null; }
       case 'assert': { const c = truthy(yield* ev(s.c, L)); tick(L); if (!c) { const msg = s.msg ? pyRepr(yield* ev(s.msg, L)) : ''; throw new PyError('AssertionError', msg, L, 'Kondisi uji bernilai False.'); } yield { line: L, note: 'assert lulus' }; return null; }
       case 'global': tick(L); yield { line: L, note: `${s.names.join(', ')} memakai variabel global` }; return null;
       case 'break': tick(L); yield { line: L, note: 'break' }; return { brk: true };

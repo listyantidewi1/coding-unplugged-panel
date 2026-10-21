@@ -146,6 +146,7 @@ const FILES = [
   'js/activities/sma-41-kasus-uji.js',
   'js/activities/sma-42-pesan-galat.js',
   'js/activities/sma-43-percepat-kode.js',
+  'js/activities/sma-44-urut-cari-kode.js',
 ];
 
 self.addEventListener('install', (e) => {

@@ -4530,3 +4530,39 @@ code.beda { background: #fee2e2 !important; color: #991b1b !important; }
 .percepat-kode .pk-kecil-wrap { display: flex; flex-direction: column; gap: 0.6em; align-items: center; width: 100%; }
 .percepat-kode .pk-potongan { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.3em; }
 .percepat-kode .pk-pot { padding: 0.2em 0.5em; }
+
+/* sma-44 Urut dan Cari */
+.urut-cari .uc-kecil { font-size: clamp(0.58rem, 1.9cqmin, 1rem); }
+.urut-cari .sk-kode.py code { white-space: pre-wrap; overflow-wrap: anywhere; }
+.urut-cari .uc-isi .seg-btn { font-size: clamp(0.6rem, 1.85cqmin, 1rem); font-family: ui-monospace, monospace; }
+.urut-cari .uc-dua { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1em; align-items: start; width: 100%; }
+.urut-cari .uc-dua > * { min-width: 0; }
+.urut-cari .uc-list { position: relative; display: flex; flex-wrap: wrap; gap: 0.2em; justify-content: center; padding-top: 0.2em; font-family: ui-monospace, monospace; }
+.urut-cari .uc-kotak { display: flex; flex-direction: column; align-items: center; min-width: 2.6em; padding: 0.1em 0.25em; border: 2px solid #64748b; border-radius: 0.4em; background: var(--surface); }
+.urut-cari .uc-kotak small { min-height: 1.2em; color: var(--primary); font-size: 0.68em; font-weight: 800; white-space: nowrap; }
+.urut-cari .uc-kotak b { font-size: clamp(0.8rem, 2.6cqmin, 1.4rem); }
+.urut-cari .uc-kotak i { color: var(--muted); font-size: 0.7em; font-style: normal; }
+.urut-cari .uc-kotak.urut { background: color-mix(in srgb, var(--good) 20%, var(--surface)); border-color: var(--good); }
+.urut-cari .uc-kotak.luar { opacity: 0.3; }
+.urut-cari .uc-kotak.tengah { background: #fde047; border-color: #ca8a04; color: #713f12; }
+.urut-cari .uc-kunci { display: flex; flex-direction: column; align-items: center; margin-left: 0.8em; padding: 0.1em 0.5em; border: 2px dashed #f59e0b; border-radius: 0.5em; background: color-mix(in srgb, #f59e0b 15%, var(--surface)); }
+.urut-cari .uc-kunci small { color: #92400e; font-weight: 800; font-size: 0.7em; }
+.urut-cari .uc-samping { display: flex; flex-direction: column; gap: 0.4em; align-items: center; }
+.urut-cari .uc-hitung { margin: 0; font-weight: 800; font-family: ui-monospace, monospace; }
+.urut-cari .uc-tabel { border-collapse: collapse; font-size: clamp(0.58rem, 1.8cqmin, 0.95rem); }
+.urut-cari .uc-tabel th, .urut-cari .uc-tabel td { padding: 0.2em 0.45em; border: 1px solid var(--line); text-align: left; vertical-align: top; }
+.urut-cari .uc-tabel td { display: table-cell; }
+.urut-cari .uc-tabel tr.beda { background: color-mix(in srgb, var(--bad) 12%, transparent); }
+.urut-cari .uc-pilih { flex-wrap: wrap; justify-content: center; }
+.urut-cari .uc-judul { margin: 0 0 0.3em; text-align: center; font-weight: 800; }
+.urut-cari .uc-hasil { margin: 0.4em 0 0; padding: 0.3em 0.6em; border-radius: 0.5em; background: color-mix(in srgb, var(--good) 15%, var(--surface)); font-family: ui-monospace, monospace; font-weight: 800; text-align: center; overflow-wrap: anywhere; }
+.urut-cari .uc-hasil.beda { background: color-mix(in srgb, var(--bad) 18%, var(--surface)); color: var(--bad); }
+.urut-cari .uc-bank { display: grid; grid-template-columns: repeat(auto-fit, minmax(12em, 1fr)); gap: 0.6em; width: 100%; }
+.urut-cari .uc-kartu { display: flex; flex-direction: column; gap: 0.2em; align-items: center; padding: 0.7em; border: 2px solid var(--line); border-radius: 0.8em; background: var(--surface); color: var(--ink); font: inherit; cursor: pointer; }
+.urut-cari .uc-kartu b { color: var(--primary); }
+.urut-cari .uc-kartu small { color: var(--muted); font-family: ui-monospace, monospace; text-align: center; }
+.urut-cari .uc-uji { display: flex; flex-direction: column; gap: 0.4em; align-items: flex-start; }
+.urut-cari .uc-uji .uc-input { align-self: stretch; }
+.urut-cari .uc-uji > small { color: var(--muted); font-weight: 800; font-family: ui-monospace, monospace; }
+.urut-cari .uc-input { padding: 0.35em 0.5em; border: 2px solid var(--line); border-radius: 0.5em; background: var(--surface); color: var(--ink); font: inherit; font-family: ui-monospace, monospace; font-size: clamp(0.8rem, 2.4cqmin, 1.25rem); min-width: 0; }
+.urut-cari .uc-baris { display: flex; flex-wrap: wrap; gap: 0.5em; align-items: center; }
