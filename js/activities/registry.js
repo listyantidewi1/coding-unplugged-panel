@@ -141,6 +141,7 @@ import paudKalauBel from './paud-11-kalau-bel.js';
 import paudKalungManik from './paud-12-kalung-manik.js';
 import sdaTanamPadi from './sda-14-tanam-padi.js';
 import sdaGambarPerintah from './sda-15-gambar-perintah.js';
+import sdaGerakBernama from './sda-16-gerak-bernama.js';
 
 export const JENJANG = [
   { id: 'paud', label: 'PAUD', detail: '4–6 tahun' },
@@ -210,7 +211,7 @@ export const activities = [
   PakaiLibrary,
   sma53DuaKasir, sma55GitKertas, sma56Mikrokontroler, sma57ProyekAplikasi,
   paudKalauBel, paudKalungManik,
-  sdaTanamPadi, sdaGambarPerintah,
+  sdaTanamPadi, sdaGambarPerintah, sdaGerakBernama,
 ]
   .sort((a, b) => order(a) - order(b) || a.id.localeCompare(b.id));
 

@@ -5303,3 +5303,44 @@ code.beda { background: #fee2e2 !important; color: #991b1b !important; }
 .gp-hitung { font-weight: 800; color: var(--muted); }
 .gp-info { margin: 0; text-align: center; font-weight: 800; font-size: clamp(0.7rem, 3.2cqmin, 1.4rem); }
 .opt .gp-kisi.kecil { width: min(22cqmin, 18cqw); }
+
+/* sda-16 Gerakan yang Diberi Nama */
+.gerak-bernama { gap: 1.4cqmin; }
+.gn-soal { display: flex; flex-direction: column; align-items: center; gap: 1cqmin; }
+.gn-artis { display: flex; flex-wrap: wrap; gap: 1cqmin 3cqmin; justify-content: center; }
+.gn-arti { display: flex; align-items: center; gap: 0.6cqmin; padding: 0.6cqmin 1.4cqmin; border-radius: 1.5cqmin; background: #fef3c7; border: max(2px, 0.4cqmin) dashed #b45309; font-size: clamp(0.8rem, 3.4cqmin, 1.6rem); color: var(--ink); }
+.gn-mini { font-size: clamp(1rem, 4.4cqmin, 2.2rem); }
+.gn-tarian { display: flex; flex-wrap: wrap; gap: 0.8cqmin; justify-content: center; align-items: center; }
+.gn-tarian.papan { min-height: 10cqmin; padding: 1cqmin; border: max(2px, 0.4cqmin) dashed var(--line); border-radius: 2cqmin; width: min(70cqw, 60rem); }
+.gn-tarian.panjang { padding: 0.6cqmin 1.4cqmin; border-radius: 2cqmin; background: #f1f5f9; gap: 0.4cqmin; }
+.gn-tarian.panjang .gn-mini { font-size: clamp(0.9rem, 3.6cqmin, 1.8rem); }
+.gn-kartu { display: flex; flex-direction: column; align-items: center; padding: 0.4cqmin 1cqmin; border-radius: 1.5cqmin; border: max(2px, 0.4cqmin) solid #334155; background: #fff; color: var(--ink); cursor: pointer; }
+.gn-kartu span { font-size: clamp(1rem, 5cqmin, 2.6rem); line-height: 1.1; }
+.gn-kartu small { font-weight: 800; font-size: clamp(0.5rem, 2.2cqmin, 1rem); }
+.gn-kartu.bernama { border-color: #b45309; background: #fffbeb; border-width: max(3px, 0.6cqmin); }
+.gn-kartu.belum { opacity: 0.6; border-style: dashed; }
+.gn-kartu.nyala { background: #fef08a; border-color: #ca8a04; }
+.gn-main { display: flex; align-items: center; gap: 2cqmin; }
+.gn-main .gym { width: min(14cqw, 18cqh); }
+.gn-main .gym-pose { font-size: clamp(2rem, 10cqmin, 6rem); }
+.gn-kotak-baris { display: flex; flex-wrap: wrap; gap: 2cqmin; justify-content: center; align-items: center; }
+.gn-kotak { display: flex; flex-direction: column; gap: 0.6cqmin; padding: 1cqmin 1.4cqmin; border-radius: 2cqmin; border: max(2px, 0.4cqmin) dashed #b45309; background: #fffbeb; cursor: pointer; }
+.gn-kotak.aktif { border-style: solid; box-shadow: 0 0 0 max(2px, 0.4cqmin) #fbbf24; }
+.gn-kotak.buka { background: #fef08a; }
+.gn-kepala { display: flex; align-items: center; gap: 1cqmin; flex-wrap: wrap; }
+.gn-nama { font: inherit; font-weight: 900; width: 9em; padding: 0.2em 0.4em; border-radius: 0.4em; border: max(2px, 0.3cqmin) solid var(--line); background: var(--surface); color: var(--ink); font-size: clamp(0.8rem, 3cqmin, 1.4rem); }
+.gn-ikon { display: flex; gap: 0.3cqmin; }
+.gn-ikon-btn, .gn-mini-btn { font: inherit; border: max(2px, 0.3cqmin) solid transparent; border-radius: 0.6em; background: none; cursor: pointer; font-size: clamp(0.9rem, 3.6cqmin, 1.8rem); padding: 0 0.15em; }
+.gn-ikon-btn.on { border-color: #b45309; background: #fde68a; }
+.gn-isi { display: flex; gap: 0.6cqmin; min-height: 6cqmin; align-items: center; }
+.gn-mini-btn { font-size: clamp(1rem, 4.6cqmin, 2.4rem); }
+.gn-mini-btn.nyala { background: #fde047; border-color: #ca8a04; }
+.gn-kosong { color: var(--muted); font-weight: 700; font-size: clamp(0.6rem, 2.6cqmin, 1.1rem); }
+.gn-tengah { display: flex; gap: 3cqw; align-items: center; justify-content: center; flex-wrap: wrap; }
+.gn-kanan { display: flex; flex-direction: column; align-items: center; gap: 1cqmin; }
+.gn-palet { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.8cqmin; padding: 0.8cqmin 1.4cqmin; border-radius: 2cqmin; background: #eef2f7; }
+.gn-pilih { font: inherit; display: flex; flex-direction: column; align-items: center; font-size: clamp(1rem, 4.6cqmin, 2.4rem); padding: 0.3cqmin 0.8cqmin; border-radius: 1.5cqmin; border: max(2px, 0.4cqmin) solid #334155; background: #fff; cursor: pointer; }
+.gn-pilih small { font-size: 0.38em; font-weight: 800; color: var(--ink); }
+.gn-pilih.bernama { border-color: #b45309; background: #fffbeb; }
+.gn-hitung { font-weight: 800; color: var(--muted); text-align: center; font-size: clamp(0.6rem, 2.8cqmin, 1.2rem); }
+.gn-info { margin: 0; text-align: center; font-weight: 800; font-size: clamp(0.7rem, 3.2cqmin, 1.4rem); }
