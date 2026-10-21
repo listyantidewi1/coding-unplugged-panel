@@ -4362,3 +4362,87 @@ code.beda { background: #fee2e2 !important; color: #991b1b !important; }
 .rekursi-memo .rk-angka-kecil { min-width: 3.5em; text-align: center; font-family: ui-monospace, monospace; font-weight: 900; font-size: 1.3em; }
 .rekursi-memo .rk-simpul.sembunyi::before, .rekursi-memo .rk-simpul.sembunyi::after { visibility: hidden; }
 .rekursi-memo .rk-anak.sebagian > .rk-simpul::before { visibility: hidden; }
+
+/* sma-40 Pemeriksa Rima Pantun */
+.rima-pantun .ri-kecil { font-size: clamp(0.62rem, 2.1cqmin, 1.1rem); }
+.rima-pantun .sk-kode.py code { white-space: pre-wrap; overflow-wrap: anywhere; }
+.rima-pantun .ri-isi .sk-baris span, .rima-pantun .ri-isi .seg-btn { font-family: ui-monospace, monospace; }
+.rima-pantun .ri-versi { flex-wrap: wrap; justify-content: center; }
+.rima-pantun .ri-ket { margin: 0; text-align: center; font-family: ui-monospace, monospace; font-weight: 700; }
+.rima-pantun .ri-dua { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1em; align-items: start; width: 100%; }
+.rima-pantun .ri-dua > * { min-width: 0; }
+.rima-pantun .ri-kotak { display: flex; flex-wrap: wrap; gap: 0.15em; justify-content: center; font-family: ui-monospace, monospace; }
+.rima-pantun .ri-kotak > span { display: flex; flex-direction: column; align-items: center; min-width: 1.9em; padding: 0.1em 0.2em; border: 2px solid #64748b; border-radius: 0.35em; background: var(--surface); }
+.rima-pantun .ri-kotak > span small { color: var(--muted); font-size: 0.7em; font-weight: 700; }
+.rima-pantun .ri-kotak > span b { font-size: clamp(0.9rem, 3cqmin, 1.6rem); line-height: 1.2; }
+.rima-pantun .ri-kotak > span.spasi b { color: #94a3b8; }
+.rima-pantun .ri-kotak > span.ambil { background: #fde047; border-color: #ca8a04; color: #713f12; }
+.rima-pantun .ri-pantun { display: flex; flex-direction: column; gap: 0.15em; padding: 0.5em 0.8em; border-radius: 0.7em; background: color-mix(in srgb, #f59e0b 10%, var(--surface)); border: 1px solid #f59e0b; font-size: clamp(0.75rem, 2.4cqmin, 1.25rem); }
+.rima-pantun .ri-pantun > small { color: #92400e; font-weight: 800; }
+.rima-pantun .ri-pantun p { margin: 0; font-style: italic; }
+.rima-pantun mark { background: #fde047; color: #713f12; border-radius: 0.2em; padding: 0 0.05em; font-style: normal; font-weight: 800; }
+.rima-pantun .ri-editor { display: flex; flex-direction: column; gap: 0.35em; }
+.rima-pantun .ri-editor label { display: flex; gap: 0.4em; align-items: center; }
+.rima-pantun .ri-editor small { color: var(--muted); font-weight: 800; min-width: 1em; }
+.rima-pantun .ri-editor input, .rima-pantun .ri-input { flex: 1; min-width: 0; padding: 0.35em 0.5em; border: 2px solid var(--line); border-radius: 0.5em; background: var(--surface); color: var(--ink); font: inherit; font-size: clamp(0.8rem, 2.4cqmin, 1.25rem); }
+.rima-pantun .ri-laporan { display: flex; flex-direction: column; gap: 0.3em; font-size: clamp(0.7rem, 2.2cqmin, 1.15rem); }
+.rima-pantun .ri-baris { display: flex; gap: 0.5em; align-items: baseline; flex-wrap: wrap; }
+.rima-pantun .ri-baris > small { color: var(--muted); font-weight: 800; }
+.rima-pantun .ri-baris code { overflow-wrap: anywhere; }
+.rima-pantun .ri-kata { padding: 0 0.4em; border-radius: 0.4em; background: color-mix(in srgb, var(--good) 15%, transparent); font-size: 0.85em; font-weight: 700; }
+.rima-pantun .ri-kata.luar { background: color-mix(in srgb, var(--bad) 18%, transparent); }
+.rima-pantun .ri-hasil { margin: 0; display: flex; flex-wrap: wrap; gap: 0.4em 1em; align-items: baseline; font-family: ui-monospace, monospace; }
+.rima-pantun .ri-hasil b.ok { color: var(--good); }
+.rima-pantun .ri-hasil b.no { color: var(--bad); }
+.rima-pantun .ri-galat { margin: 0; padding: 0.3em 0.6em; border-radius: 0.5em; background: #7f1d1d; color: #fff; font-family: ui-monospace, monospace; }
+.rima-pantun .ri-atur { display: flex; flex-wrap: wrap; gap: 0.5em 1em; align-items: center; justify-content: center; }
+.rima-pantun .ri-atur label { display: flex; gap: 0.3em; align-items: center; min-width: 14em; }
+.rima-pantun .ri-ekspresi { margin: 0; text-align: center; font-family: ui-monospace, monospace; font-size: clamp(1rem, 3.5cqmin, 1.8rem); }
+.rima-pantun .ri-ekspresi b { color: var(--primary); }
+.rima-pantun .ri-tabel { border-collapse: collapse; font-size: clamp(0.6rem, 1.9cqmin, 1rem); }
+.rima-pantun .ri-tabel th, .rima-pantun .ri-tabel td { padding: 0.25em 0.45em; border: 1px solid var(--line); text-align: left; vertical-align: top; }
+.rima-pantun .ri-tabel td { display: table-cell; }
+.rima-pantun .ri-tabel td code { display: block; font-size: 0.9em; }
+.rima-pantun .ri-tabel td.ok b { color: var(--good); }
+.rima-pantun .ri-tabel td.no b { color: var(--bad); }
+.rima-pantun .ri-tabel tr.pilih th { background: color-mix(in srgb, var(--primary) 15%, transparent); }
+.rima-pantun .ri-tebakan { display: flex; flex-direction: column; gap: 0.4em; align-items: center; }
+.rima-pantun .ri-tebak { display: flex; gap: 0.6em; align-items: center; }
+
+/* sma-41 Kasus Uji */
+.kasus-uji .ku-kecil { font-size: clamp(0.6rem, 2cqmin, 1.05rem); }
+.kasus-uji .sk-kode.py code { white-space: pre-wrap; overflow-wrap: anywhere; }
+.kasus-uji .sk-kode.ku-kolom2 { columns: 2; column-gap: 2em; width: min(100%, 60em); } .kasus-uji .sk-kode.ku-kolom2 li { break-inside: avoid; }
+.kasus-uji .ku-isi .seg-btn { font-size: clamp(0.65rem, 2cqmin, 1.05rem); }
+.kasus-uji .ku-dua { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1em; align-items: start; width: 100%; }
+.kasus-uji .ku-dua > * { min-width: 0; }
+.kasus-uji .ku-tabel, .kasus-uji .ku-aturan { border-collapse: collapse; font-size: clamp(0.6rem, 1.9cqmin, 1rem); }
+.kasus-uji .ku-tabel th, .kasus-uji .ku-tabel td, .kasus-uji .ku-aturan td { padding: 0.25em 0.45em; border: 1px solid var(--line); text-align: left; vertical-align: top; }
+.kasus-uji .ku-tabel td { display: table-cell; }
+.kasus-uji .ku-tabel td code { overflow-wrap: anywhere; }
+.kasus-uji .ku-tabel tr.lulus td:last-child { color: var(--good); font-weight: 800; }
+.kasus-uji .ku-tabel tr.gagal { background: color-mix(in srgb, var(--bad) 12%, transparent); }
+.kasus-uji .ku-tabel tr.gagal td:last-child { color: var(--bad); font-weight: 800; }
+.kasus-uji .ku-tabel tr.pilih { outline: 3px solid var(--primary); outline-offset: -3px; }
+.kasus-uji .ku-aturan { margin: 0 auto; }
+.kasus-uji .ku-aturan td:last-child { font-weight: 800; }
+.kasus-uji .ku-versi { flex-wrap: wrap; justify-content: center; }
+.kasus-uji .ku-baris { display: flex; flex-wrap: wrap; gap: 0.5em 1em; align-items: center; justify-content: center; }
+.kasus-uji .ku-harapan { display: flex; flex-wrap: wrap; gap: 0.4em; align-items: center; justify-content: center; }
+.kasus-uji .ku-harapan > small { color: var(--muted); font-weight: 800; }
+.kasus-uji .ku-harapan .seg { flex-wrap: wrap; justify-content: center; }
+.kasus-uji .ku-salah { color: var(--bad); font-weight: 700; font-size: 0.85em; }
+.kasus-uji .ku-ringkas { margin: 0.3em 0 0; text-align: center; font-weight: 800; }
+.kasus-uji .ku-ket { margin: 0; text-align: center; color: var(--muted); font-size: clamp(0.65rem, 2cqmin, 1rem); }
+.kasus-uji .ku-garis { position: relative; width: 100%; height: clamp(5.5rem, 22cqmin, 11rem); margin: 0.5em 0 1.6em; }
+.kasus-uji .ku-pita { position: absolute; top: 0; height: 55%; display: flex; align-items: flex-start; justify-content: center; padding-top: 0.2em; background: color-mix(in srgb, var(--c) 22%, var(--surface)); border: 2px solid var(--c); border-radius: 0.4em; box-sizing: border-box; overflow: hidden; }
+.kasus-uji .ku-pita small { font-size: clamp(0.5rem, 1.6cqmin, 0.9rem); font-weight: 800; text-align: center; line-height: 1.1; }
+.kasus-uji .ku-pita.diuji { background: color-mix(in srgb, var(--c) 45%, var(--surface)); }
+.kasus-uji .ku-titik { position: absolute; top: 62%; width: 0.9em; height: 0.9em; margin-left: -0.45em; border-radius: 50%; background: var(--primary); }
+.kasus-uji .ku-titik.batas { background: #f59e0b; box-shadow: 0 0 0 2px #92400e; }
+.kasus-uji .ku-skala { position: absolute; top: 85%; transform: translateX(-50%); font-family: ui-monospace, monospace; font-size: clamp(0.55rem, 1.8cqmin, 0.95rem); }
+.kasus-uji .ku-atur { display: flex; flex-wrap: wrap; gap: 0.5em 1em; align-items: center; justify-content: center; }
+.kasus-uji .ku-mutan { display: grid; grid-template-columns: repeat(auto-fit, minmax(11em, 1fr)); gap: 0.6em; width: 100%; }
+.kasus-uji .ku-kartu { display: flex; flex-direction: column; gap: 0.2em; align-items: center; padding: 0.7em; border: 2px solid var(--line); border-radius: 0.8em; background: var(--surface); color: var(--ink); font: inherit; cursor: pointer; }
+.kasus-uji .ku-kartu b { font-size: clamp(1rem, 3.5cqmin, 1.8rem); color: var(--primary); }
+.kasus-uji .ku-kartu small { color: var(--muted); text-align: center; }

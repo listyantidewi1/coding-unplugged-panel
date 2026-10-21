@@ -7,7 +7,7 @@
 
 export class PyError extends Error {
   constructor(type, message, line, penjelasan = '') { super(message); this.type = type; this.line = line; this.penjelasan = penjelasan; }
-  get text() { return `${this.type}: ${this.message}`; }
+  get text() { return this.message ? `${this.type}: ${this.message}` : this.type; }
 }
 export class PyFloat { constructor(v) { this.v = v; } }
 // dict keeps insertion order like Python 3.7+; tuples are arrays marked tup.
@@ -24,7 +24,7 @@ export function pyRepr(v, inner = false) {
   if (v === false) return 'False';
   if (v instanceof PyFloat) { const x = v.v; if (!Number.isFinite(x)) return x > 0 ? 'inf' : x < 0 ? '-inf' : 'nan'; return Number.isInteger(x) ? `${x}.0` : String(x); }
   if (typeof v === 'number') return String(v);
-  if (typeof v === 'string') return inner ? `'${v}'` : v;
+  if (typeof v === 'string') { if (!inner) return v; const q = v.includes("'") && !v.includes('"') ? '"' : "'"; return q + v.replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/\t/g, '\\t').replace(q === "'" ? /'/g : /(?!)/g, "\\'") + q; }
   if (isTup(v)) return v.length === 1 ? `(${pyRepr(v[0], true)},)` : `(${v.map((x) => pyRepr(x, true)).join(', ')})`;
   if (Array.isArray(v)) return `[${v.map((x) => pyRepr(x, true)).join(', ')}]`;
   if (v instanceof PyDict) return `{${[...v].map(([k, x]) => `${pyRepr(k, true)}: ${pyRepr(x, true)}`).join(', ')}}`;
@@ -40,7 +40,7 @@ function tokenize(src, line) {
     const c = src[i];
     if (c === ' ' || c === '\t') { i++; continue; }
     if (c === '#') break;
-    if (c === '"' || c === "'") { let j = i + 1; while (j < src.length && src[j] !== c) j++; if (j >= src.length) throw new PyError('SyntaxError', `unterminated string literal (detected at line ${line + 1})`, line, 'Tanda petik penutup teks hilang.'); t.push({ k: 'str', v: src.slice(i + 1, j) }); i = j + 1; continue; }
+    if (c === '"' || c === "'") { let j = i + 1; let v = ''; const ESC = { n: '\n', t: '\t', '\\': '\\', '"': '"', "'": "'" }; while (j < src.length && src[j] !== c) { if (src[j] === '\\' && j + 1 < src.length) { v += ESC[src[j + 1]] ?? `\\${src[j + 1]}`; j += 2; } else v += src[j++]; } if (j >= src.length) throw new PyError('SyntaxError', `unterminated string literal (detected at line ${line + 1})`, line, 'Tanda petik penutup teks hilang.'); t.push({ k: 'str', v }); i = j + 1; continue; }
     if (/[0-9]/.test(c)) { let j = i; while (j < src.length && /[0-9_]/.test(src[j])) j++; let f = false; if (src[j] === '.' && /[0-9]/.test(src[j + 1] || '')) { f = true; j++; while (j < src.length && /[0-9]/.test(src[j])) j++; } const v = Number(src.slice(i, j).replace(/_/g, '')); t.push({ k: 'num', v: f ? new PyFloat(v) : v }); i = j; continue; }
     if (/[A-Za-z_]/.test(c)) { let j = i; while (j < src.length && /\w/.test(src[j])) j++; const w = src.slice(i, j); t.push(['and', 'or', 'not', 'in', 'True', 'False', 'None'].includes(w) ? { k: 'kw', v: w } : { k: 'name', v: w }); i = j; continue; }
     const two = src.slice(i, i + 2);
@@ -73,7 +73,7 @@ function parseExpr(toks, line) {
     else throw new PyError('SyntaxError', 'invalid syntax', line, 'Penulisan tidak sesuai aturan Python.');
     for (;;) {
       if (isOp('(')) { next(); const args = []; const kw = {}; const arg = () => { if (peek()?.k === 'name' && toks[p + 1]?.v === '=') { const k2 = next().v; next(); kw[k2] = expr(0); } else args.push(expr(0)); }; if (!isOp(')')) { arg(); while (isOp(',')) { next(); if (isOp(')')) break; arg(); } } expect(')'); n = { t: 'call', f: n, args, kw }; }
-      else if (isOp('[')) { next(); const i = expr(0); expect(']'); n = { t: 'idx', a: n, i }; }
+      else if (isOp('[')) { next(); const i = isOp(':') ? null : expr(0); if (isOp(':')) { next(); const hi = isOp(']') || isOp(':') ? null : expr(0); let st = null; if (isOp(':')) { next(); st = isOp(']') ? null : expr(0); } expect(']'); n = { t: 'slice', a: n, lo: i, hi, st }; } else { expect(']'); n = { t: 'idx', a: n, i }; } }
       else if (isOp('.')) { next(); const m = next(); if (!m || m.k !== 'name') throw new PyError('SyntaxError', 'invalid syntax', line); n = { t: 'attr', o: n, name: m.v }; }
       else break;
     }
@@ -91,7 +91,8 @@ function parseExpr(toks, line) {
     }
     return l;
   }
-  const e = expr(0);
+  let e = expr(0);
+  if (isOp(',')) { const items = [e]; while (isOp(',')) { next(); if (p >= toks.length) break; items.push(expr(0)); } e = { t: 'tuple', items }; }
   if (p < toks.length) { const t = toks[p]; if (t.v === '=') throw new PyError('SyntaxError', "invalid syntax. Maybe you meant '==' or ':=' instead of '='?", line, 'Untuk membandingkan, pakai == (dua tanda sama dengan).'); if (t.v === ':') throw new PyError('SyntaxError', 'invalid syntax', line); throw new PyError('SyntaxError', 'invalid syntax', line, 'Ada bagian yang berlebih atau tanda yang hilang.'); }
   return e;
 }
@@ -119,7 +120,7 @@ export function parsePy(lines) {
   function stmt(r) {
     const L = r.i; let m;
     const kw = (r.s.match(BLOCK) || [])[1];
-    if (kw === 'for') { const h = header(r, 'for'); m = h.match(/^([A-Za-z_]\w*)\s+in\s+(.+)$/); if (!m) throw new PyError('SyntaxError', 'invalid syntax', L, 'Bentuknya: for nama in range(…):'); return { t: 'for', line: L, v: m[1], it: parseExpr(tokenize(m[2], L), L), body: block(r.ind, { ind: r.ind, i: L, kw }) }; }
+    if (kw === 'for') { const h = header(r, 'for'); m = h.match(/^([A-Za-z_]\w*(?:\s*,\s*[A-Za-z_]\w*)*)\s+in\s+(.+)$/); if (!m) throw new PyError('SyntaxError', 'invalid syntax', L, 'Bentuknya: for nama in range(…):'); return { t: 'for', line: L, v: m[1], it: parseExpr(tokenize(m[2], L), L), body: block(r.ind, { ind: r.ind, i: L, kw }) }; }
     if (kw === 'while') { const h = header(r, 'while'); return { t: 'while', line: L, c: parseExpr(tokenize(h, L), L), body: block(r.ind, { ind: r.ind, i: L, kw }) }; }
     if (kw === 'if' || kw === 'elif') {
       const h = header(r, kw); const node = { t: 'if', line: L, c: parseExpr(tokenize(h, L), L), body: block(r.ind, { ind: r.ind, i: L, kw }), else: null };
@@ -133,14 +134,16 @@ export function parsePy(lines) {
       return node;
     }
     if (kw === 'else') throw new PyError('SyntaxError', 'invalid syntax', L, 'else harus tepat di bawah if dengan jorok yang sama.');
-    if (kw === 'def') { const h = header(r, 'def'); m = h.match(/^([A-Za-z_]\w*)\((.*)\)$/); if (!m) throw new PyError('SyntaxError', 'invalid syntax', L); const params = m[2].split(',').map((x) => x.trim()).filter(Boolean); const body = block(r.ind, { ind: r.ind, i: L, kw: 'function definition' }); const glob = new Set(); const loc = new Set(params);
-      const walk = (b) => { for (const x of b) { if (x.t === 'global') x.names.forEach((n) => glob.add(n)); if ((x.t === 'set' || x.t === 'aug') && x.target.t === 'var') loc.add(x.target.name); if (x.t === 'for') loc.add(x.v); for (const c of [x.body, x.else]) if (Array.isArray(c)) walk(c); } };
-      walk(body); glob.forEach((n) => loc.delete(n)); return { t: 'def', line: L, name: m[1], params, body, locals: loc, globals: glob }; }
+    if (kw === 'def') { const h = header(r, 'def'); m = h.match(/^([A-Za-z_]\w*)\((.*)\)$/); if (!m) throw new PyError('SyntaxError', 'invalid syntax', L); const raw = m[2].split(',').map((x) => x.trim()).filter(Boolean); const params = raw.map((x) => x.split('=')[0].trim()); const defaults = Object.fromEntries(raw.filter((x) => x.includes('=')).map((x) => [x.split('=')[0].trim(), parseExpr(tokenize(x.slice(x.indexOf('=') + 1), L), L)])); const body = block(r.ind, { ind: r.ind, i: L, kw: 'function definition' }); const glob = new Set(); const loc = new Set(params);
+      const walk = (b) => { for (const x of b) { if (x.t === 'global') x.names.forEach((n) => glob.add(n)); if ((x.t === 'set' || x.t === 'aug') && x.target.t === 'var') loc.add(x.target.name); if (x.t === 'set' && x.target.t === 'unpack') x.target.names.forEach((n) => loc.add(n)); if (x.t === 'for') x.v.split(',').forEach((n) => loc.add(n.trim())); for (const c of [x.body, x.else]) if (Array.isArray(c)) walk(c); } };
+      walk(body); glob.forEach((n) => loc.delete(n)); return { t: 'def', line: L, name: m[1], params, defaults, body, locals: loc, globals: glob }; }
     if ((m = r.s.match(/^return\b\s*(.*)$/))) return { t: 'ret', line: L, e: m[1] ? parseExpr(tokenize(m[1], L), L) : null };
     if ((m = r.s.match(/^global\s+(.+)$/))) return { t: 'global', line: L, names: m[1].split(',').map((x) => x.trim()) };
+    if ((m = r.s.match(/^assert\s+(.+)$/))) { const e = parseExpr(tokenize(m[1], L), L); return e.t === 'tuple' && e.items.length === 2 ? { t: 'assert', line: L, c: e.items[0], msg: e.items[1] } : { t: 'assert', line: L, c: e, msg: null }; }
     if (r.s === 'pass') return { t: 'pass', line: L };
     if (r.s === 'break') return { t: 'break', line: L };
     if ((m = r.s.match(/^([A-Za-z_]\w*(?:\[.+\])?)\s*(\+=|-=|\*=)\s*(.+)$/))) return { t: 'aug', line: L, target: parseExpr(tokenize(m[1], L), L), op: m[2][0], e: parseExpr(tokenize(m[3], L), L) };
+    if ((m = r.s.match(/^([A-Za-z_]\w*(?:\s*,\s*[A-Za-z_]\w*)+)\s*=(?!=)\s*(.+)$/))) return { t: 'set', line: L, target: { t: 'unpack', names: m[1].split(',').map((x) => x.trim()) }, e: parseExpr(tokenize(m[2], L), L) };
     if ((m = r.s.match(/^([A-Za-z_]\w*(?:\[.+\])?)\s*=(?!=)\s*(.+)$/))) return { t: 'set', line: L, target: parseExpr(tokenize(m[1], L), L), e: parseExpr(tokenize(m[2], L), L) };
     return { t: 'expr', line: L, e: parseExpr(tokenize(r.s, L), L) };
   }
@@ -149,6 +152,16 @@ export function parsePy(lines) {
 }
 
 // ---- runner ----
+const WS = ' \t\n\r\f\v';
+const stripChars = (o, ch, left, right) => { const set = ch === undefined || ch === null ? WS : ch; let i = 0; let j = o.length; if (left) while (i < j && set.includes(o[i])) i++; if (right) while (j > i && set.includes(o[j - 1])) j--; return o.slice(i, j); };
+const STRM = {
+  upper: (o) => o.toUpperCase(), lower: (o) => o.toLowerCase(),
+  strip: (o, ch) => stripChars(o, ch, true, true), lstrip: (o, ch) => stripChars(o, ch, true, false), rstrip: (o, ch) => stripChars(o, ch, false, true),
+  split: (o, sep) => (sep === undefined || sep === null ? o.split(/[ \t\n\r\f\v]+/).filter(Boolean) : o.split(sep)),
+  join: (o, xs) => { const a = Array.isArray(xs) ? xs : typeof xs === 'string' ? [...xs] : []; a.forEach((x, k) => { if (typeof x !== 'string') throw new PyError('TypeError', `sequence item ${k}: expected str instance, ${pyType(x)} found`, null); }); return a.join(o); },
+  replace: (o, a, b) => o.split(a).join(b), count: (o, a) => (a === '' ? o.length + 1 : o.split(a).length - 1), find: (o, a) => o.indexOf(a),
+  startswith: (o, a) => o.startsWith(a), endswith: (o, a) => o.endsWith(a), isdigit: (o) => o.length > 0 && /^[0-9]+$/.test(o),
+};
 export function makePyRunner(lines, { builtins = {}, vars = {}, limit = 3000, input = [], loopLimit = 0 } = {}) {
   const st = { vars: { ...vars }, frames: [], out: [], steps: 0, done: false, error: null, calls: [] };
   let prog = []; let parseErr = null;
@@ -227,23 +240,34 @@ export function makePyRunner(lines, { builtins = {}, vars = {}, limit = 3000, in
       case 'not': return !truthy(yield* ev(n.e, L));
       case 'bin': { const a = yield* ev(n.l, L); if (n.op === 'and') return truthy(a) ? yield* ev(n.r, L) : a; if (n.op === 'or') return truthy(a) ? a : yield* ev(n.r, L); return bin(n.op, a, yield* ev(n.r, L), L); }
       case 'idx': { const a = yield* ev(n.a, L); let i = yield* ev(n.i, L); if (a instanceof PyDict) { if (!a.has(i)) throw new PyError('KeyError', pyRepr(i, true), L, 'Kunci itu tidak ada di dictionary.'); return a.get(i); } if (!Array.isArray(a) && typeof a !== 'string') throw new PyError('TypeError', `'${pyType(a)}' object is not subscriptable`, L); if (i < 0) i += a.length; if (i < 0 || i >= a.length) throw new PyError('IndexError', `${Array.isArray(a) ? 'list' : 'string'} index out of range`, L, 'Indeks di luar batas.'); return a[i]; }
-      case 'attr': { const o = yield* ev(n.o, L); const M = methods(o, n.name, L); if (M) return { py: 'fn', name: n.name, f: M }; if (typeof o === 'string' && ['upper', 'lower', 'strip'].includes(n.name)) return { py: 'fn', name: n.name, f: () => (n.name === 'upper' ? o.toUpperCase() : n.name === 'lower' ? o.toLowerCase() : o.trim()) }; throw new PyError('AttributeError', `'${pyType(o)}' object has no attribute '${n.name}'`, L); }
+      case 'slice': { const a = yield* ev(n.a, L); if (!Array.isArray(a) && typeof a !== 'string') throw new PyError('TypeError', `'${pyType(a)}' object is not subscriptable`, L); const len = a.length; const st = n.st ? yield* ev(n.st, L) : 1; if (st === 0) throw new PyError('ValueError', 'slice step cannot be zero', L);
+        const norm = (x, d) => { if (x === null || x === undefined) return d; x = num(x); if (x < 0) x += len; return st > 0 ? Math.min(Math.max(x, 0), len) : Math.min(Math.max(x, -1), len - 1); };
+        const lo = norm(n.lo ? yield* ev(n.lo, L) : null, st > 0 ? 0 : len - 1); const hi = norm(n.hi ? yield* ev(n.hi, L) : null, st > 0 ? len : -1); const out = []; if (st > 0) for (let k = lo; k < hi; k += st) out.push(a[k]); else for (let k = lo; k > hi; k += st) out.push(a[k]);
+        return typeof a === 'string' ? out.join('') : isTup(a) ? tuple(out) : out; }
+      case 'attr': { const o = yield* ev(n.o, L); const M = methods(o, n.name, L); if (M) return { py: 'fn', name: n.name, f: M }; if (typeof o === 'string' && STRM[n.name]) return { py: 'fn', name: n.name, f: (...x) => STRM[n.name](o, ...x) }; throw new PyError('AttributeError', `'${pyType(o)}' object has no attribute '${n.name}'`, L); }
       case 'call': {
         const f = yield* ev(n.f, L); const args = []; for (const x of n.args) args.push(yield* ev(x, L));
         if (!f || f.py !== 'fn') throw new PyError('TypeError', `'${pyType(f)}' object is not callable`, L);
-        if (f.def) return yield* callDef(f.def, args, L);
+        if (f.def) { const kw = {}; for (const [k, x] of Object.entries(n.kw || {})) kw[k] = yield* ev(x, L); return yield* callDef(f.def, args, L, kw); }
         if (n.kw && Object.keys(n.kw).length) { const kw = {}; for (const [k, x] of Object.entries(n.kw)) kw[k] = yield* ev(x, L); args.push({ kwargs: kw }); }
         try { return f.f(...args); } catch (e) { if (e instanceof PyError && e.line == null) e.line = L; throw e; }
       }
       default: throw new PyError('SyntaxError', 'invalid syntax', L);
     }
   }
-  function* callDef(d, args, L) {
+  function* callDef(d, args, L, kw = {}) {
     if (st.frames.length > 200) throw new PyError('RecursionError', 'maximum recursion depth exceeded', L, 'Fungsi memanggil dirinya terlalu dalam tanpa berhenti.');
-    st.frames.push({ name: d.name, vars: Object.fromEntries(d.params.map((p, i) => [p, args[i]])), locals: d.locals, globals: d.globals });
+    const np = d.params.length; const plural = (k, w) => `${k} ${w}${k === 1 ? '' : 's'}`;
+    if (args.length > np) { const need = np - Object.keys(d.defaults || {}).length; throw new PyError('TypeError', `${d.name}() takes ${need === np ? '' : `from ${need} to `}${plural(np, 'positional argument').replace(/^\d+ /, `${np} `)} but ${args.length} ${args.length === 1 ? 'was' : 'were'} given`, L, `Fungsi ${d.name} hanya menerima ${np} masukan.`); }
+    for (const k of Object.keys(kw)) if (!d.params.includes(k)) throw new PyError('TypeError', `${d.name}() got an unexpected keyword argument '${k}'`, L);
+    const vars = {}; const missing = [];
+    for (let i = 0; i < np; i++) { const p = d.params[i]; if (i < args.length) vars[p] = args[i]; else if (p in kw) vars[p] = kw[p]; else if (d.defaults && p in d.defaults) vars[p] = yield* ev(d.defaults[p], L); else missing.push(p); }
+    if (missing.length) throw new PyError('TypeError', `${d.name}() missing ${plural(missing.length, 'required positional argument')}: ${missing.map((x) => `'${x}'`).join(missing.length === 2 ? ' and ' : ', ')}`, L, 'Ada masukan fungsi yang belum diberikan.');
+    st.frames.push({ name: d.name, vars, locals: d.locals, globals: d.globals });
     try { const sig = yield* block(d.body); return sig && 'ret' in sig ? sig.ret : null; } finally { st.frames.pop(); }
   }
   function* assign(target, v, L) {
+    if (target.t === 'unpack') { const ns = target.names; const vs = typeof v === 'string' ? [...v] : v instanceof PyDict ? [...v.keys()] : v; if (!Array.isArray(vs)) throw new PyError('TypeError', `cannot unpack non-iterable ${pyType(v)} object`, L); if (vs.length > ns.length) throw new PyError('ValueError', `too many values to unpack (expected ${ns.length})`, L); if (vs.length < ns.length) throw new PyError('ValueError', `not enough values to unpack (expected ${ns.length}, got ${vs.length})`, L); for (let k = 0; k < ns.length; k++) yield* assign({ t: 'var', name: ns[k] }, vs[k], L); return; }
     if (target.t === 'var') { const f = st.frames[st.frames.length - 1]; (f?.globals?.has(target.name) ? st.vars : scope())[target.name] = v; return; }
     if (target.t === 'idx') { const a = yield* ev(target.a, L); const i = yield* ev(target.i, L); if (a instanceof PyDict) { a.set(i, v); return; } if (isTup(a)) throw new PyError('TypeError', "'tuple' object does not support item assignment", L); if (i < 0 || i >= a.length) throw new PyError('IndexError', 'list assignment index out of range', L); a[i] = v; return; }
     throw new PyError('SyntaxError', 'cannot assign to expression', L);
@@ -252,17 +276,18 @@ export function makePyRunner(lines, { builtins = {}, vars = {}, limit = 3000, in
   function* exec(s) {
     const L = s.line;
     switch (s.t) {
-      case 'set': { const v = yield* ev(s.e, L); yield* assign(s.target, v, L); tick(L); yield { line: L, note: `${s.target.t === 'var' ? s.target.name : 'elemen'} = ${pyRepr(v, true)}` }; return null; }
+      case 'set': { const v = yield* ev(s.e, L); yield* assign(s.target, v, L); tick(L); yield { line: L, note: `${s.target.t === 'var' ? s.target.name : s.target.t === 'unpack' ? s.target.names.join(', ') : 'elemen'} = ${pyRepr(v, true)}` }; return null; }
       case 'aug': { const cur = yield* ev(s.target, L); const v = bin(s.op, cur, yield* ev(s.e, L), L); yield* assign(s.target, v, L); tick(L); yield { line: L, note: `= ${pyRepr(v, true)}` }; return null; }
       case 'expr': { const v = yield* ev(s.e, L); tick(L); yield { line: L, note: s.e.t === 'call' ? `${s.e.f.name ?? 'fungsi'}()` : v && v.py === 'fn' ? `${v.name} tidak dipanggil (tanpa tanda kurung)` : '' }; return null; }
       case 'pass': tick(L); yield { line: L, note: 'pass' }; return null;
+      case 'assert': { const c = truthy(yield* ev(s.c, L)); tick(L); if (!c) { const msg = s.msg ? pyRepr(yield* ev(s.msg, L)) : ''; throw new PyError('AssertionError', msg, L, 'Kondisi uji bernilai False.'); } yield { line: L, note: 'assert lulus' }; return null; }
       case 'global': tick(L); yield { line: L, note: `${s.names.join(', ')} memakai variabel global` }; return null;
       case 'break': tick(L); yield { line: L, note: 'break' }; return { brk: true };
       case 'ret': { const v = s.e ? yield* ev(s.e, L) : null; tick(L); yield { line: L, note: `return ${pyRepr(v, true)}` }; return { ret: v }; }
       case 'def': st.vars[s.name] = { py: 'fn', name: s.name, def: s }; tick(L); yield { line: L, note: `fungsi ${s.name} dibuat` }; return null;
       case 'if': { const c = truthy(yield* ev(s.c, L)); tick(L); yield { line: L, note: `syarat → ${c ? 'True' : 'False'}`, cond: c }; if (c) return yield* block(s.body); if (s.else) return yield* block(s.else); return null; }
       case 'while': { for (let rounds = 0; ; rounds++) { const c = truthy(yield* ev(s.c, L)); tick(L); if (c && loopLimit && rounds >= loopLimit) throw new PyError('Batas', `Perulangan tidak berhenti: sudah ${loopLimit} putaran dan syaratnya masih True.`, L, 'batas'); yield { line: L, note: `syarat → ${c ? 'True' : 'False'}`, cond: c }; if (!c) return null; const sig = yield* block(s.body); if (sig?.brk) return null; if (sig) return sig; } }
-      case 'for': { const it = yield* ev(s.it, L); const list = typeof it === 'string' ? [...it] : it instanceof PyDict ? [...it.keys()] : it; if (!Array.isArray(list)) throw new PyError('TypeError', `'${pyType(it)}' object is not iterable`, L); for (const x of list) { scope()[s.v] = x; tick(L); yield { line: L, note: `${s.v} = ${pyRepr(x, true)}` }; const sig = yield* block(s.body); if (sig?.brk) return null; if (sig) return sig; } return null; }
+      case 'for': { const it = yield* ev(s.it, L); const list = typeof it === 'string' ? [...it] : it instanceof PyDict ? [...it.keys()] : it; if (!Array.isArray(list)) throw new PyError('TypeError', `'${pyType(it)}' object is not iterable`, L); for (const x of list) { if (s.v.includes(',')) yield* assign({ t: 'unpack', names: s.v.split(',').map((q) => q.trim()) }, x, L); else scope()[s.v] = x; tick(L); yield { line: L, note: `${s.v} = ${pyRepr(x, true)}` }; const sig = yield* block(s.body); if (sig?.brk) return null; if (sig) return sig; } return null; }
       default: return null;
     }
   }

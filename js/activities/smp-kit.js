@@ -10,6 +10,9 @@ import { say } from './sma-kit.js';
 // rows: [key, label, options[], right, explain]; every row must be answered.
 export function rowsChoose(wrap, ctx, { prompt, rows, done, info = '', cls = '' }) {
   const res = {};
+  // Mixed order so the right answer is not always in the same place; numbers stay in counting order.
+  const isInt = (v) => /^-?\d+$/.test(String(v));
+  rows = rows.map(([k, t, opts, a, w]) => [k, t, opts.every(isInt) ? [...opts].sort((x, y) => Number(x) - Number(y)) : ctx.rand?.shuffle ? ctx.rand.shuffle([...opts]) : opts, a, w]);
   const msg = el('p', { class: 'reveal info' }, info);
   const box = el('div', { class: `sk-baris-baris ${cls}` });
   const draw = () => box.replaceChildren(...rows.map(([k, t, opts, a, w]) => el('div', { class: `sk-baris ${k in res ? 'beres' : ''}` }, el('span', null, t), k in res ? el('b', null, a) : el('div', { class: 'seg' }, opts.map((v) => onTap(el('button', { class: 'seg-btn', type: 'button' }, v), () => {
