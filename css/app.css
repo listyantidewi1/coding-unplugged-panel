@@ -3166,3 +3166,45 @@ code.beda { background: #fee2e2 !important; color: #991b1b !important; }
 @container (max-aspect-ratio: 1/1) { .sb-cabang { grid-template-columns: 1fr; } }
 .sb-opsi { flex: 1 1 18em; max-width: 30em; }
 .sb-opsi .opt { min-height: 0; padding-block: 0.4em; }
+
+/* sma-27 Merancang Prompt yang Baik */
+.rp-dua { display: flex; gap: 2cqmin; align-items: flex-start; justify-content: center; width: 100%; flex-wrap: wrap; }
+.rp-naskah { display: flex; flex-direction: column; gap: 0.3em; flex: 1 1 30em; min-width: 0; max-width: 56em; padding: 0.6em 0.9em; border: 2px solid #c4b5fd; border-radius: 0.8em; background: #fff; color: #111827; text-align: left; font-size: clamp(0.6rem, 2.5cqmin, 1.45rem); }
+.rp-judul { font-size: 1.15em; }
+.rp-kal { display: block; padding: 0.15em 0.4em; border-radius: 0.4em; }
+.rp-kal > * + * { margin-left: 0.4em; }
+.rp-kal.kini { background: #fef08a; outline: 3px solid #ca8a04; }
+.rp-kal.isi { color: #475569; }
+.rp-kal.masalah { background: #fef2f2; }
+.rp-kal small { display: block; margin-left: 0; color: #b91c1c; font-size: 0.8em; }
+.rp-no { color: #7c3aed; font-weight: 800; }
+.rp-kode { padding: 0 0.4em; border-radius: 0.3em; background: #dcfce7; color: #15803d; }
+.rp-kode.k-AK, .rp-kode.k-SU, .rp-kode.k-BI, .rp-kode.k-RE { background: #fee2e2; color: #b91c1c; }
+.rp-kanan { display: flex; flex-direction: column; gap: 1cqmin; flex: 1 1 22em; max-width: 34em; }
+.rp-pilih { flex-wrap: wrap; justify-content: center; }
+.rp-pilih .seg-btn { font-size: clamp(0.7rem, 2.8cqmin, 1.55rem); }
+.rp-fakta, .rp-komponen { display: flex; flex-direction: column; gap: 0.25em; font-size: clamp(0.55rem, 2.1cqmin, 1.2rem); text-align: left; }
+.rp-fakta > div, .rp-komponen > div { display: flex; gap: 0.5em; padding: 0.2em 0.5em; border-radius: 0.4em; background: #f0f9ff; color: #111827; }
+.rp-fakta > div.tanda { background: #fef08a; }
+.rp-fakta b, .rp-komponen b { flex: none; color: #0369a1; }
+.rp-rubrik { border-collapse: collapse; margin-top: 0.4em; background: #fff; color: #111827; font-size: 1em; }
+.rp-rubrik th, .rp-rubrik td { border: 1px solid #cbd5e1; padding: 0.2em 0.7em; text-align: center; }
+.rp-rubrik td.s2 { background: #dcfce7; } .rp-rubrik td.s1 { background: #fef9c3; } .rp-rubrik td.s0 { background: #fee2e2; }
+.rp-aturan { font-weight: 700; font-size: clamp(0.65rem, 2.6cqmin, 1.4rem); }
+.rp-perakit { display: flex; gap: 2cqmin; align-items: flex-start; width: 100%; flex-wrap: wrap; }
+.rp-kartu-kartu { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.5cqmin; flex: 1 1 34em; min-width: 0; }
+.rp-kartu { display: flex; gap: 0.5em; align-items: baseline; padding: 0.3em 0.6em; border: 2px solid #a78bfa; border-radius: 0.5em; background: #fff; color: #111827; font: inherit; font-size: clamp(0.55rem, 2.1cqmin, 1.2rem); text-align: left; cursor: pointer; }
+.rp-kartu b { flex: none; display: inline-grid; place-items: center; min-width: 2em; padding: 0.05em 0.3em; border-radius: 0.3em; background: #7c3aed; color: #fff; }
+.rp-kartu.x b { background: #dc2626; }
+.rp-slot-slot { display: flex; flex-direction: column; gap: 0.4em; flex: 1 1 24em; max-width: 36em; }
+.rp-slot-slot.kecil { flex-direction: row; flex-wrap: wrap; max-width: none; width: 100%; }
+.rp-slot-slot.kecil .rp-slot { flex: 1 1 10em; }
+.rp-slot { display: flex; flex-direction: column; gap: 0.1em; padding: 0.3em 0.6em; border: 2px dashed #94a3b8; border-radius: 0.5em; background: #f8fafc; color: #111827; font-size: clamp(0.55rem, 2.1cqmin, 1.2rem); text-align: left; cursor: pointer; }
+.rp-slot.isi { border-style: solid; border-color: #7c3aed; background: #f5f3ff; }
+.rp-slot small { color: #94a3b8; }
+.rp-data { display: flex; flex-direction: column; gap: 0.5cqmin; width: min(100%, 60em); }
+.rp-d-baris { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.3em 1em; align-items: center; padding: 0.3em 0.8em; border: 2px solid #cbd5e1; border-radius: 0.6em; background: #fff; color: #111827; text-align: left; font-size: clamp(0.6rem, 2.5cqmin, 1.4rem); }
+.rp-d-baris.beres { border-color: #16a34a; background: #f0fdf4; }
+.rp-d-baris .seg-btn { font-size: 1em; }
+.rp-d-baris b.ya { color: #15803d; } .rp-d-baris b.tidak { color: #b91c1c; }
+@container (max-aspect-ratio: 1/1) { .rp-kartu-kartu { grid-template-columns: 1fr; } }
