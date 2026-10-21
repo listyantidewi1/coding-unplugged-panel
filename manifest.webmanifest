@@ -1,0 +1,12 @@
+{
+  "name": "Coding Unplugged · Panel Interaktif",
+  "short_name": "Coding Unplugged",
+  "lang": "id",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#f4f7fb",
+  "theme_color": "#1d4ed8",
+  "icons": [{ "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
