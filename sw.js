@@ -92,6 +92,7 @@ const FILES = [
   'js/activities/sma-08-pentas-seni.js',
   'js/activities/sma-09-kabel-dusun.js',
   'js/activities/sma-10-bagasi.js',
+  'js/activities/sma-11-mudah-dicek.js',
 ];
 
 self.addEventListener('install', (e) => {

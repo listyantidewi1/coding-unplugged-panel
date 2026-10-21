@@ -2528,3 +2528,26 @@ button.kk-kotak { cursor: pointer; }
 .bg-dp-sel.kini { background: #fde68a; outline: 2px solid #ca8a04; }
 .bg-dp-sel.atas { background: #bfdbfe; }
 .bg-dp-sel.kiri { background: #bbf7d0; }
+
+/* sma-11 Mudah Dicek, Sulit Dicari */
+.mc-dua { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 1.2cqmin; }
+.mc-truk { border: 3px solid #cbd5e1; border-radius: 0.8em; background: #fff; padding: 0.6cqmin; display: flex; flex-direction: column; gap: 0.6cqmin; min-height: 18cqmin; transition: border-color .2s, background .2s; }
+.mc-truk.adil { border-color: #16a34a; background: #f0fdf4; }
+.mc-truk-kepala { display: flex; justify-content: space-between; align-items: center; font-weight: 800; font-size: clamp(0.8rem, 3.6cqmin, 2rem); color: #111827; }
+.mc-truk-kepala b { color: #1d4ed8; }
+.mc-muatan { display: flex; flex-wrap: wrap; gap: 0.6cqmin; align-content: flex-start; }
+.mc-karung { display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 9cqmin; min-height: 9cqmin; padding: 0.2em 0.5em; border: 2px solid #a16207; border-radius: 40% 40% 0.5em 0.5em; background: #fde68a; color: #111827; font-size: clamp(0.8rem, 3.4cqmin, 1.9rem); font-weight: 800; cursor: pointer; position: relative; }
+.mc-karung small { font-size: 0.55em; font-weight: 500; color: #78350f; }
+.mc-karung.kecil { min-width: 7cqmin; min-height: 7cqmin; font-size: clamp(0.7rem, 2.8cqmin, 1.6rem); cursor: default; opacity: .55; }
+.mc-karung.kini { opacity: 1; outline: 4px solid #2563eb; }
+.mc-karung.di-A { opacity: 1; background: #bfdbfe; border-color: #1d4ed8; }
+.mc-karung.di-B { opacity: 1; background: #fecaca; border-color: #b91c1c; }
+.mc-karung em { position: absolute; top: -0.6em; right: -0.4em; font-style: normal; font-size: 0.6em; background: #111827; color: #fff; border-radius: 1em; padding: 0 0.4em; }
+.mc-urut { display: flex; flex-wrap: wrap; gap: 0.8cqmin; justify-content: center; }
+.mc-skor { display: flex; gap: 3cqmin; justify-content: center; font-weight: 800; font-size: clamp(0.9rem, 4cqmin, 2.2rem); color: #111827; }
+.mc-sudoku { display: grid; grid-template-columns: repeat(4, 1fr); width: min(52cqmin, 90%); aspect-ratio: 1; border: 4px solid #111827; background: #fff; }
+.mc-sd { border: 1px solid #94a3b8; background: #fff; color: #111827; font-size: clamp(1rem, 6cqmin, 3.4rem); font-weight: 800; cursor: pointer; }
+.mc-sd.kanan { border-right: 4px solid #111827; }
+.mc-sd.bawah { border-bottom: 4px solid #111827; }
+.mc-sd.salah { background: #fee2e2; color: #b91c1c; }
+.mc-kalk { font-size: clamp(0.8rem, 3.4cqmin, 1.9rem); }
