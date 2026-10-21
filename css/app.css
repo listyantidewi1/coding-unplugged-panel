@@ -1302,3 +1302,53 @@ button.bit-sel { cursor: pointer; }
   .kode-huruf .tabel-kode { display: none; }
   .kode-huruf .saklar { font-size: clamp(0.8rem, 4cqmin, 2rem); }
 }
+
+/* Videotron */
+.videotron { gap: 1.2cqmin; }
+.swatch-kode { display: flex; align-items: center; gap: 0.6em; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: clamp(0.9rem, 5cqmin, 2.4rem); }
+.swatch-kode i { width: 1.6em; height: 1.6em; border-radius: 0.3em; border: 2px solid #94a3b8; }
+.swatch-bulat { display: inline-block; width: 1.4em; height: 1.4em; border-radius: 50%; border: 2px solid #94a3b8; }
+.swatch-pasang { display: flex; gap: 2cqw; }
+.swatch-besar { width: min(22cqw, 20cqh); aspect-ratio: 1.3; border-radius: 1.2cqmin; border: 2px solid #94a3b8; display: flex; align-items: end; justify-content: center; padding-bottom: 0.3em; }
+.swatch-besar small { background: rgb(255 255 255 / 0.85); color: #111827; padding: 0 0.5em; border-radius: 0.4em; font-weight: 800; font-size: clamp(0.5rem, 2.2cqmin, 1rem); }
+.kode-warna { margin: 0; font-family: ui-monospace, Menlo, Consolas, monospace; font-weight: 900; font-size: clamp(0.8rem, 4cqmin, 2rem); }
+.geser-kotak { display: flex; flex-direction: column; gap: 0.8cqmin; width: min(70cqw, 40rem); }
+.geser-baris { display: flex; align-items: center; gap: 0.6em; font-size: clamp(0.7rem, 3.4cqmin, 1.6rem); }
+.geser-label { font-weight: 900; width: 1.4em; text-align: center; border-radius: 0.3em; color: #fff; }
+.geser-label.r { background: #dc2626; } .geser-label.g { background: #16a34a; } .geser-label.b { background: #2563eb; }
+.geser { flex: 1; min-width: 0; height: max(28px, 5cqmin); accent-color: #111827; }
+.geser-r { accent-color: #dc2626; } .geser-g { accent-color: #16a34a; } .geser-b { accent-color: #2563eb; }
+.geser-nilai { width: 2.4em; text-align: right; font-family: ui-monospace, Menlo, Consolas, monospace; }
+.geser-tombol { font: inherit; font-weight: 900; width: 1.8em; height: 1.8em; border-radius: 50%; border: 2px solid #94a3b8; background: #fff; cursor: pointer; padding: 0; color: #111827; }
+.campur { display: flex; gap: 4cqw; align-items: center; }
+.cahaya { position: relative; width: min(30cqw, 30cqh); aspect-ratio: 1; background: #000; border-radius: 1.2cqmin; isolation: isolate; }
+.cahaya i { position: absolute; width: 55%; aspect-ratio: 1; border-radius: 50%; mix-blend-mode: screen; }
+.cahaya .c-r { left: 8%; top: 8%; } .cahaya .c-g { right: 8%; top: 8%; } .cahaya .c-b { left: 22.5%; bottom: 6%; }
+.kaca { display: grid; grid-template-columns: repeat(4, auto); gap: 0.6cqmin; padding: 1cqmin; background: #0f172a; border-radius: 50%; aspect-ratio: 1; place-content: center; width: min(28cqw, 28cqh); }
+.titik-led { display: flex; gap: 2px; } .titik-led i { width: min(1.4cqw, 1.6cqh); height: min(3cqw, 3.4cqh); border-radius: 2px; }
+.hitung { display: flex; flex-direction: column; gap: 0.6cqmin; font-size: clamp(0.6rem, 3cqmin, 1.4rem); }
+.hitung-baris { display: flex; gap: 0.8em; justify-content: space-between; padding: 0.3em 0.8em; border-radius: 0.8cqmin; background: #f8fafc; border: 2px solid transparent; }
+.hitung-baris.aktif { border-color: #ca8a04; background: #fef9c3; }
+.hitung-baris.beres { background: #f0fdf4; color: #166534; }
+.hitung-isi { font-family: ui-monospace, Menlo, Consolas, monospace; min-width: 9em; text-align: right; }
+.grafik-wadah { display: flex; flex-direction: column; align-items: center; gap: 0.4cqmin; }
+.grafik-bingkai { position: relative; --s: min(5.2cqw, calc((100cqh - 46cqmin) / 10)); }
+.grafik { display: grid; grid-template-columns: auto repeat(12, var(--s)); grid-auto-rows: var(--s); font-size: clamp(0.5rem, 2cqmin, 0.9rem); }
+.grafik-y { align-self: center; padding-right: 0.4em; text-align: right; color: var(--muted); }
+.grafik-x { text-align: center; color: var(--muted); }
+.grafik-sel { border: 1px solid #e2e8f0; background: #fff; padding: 0; cursor: pointer; }
+.grafik-sel.nol { border-bottom: 2px solid #94a3b8; }
+.grafik-sel.on { background: radial-gradient(circle, #1d4ed8 0 32%, #dbeafe 34%); }
+.grafik-lapis { position: absolute; top: 0; right: 0; width: calc(var(--s) * 12); pointer-events: none; }
+.grafik-lapis svg { display: block; width: 100%; height: 100%; }
+.grafik-lapis .kurva { fill: none; stroke: #f97316; stroke-width: 0.08; }
+.grafik-lapis .kurva.pudar { stroke-dasharray: 0.15 0.15; opacity: 0.5; }
+.grafik-lapis .kurva.banding { stroke: #16a34a; }
+.grafik-lapis .kurva.jarang { stroke: #dc2626; stroke-width: 0.12; }
+.grafik-lapis .titik { fill: #f97316; } .grafik-lapis .titik.pudar { opacity: 0.35; }
+.grafik-ket { margin: 0; } .k-utama { color: #f97316; font-weight: 800; } .k-banding { color: #16a34a; font-weight: 800; }
+.pengumuman { padding: 0.6em 1.4em; border-radius: 1cqmin; font-weight: 900; font-size: clamp(1rem, 7cqmin, 3.6rem); border: 2px solid #94a3b8; }
+@container (max-height: 520px) {
+  .videotron .swatch-besar { width: min(16cqw, 18cqh); }
+  .videotron .geser-baris { font-size: clamp(0.55rem, 2.8cqmin, 1.2rem); }
+}

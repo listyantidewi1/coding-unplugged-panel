@@ -54,6 +54,7 @@ const FILES = [
   'js/activities/sdl-18-data-pribadi.js',
   'js/activities/smp-01-kartu-pelajar.js',
   'js/activities/smp-02-kode-huruf.js',
+  'js/activities/smp-03-videotron.js',
 ];
 
 self.addEventListener('install', (e) => {
