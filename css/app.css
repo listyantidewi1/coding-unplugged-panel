@@ -2404,3 +2404,32 @@ button.kk-kotak { cursor: pointer; }
 .at-tabel { display: flex; flex-direction: column; gap: 0.15em; font-size: clamp(0.5rem, 2.6cqmin, 1.4rem); }
 .at-baris { display: grid; grid-template-columns: 2em 8em 4em 4em 5em; gap: 0.4em; padding: 0.1em 0.4em; background: #f8fafc; border-left: 0.5em solid #cbd5e1; color: #111827; }
 .at-baris.kepala { font-weight: 800; background: none; }
+
+/* sma-04 Pohon Kamus Bahasa Daerah */
+.pohon-cari { gap: 1cqmin; }
+.pc-pohon { width: 100%; display: flex; justify-content: center; }
+.pc-pohon svg { width: 100%; max-height: 56cqh; touch-action: none; }
+.pc-pohon.kecil svg { max-height: 40cqh; }
+.pc-slot, .pc-ketuk { cursor: pointer; }
+.pc-datang { display: flex; flex-wrap: wrap; gap: 0.3em; justify-content: center; font-size: clamp(0.55rem, 2.8cqmin, 1.5rem); }
+.pc-kata { padding: 0.15em 0.5em; border-radius: 0.4em; background: #f1f5f9; color: #475569; }
+.pc-kata.kini { background: #fde68a; color: #111827; font-weight: 900; outline: 3px solid #f97316; }
+.pc-kata.sudah { opacity: 0.4; text-decoration: line-through; }
+.pc-pool { justify-content: center; font-size: clamp(0.55rem, 2.8cqmin, 1.4rem); }
+.pc-pakai { opacity: 0.35; }
+.pc-cetak { font-size: clamp(0.6rem, 2.8cqmin, 1.4rem); }
+.pc-cari { width: 14em; }
+
+/* sma-05 Quicksort di Gudang Beras */
+.gudang-beras { gap: 1cqmin; }
+.gb-papan { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 0.6cqmin; }
+.gb-baris { display: flex; gap: 0.8cqw; align-items: flex-end; justify-content: center; height: 34cqh; width: 100%; }
+.gb-karung { --h: 60%; font: inherit; flex: 0 1 8cqw; height: var(--h); display: flex; align-items: flex-end; justify-content: center; padding: 0 0 0.4em; border-radius: 1.2em 1.2em 0.5em 0.5em; border: 3px solid #a8a29e; background: #e7e5e4; color: #44403c; font-weight: 900; font-size: clamp(0.6rem, 3.4cqmin, 1.8rem); cursor: default; opacity: 0.55; transition: transform 0.15s; }
+.gb-karung.kelompok { opacity: 1; background: #fef3c7; border-color: #b45309; color: #111827; cursor: pointer; }
+.gb-karung.tetap { opacity: 1; background: #bbf7d0; border-color: #16a34a; color: #14532d; }
+.gb-karung.pivot { background: #fde047; border-color: #ca8a04; outline: 4px solid #f97316; }
+.gb-karung.banding { transform: translateY(-0.4em); outline: 3px dashed #1d4ed8; }
+.gb-karung.ke-kiri { box-shadow: -0.4em 0 0 #60a5fa; }
+.gb-karung.ke-kanan { box-shadow: 0.4em 0 0 #f87171; }
+.gb-tabel { display: flex; flex-direction: column; gap: 0.15em; font-size: clamp(0.5rem, 2.4cqmin, 1.25rem); font-family: ui-monospace, monospace; text-align: left; }
+.gb-ketik { width: 18em; }
