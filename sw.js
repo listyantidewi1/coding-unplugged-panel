@@ -60,6 +60,7 @@ const FILES = [
   'js/activities/smp-06-tebak-huruf.js',
   'js/activities/smp-07-koperasi.js',
   'js/activities/smp-08-loker.js',
+  'js/activities/smp-09-klasemen.js',
 ];
 
 self.addEventListener('install', (e) => {
