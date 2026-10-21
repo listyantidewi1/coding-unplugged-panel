@@ -5621,3 +5621,7 @@ button.pls-chip, .pls-pilih { cursor: pointer; }
 .tnn-sel.p1 { background: #0f766e; }
 .tnn-info { font-weight: 700; text-align: center; max-width: 92cqw; }
 .motif-tenun .tnn-kolom .tnn-kain { width: min(58cqw, calc(var(--k) * 4cqmin)); }
+
+/* Panel sempit (lomba): aktivitas SD Lanjut yang padat boleh digulir. */
+.act.ubin-teras, .act.pilah-sampah, .act.celengan, .act.sampai-penuh,
+.act.robot-labirin, .act.tangkap-mangga, .act.motif-tenun { overflow-y: auto; justify-content: safe center; }
