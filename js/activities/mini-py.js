@@ -100,6 +100,7 @@ function parseExpr(toks, line) {
     if (t.k === 'num') n = { t: 'val', v: t.v };
     else if (t.k === 'str') n = { t: 'val', v: t.v };
     else if (t.k === 'kw' && ['True', 'False', 'None'].includes(t.v)) n = { t: 'val', v: t.v === 'True' ? true : t.v === 'False' ? false : null };
+    else if (t.k === 'name' && t.v === 'lambda') { const params = []; while (!isOp(':')) { const q = next(); if (!q || q.k !== 'name') throw new PyError('SyntaxError', 'invalid syntax', line); params.push(q.v); if (isOp(',')) next(); } next(); return { t: 'lambda', params, body: expr(0) }; }
     else if (t.k === 'name') n = { t: 'var', name: t.v };
     else if (t.k === 'op' && t.v === '(') { if (isOp(')')) { next(); n = { t: 'tuple', items: [] }; } else { const first = expr(0); if (isOp(',')) { const items = [first]; while (isOp(',')) { next(); if (isOp(')')) break; items.push(expr(0)); } n = { t: 'tuple', items }; } else n = first; expect(')'); } }
     else if (t.k === 'op' && t.v === '{') { const pairs = []; while (!isOp('}')) { const k = expr(0); expect(':'); pairs.push([k, expr(0)]); if (isOp(',')) next(); else break; } expect('}'); n = { t: 'dict', pairs }; }
@@ -155,7 +156,7 @@ export function parsePy(lines) {
   function stmt(r) {
     const L = r.i; let m;
     const kw = (r.s.match(BLOCK) || [])[1];
-    if (kw === 'for') { const h = header(r, 'for'); m = h.match(/^([A-Za-z_]\w*(?:\s*,\s*[A-Za-z_]\w*)*)\s+in\s+(.+)$/); if (!m) throw new PyError('SyntaxError', 'invalid syntax', L, 'Bentuknya: for nama in range(…):'); return { t: 'for', line: L, v: m[1], it: parseExpr(tokenize(m[2], L), L), body: block(r.ind, { ind: r.ind, i: L, kw }) }; }
+    if (kw === 'for') { const h = header(r, 'for').replace(/^\(\s*([^()]*?)\s*\)(\s+in\s+)/, '$1$2'); m = h.match(/^([A-Za-z_]\w*(?:\s*,\s*[A-Za-z_]\w*)*)\s+in\s+(.+)$/); if (!m) throw new PyError('SyntaxError', 'invalid syntax', L, 'Bentuknya: for nama in range(…):'); return { t: 'for', line: L, v: m[1], it: parseExpr(tokenize(m[2], L), L), body: block(r.ind, { ind: r.ind, i: L, kw }) }; }
     if (kw === 'while') { const h = header(r, 'while'); return { t: 'while', line: L, c: parseExpr(tokenize(h, L), L), body: block(r.ind, { ind: r.ind, i: L, kw }) }; }
     if (kw === 'if' || kw === 'elif') {
       const h = header(r, kw); const node = { t: 'if', line: L, c: parseExpr(tokenize(h, L), L), body: block(r.ind, { ind: r.ind, i: L, kw }), else: null };
@@ -213,10 +214,10 @@ export function makePyRunner(lines, { builtins = {}, vars = {}, limit = 3000, in
     len: fn('len', (x) => { if (x instanceof PyDict || x instanceof PySet) return x.size; if (typeof x === 'string' || Array.isArray(x)) return x.length; throw new PyError('TypeError', `object of type '${pyType(x)}' has no len()`, null, 'len() hanya untuk teks, list, tuple, atau dictionary.'); }),
     list: fn('list', (x) => iter(x)),
     set: fn('set', (x) => new PySet(x === undefined ? [] : iter(x))),
-    sorted: fn('sorted', (...a) => { const kw = kwOf(a); const xs = [...iter(a[0])]; xs.sort(truthy(kw.reverse) ? (x, y) => pyCmp(y, x) : pyCmp); return xs; }),
+    sorted: fn('sorted', (...a) => { const kw = kwOf(a); return sortBy([...iter(a[0])], kw); }),
     sum: fn('sum', (x) => x.reduce((a, b) => bin('+', a, b, null), 0)),
-    max: fn('max', (...a) => { const xs = a.length === 1 && Array.isArray(a[0]) ? a[0] : a; return xs.reduce((p, q) => (num(q) > num(p) ? q : p)); }),
-    min: fn('min', (...a) => { const xs = a.length === 1 && Array.isArray(a[0]) ? a[0] : a; return xs.reduce((p, q) => (num(q) < num(p) ? q : p)); }),
+    max: fn('max', (...a) => extreme(a, 1, 'max')),
+    min: fn('min', (...a) => extreme(a, -1, 'min')),
     str: fn('str', (x) => pyRepr(x)),
     int: fn('int', (x) => { if (typeof x === 'string') { if (!/^\s*[-+]?\d+\s*$/.test(x)) throw new PyError('ValueError', `invalid literal for int() with base 10: '${x}'`, null, 'Teks itu bukan bilangan bulat.'); return parseInt(x, 10); } return Math.trunc(num(x)); }),
     float: fn('float', (x) => new PyFloat(Number(typeof x === 'string' ? x : num(x)))),
@@ -227,13 +228,17 @@ export function makePyRunner(lines, { builtins = {}, vars = {}, limit = 3000, in
     input: fn('input', () => (inputs.length ? inputs.shift() : '')),
     ...Object.fromEntries(Object.entries(builtins).map(([k, f]) => [k, fn(k, f)])),
   };
+  // Calls a Python function from a builtin (sorted key=, max key=) by running it to the end.
+  function callSync(f, args) { if (!f || f.py !== 'fn') throw new PyError('TypeError', `'${pyType(f)}' object is not callable`, null); if (f.f) return f.f(...args); const g = callDef(f.def, f.self ? [f.self, ...args] : args, null, {}, f.env || null); let r = g.next(); while (!r.done) r = g.next(); return r.value; }
+  function sortBy(xs, kw) { const keys = kw.key && kw.key !== null ? xs.map((x) => callSync(kw.key, [x])) : xs; const idx = xs.map((_, i) => i); const rev = truthy(kw.reverse); idx.sort((i, j) => (rev ? pyCmp(keys[j], keys[i]) : pyCmp(keys[i], keys[j]))); return idx.map((i) => xs[i]); }
+  function extreme(a, sign, nm) { const kw = kwOf(a); const xs = a.length === 1 ? iter(a[0]) : a; if (!xs.length) throw new PyError('ValueError', `${nm}() iterable argument is empty`, null); const k = (x) => (kw.key ? callSync(kw.key, [x]) : x); let best = xs[0]; let bk = k(best); for (const x of xs.slice(1)) { const xk = k(x); if (pyCmp(xk, bk) * sign > 0) { best = x; bk = xk; } } return best; }
   function iter(x) { if (typeof x === 'string') return [...x]; if (x instanceof PyDict) return [...x.keys()]; if (x instanceof PySet) return x.items(); if (Array.isArray(x)) return [...x]; throw new PyError('TypeError', `'${pyType(x)}' object is not iterable`, null); }
   // Standard-library modules available to `import`.
   const seqLen = (a) => { if (!Array.isArray(a)) throw new PyError('TypeError', `object of type '${pyType(a)}' has no len()`, null, 'bisect memerlukan list yang urut.'); return a.length; };
   const bisectAt = (a, x, right) => { let lo = 0; let hi = seqLen(a); while (lo < hi) { const mid = Math.floor((lo + hi) / 2); if (right ? pyCmp(x, a[mid]) < 0 : pyCmp(a[mid], x) < 0) { if (right) hi = mid; else lo = mid + 1; } else if (right) lo = mid + 1; else hi = mid; } return lo; };
-  const MODS = { collections: { deque: (x) => PyDeque.from(x === undefined ? [] : iter(x)) }, bisect: { bisect_left: (a, x) => bisectAt(a, x, false), bisect_right: (a, x) => bisectAt(a, x, true), bisect: (a, x) => bisectAt(a, x, true), insort: (a, x) => { a.splice(bisectAt(a, x, true), 0, x); return null; }, insort_left: (a, x) => { a.splice(bisectAt(a, x, false), 0, x); return null; }, insort_right: (a, x) => { a.splice(bisectAt(a, x, true), 0, x); return null; } } };
+  const MODS = { math: { sqrt: (x) => { if (num(x) < 0) throw new PyError('ValueError', 'math domain error', null); return new PyFloat(Math.sqrt(num(x))); }, floor: (x) => Math.floor(num(x)), ceil: (x) => Math.ceil(num(x)) }, collections: { deque: (x) => PyDeque.from(x === undefined ? [] : iter(x)) }, bisect: { bisect_left: (a, x) => bisectAt(a, x, false), bisect_right: (a, x) => bisectAt(a, x, true), bisect: (a, x) => bisectAt(a, x, true), insort: (a, x) => { a.splice(bisectAt(a, x, true), 0, x); return null; }, insort_left: (a, x) => { a.splice(bisectAt(a, x, false), 0, x); return null; }, insort_right: (a, x) => { a.splice(bisectAt(a, x, true), 0, x); return null; } } };
   const scope = () => (st.frames.length ? st.frames[st.frames.length - 1].vars : st.vars);
-  const look = (n, L) => { const s = scope(); if (n in s) return s[n]; const f = st.frames[st.frames.length - 1]; if (f?.locals?.has(n)) throw new PyError('UnboundLocalError', `cannot access local variable '${n}' where it is not associated with a value`, L, `${n} diberi nilai di dalam fungsi, jadi Python menganggapnya variabel lokal, padahal belum punya nilai.`); if (n in st.vars) return st.vars[n]; if (n in B) return B[n]; throw new PyError('NameError', `name '${n}' is not defined`, L, `Variabel atau fungsi ${n} belum dibuat.`); };
+  const look = (n, L) => { const s = scope(); if (n in s) return s[n]; const f = st.frames[st.frames.length - 1]; if (f?.locals?.has(n)) throw new PyError('UnboundLocalError', `cannot access local variable '${n}' where it is not associated with a value`, L, `${n} diberi nilai di dalam fungsi, jadi Python menganggapnya variabel lokal, padahal belum punya nilai.`); for (let e = f?.env; e; e = e.env) if (n in e.vars) return e.vars[n]; if (n in st.vars) return st.vars[n]; if (n in B) return B[n]; throw new PyError('NameError', `name '${n}' is not defined`, L, `Variabel atau fungsi ${n} belum dibuat.`); };
   function tick(L) { st.steps++; if (st.steps > limit) throw new PyError('Batas', `Program sudah menjalankan ${limit} langkah dan belum selesai. Mungkin ada perulangan yang tidak pernah berhenti.`, L, 'batas'); }
   function bin(op, a, b, L) {
     const fl = a instanceof PyFloat || b instanceof PyFloat;
@@ -265,7 +270,7 @@ export function makePyRunner(lines, { builtins = {}, vars = {}, limit = 3000, in
     if (o && o.py === 'mod') { if (o.f[name]) return o.f[name]; throw new PyError('AttributeError', `module '${o.name}' has no attribute '${name}'`, L); }
     if (Array.isArray(o) && !isTup(o)) {
       if (name === 'append') return (x) => { o.push(x); return null; };
-      if (name === 'sort') return (...a) => { const kw = kwOf(a); o.sort(truthy(kw.reverse) ? (x, y) => pyCmp(y, x) : pyCmp); return null; };
+      if (name === 'sort') return (...a) => { const kw = kwOf(a); const r = sortBy([...o], kw); o.splice(0, o.length, ...r); return null; };
       if (name === 'copy') return () => [...o];
       if (name === 'reverse') return () => { o.reverse(); return null; };
       if (name === 'remove') return (x) => { const i = o.findIndex((y) => eq(y, x)); if (i < 0) throw new PyError('ValueError', 'list.remove(x): x not in list', L); o.splice(i, 1); return null; };
@@ -297,6 +302,7 @@ export function makePyRunner(lines, { builtins = {}, vars = {}, limit = 3000, in
       case 'tuple': { const a = []; for (const x of n.items) a.push(yield* ev(x, L)); return tuple(a); }
       case 'dict': { const d = new PyDict(); for (const [k, x] of n.pairs) { const kv = yield* ev(k, L); d.set(kv, yield* ev(x, L)); } return d; }
       case 'neg': { const v = yield* ev(n.e, L); return v instanceof PyFloat ? new PyFloat(-v.v) : -v; }
+      case 'lambda': { if (!n.def) n.def = { name: '<lambda>', params: n.params, defaults: {}, body: [{ t: 'ret', line: L, e: n.body }], locals: new Set(n.params), globals: new Set() }; return { py: 'fn', name: '<lambda>', def: n.def, env: st.frames[st.frames.length - 1] || null }; }
       case 'not': return !truthy(yield* ev(n.e, L));
       case 'bin': { const a = yield* ev(n.l, L); if (n.op === 'and') return truthy(a) ? yield* ev(n.r, L) : a; if (n.op === 'or') return truthy(a) ? a : yield* ev(n.r, L); return bin(n.op, a, yield* ev(n.r, L), L); }
       case 'idx': { const a = yield* ev(n.a, L); let i = yield* ev(n.i, L); if (a instanceof PyDict) { if (!a.has(i)) throw new PyError('KeyError', pyRepr(i, true), L, 'Kunci itu tidak ada di dictionary.'); return a.get(i); } if (!Array.isArray(a) && typeof a !== 'string') throw new PyError('TypeError', `'${pyType(a)}' object is not subscriptable`, L); if (i < 0) i += a.length; if (i < 0 || i >= a.length) throw new PyError('IndexError', `${Array.isArray(a) ? 'list' : 'string'} index out of range`, L, 'Indeks di luar batas.'); return a[i]; }
@@ -317,14 +323,14 @@ export function makePyRunner(lines, { builtins = {}, vars = {}, limit = 3000, in
         if (f && f.py === 'superfn') { const fr = st.frames[st.frames.length - 1]; if (!fr?.cls || !fr.vars.self) throw new PyError('RuntimeError', 'super(): no arguments', L); return { py: 'super', cls: fr.cls, obj: fr.vars.self }; }
         if (!f || f.py !== 'fn') throw new PyError('TypeError', `'${pyType(f)}' object is not callable`, L);
         if (f.def && f.self) { const kw = {}; for (const [k, x] of Object.entries(n.kw || {})) kw[k] = yield* ev(x, L); return yield* callDef(f.def, [f.self, ...args], L, kw); }
-        if (f.def) { const kw = {}; for (const [k, x] of Object.entries(n.kw || {})) kw[k] = yield* ev(x, L); return yield* callDef(f.def, args, L, kw); }
+        if (f.def) { const kw = {}; for (const [k, x] of Object.entries(n.kw || {})) kw[k] = yield* ev(x, L); return yield* callDef(f.def, args, L, kw, f.env || null); }
         if (n.kw && Object.keys(n.kw).length) { const kw = {}; for (const [k, x] of Object.entries(n.kw)) kw[k] = yield* ev(x, L); args.push({ kwargs: kw }); }
         try { return f.f(...args); } catch (e) { if (e instanceof PyError && e.line == null) e.line = L; throw e; }
       }
       default: throw new PyError('SyntaxError', 'invalid syntax', L);
     }
   }
-  function* callDef(d, args, L, kw = {}) {
+  function* callDef(d, args, L, kw = {}, env = null) {
     if (st.frames.length > 200) throw new PyError('RecursionError', 'maximum recursion depth exceeded', L, 'Fungsi memanggil dirinya terlalu dalam tanpa berhenti.');
     const nm = d.qual || d.name; const np = d.params.length; const plural = (k, w) => `${k} ${w}${k === 1 ? '' : 's'}`;
     if (args.length > np) { const need = np - Object.keys(d.defaults || {}).length; throw new PyError('TypeError', `${nm}() takes ${need === np ? '' : `from ${need} to `}${plural(np, 'positional argument').replace(/^\d+ /, `${np} `)} but ${args.length} ${args.length === 1 ? 'was' : 'were'} given`, L, `Fungsi ${d.name} hanya menerima ${np} masukan.`); }
@@ -332,7 +338,7 @@ export function makePyRunner(lines, { builtins = {}, vars = {}, limit = 3000, in
     const vars = {}; const missing = [];
     for (let i = 0; i < np; i++) { const p = d.params[i]; if (i < args.length) vars[p] = args[i]; else if (p in kw) vars[p] = kw[p]; else if (d.defaults && p in d.defaults) vars[p] = yield* ev(d.defaults[p], L); else missing.push(p); }
     if (missing.length) throw new PyError('TypeError', `${nm}() missing ${plural(missing.length, 'required positional argument')}: ${missing.map((x) => `'${x}'`).join(missing.length === 2 ? ' and ' : ', ')}`, L, 'Ada masukan fungsi yang belum diberikan.');
-    st.frames.push({ name: nm, vars, locals: d.locals, globals: d.globals, cls: d.cls || null });
+    st.frames.push({ name: nm, vars, locals: d.locals, globals: d.globals, cls: d.cls || null, env });
     try { const sig = yield* block(d.body); return sig && 'ret' in sig ? sig.ret : null; } finally { st.frames.pop(); }
   }
   function* assign(target, v, L) {

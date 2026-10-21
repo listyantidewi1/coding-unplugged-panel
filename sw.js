@@ -150,6 +150,7 @@ const FILES = [
   'js/activities/sma-45-tumpukan-kode.js',
   'js/activities/sma-46-bfs-angkot.js',
   'js/activities/sma-47-oop-perpustakaan.js',
+  'js/activities/sma-48-knn-kode.js',
 ];
 
 self.addEventListener('install', (e) => {

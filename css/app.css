@@ -4706,3 +4706,45 @@ code.beda { background: #fee2e2 !important; color: #991b1b !important; }
 .oop-perpus .op-kartu-btn { display: flex; flex-direction: column; gap: 0.2em; align-items: center; padding: 0.8em; border: 2px solid var(--line); border-radius: 0.8em; background: var(--surface); color: var(--ink); font: inherit; cursor: pointer; }
 .oop-perpus .op-kartu-btn small { color: var(--muted); text-align: center; }
 @container (max-width: 640px) { .oop-perpus .op-dua, .oop-perpus .op-dua.lebar { grid-template-columns: minmax(0, 1fr); } .oop-perpus .sk-kode.op-kolom3 { columns: 1; } }
+
+/* sma-48 KNN Mangga */
+.knn-kode .mg-kecil { font-size: clamp(0.52rem, 1.7cqmin, 0.95rem); }
+.knn-kode .sk-kode.py code { white-space: pre-wrap; overflow-wrap: anywhere; }
+.knn-kode .mg-isi .seg-btn { font-size: clamp(0.56rem, 1.75cqmin, 1rem); }
+.knn-kode .mg-mono .seg-btn { font-family: ui-monospace, monospace; }
+.knn-kode .mg-dua { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1em; align-items: center; width: 100%; }
+.knn-kode .mg-dua.lebar { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); align-items: start; }
+.knn-kode .mg-dua > * { min-width: 0; }
+.knn-kode .mg-bidang { position: relative; width: min(100%, 40em, 90cqh); aspect-ratio: 100 / 62; margin: 0 auto; border: 2px solid var(--line); border-radius: 0.6em; background: var(--surface); touch-action: none; }
+.knn-kode.act > .mg-dua .mg-bidang { width: min(100%, 34em, 62cqh); }
+.knn-kode .mg-svg, .knn-kode .mg-svg svg { position: absolute; inset: 0; width: 100%; height: 100%; color: var(--muted); }
+.knn-kode .mg-svg line.g { stroke: currentColor; stroke-width: 1; opacity: 0.25; vector-effect: non-scaling-stroke; }
+.knn-kode .mg-svg line.tet { stroke: #f59e0b; stroke-width: 2.5; stroke-dasharray: 5 3; vector-effect: non-scaling-stroke; }
+.knn-kode .mg-svg text.t { fill: currentColor; font-size: 2.4px; text-anchor: middle; }
+.knn-kode .mg-titik { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; min-width: 1.6em; padding: 0 0.2em; border-radius: 999px; font-size: clamp(0.45rem, 1.4cqmin, 0.8rem); line-height: 1.1; pointer-events: none; }
+.knn-kode .mg-titik.matang { background: #16a34a; color: #fff; border: 2px solid #14532d; }
+.knn-kode .mg-titik.belum { background: var(--surface); color: var(--ink); border: 2px solid #16a34a; }
+.knn-kode .mg-titik.dekat { box-shadow: 0 0 0 3px #f59e0b; z-index: 1; }
+.knn-kode .mg-titik small { font-size: 0.8em; font-weight: 800; }
+.knn-kode .mg-titik.inline { position: static; transform: none; display: inline-block; }
+.knn-kode .mg-bintang { position: absolute; transform: translate(-50%, -50%); color: #f59e0b; font-size: clamp(1rem, 3.2cqmin, 1.8rem); font-weight: 800; text-shadow: 0 0 2px var(--ink); pointer-events: none; z-index: 2; white-space: nowrap; }
+.knn-kode .mg-bintang.luar { transform: translate(-100%, -50%); font-size: clamp(0.6rem, 1.8cqmin, 1rem); }
+.knn-kode .mg-sumbu { position: absolute; color: var(--muted); font-size: clamp(0.45rem, 1.3cqmin, 0.75rem); }
+.knn-kode .mg-sumbu.x { right: 0.5em; bottom: -1.4em; }
+.knn-kode .mg-sumbu.y { left: 0.3em; top: -1.4em; }
+.knn-kode .mg-legenda { margin: 1.4em 0 0; color: var(--muted); text-align: center; font-size: clamp(0.55rem, 1.6cqmin, 0.9rem); }
+.knn-kode .mg-ket { margin: 0; color: var(--muted); text-align: center; }
+.knn-kode .mg-tabel { border-collapse: collapse; font-size: clamp(0.5rem, 1.6cqmin, 0.9rem); margin: 0 auto; }
+.knn-kode .mg-tabel th, .knn-kode .mg-tabel td { padding: 0.1em 0.5em; border: 1px solid var(--line); text-align: right; }
+.knn-kode .mg-tabel tr.matang td:last-child { color: #16a34a; font-weight: 800; }
+.knn-kode .mg-atur { display: flex; flex-wrap: wrap; gap: 0.5em; align-items: center; justify-content: center; }
+.knn-kode .mg-samping { display: flex; flex-direction: column; gap: 0.5em; align-items: center; }
+.knn-kode .mg-hasil-box { display: flex; flex-direction: column; gap: 0.3em; align-items: center; }
+.knn-kode .mg-hasil { margin: 0; padding: 0.3em 0.8em; border-radius: 0.5em; font-family: ui-monospace, monospace; font-weight: 800; font-size: clamp(0.8rem, 2.6cqmin, 1.4rem); }
+.knn-kode .mg-hasil.matang { background: color-mix(in srgb, #16a34a 20%, var(--surface)); color: #15803d; }
+.knn-kode .mg-hasil.belum { background: color-mix(in srgb, var(--primary) 15%, var(--surface)); color: var(--primary); }
+.knn-kode .mg-ekstra { display: flex; flex-direction: column; gap: 0.2em; font-family: ui-monospace, monospace; font-size: clamp(0.55rem, 1.6cqmin, 0.9rem); }
+.knn-kode .mg-ekstra p { margin: 0; overflow-wrap: anywhere; }
+.knn-kode .mg-pilih .seg-btn { font-size: clamp(0.9rem, 3cqmin, 1.6rem); padding: 0.3em 1.2em; }
+@container (max-width: 640px) { .knn-kode .mg-dua, .knn-kode .mg-dua.lebar { grid-template-columns: minmax(0, 1fr); } }
+.knn-kode .sk-jejak.mg-kecil .sk-kode { font-size: clamp(0.5rem, 1.6cqmin, 0.9rem); }
