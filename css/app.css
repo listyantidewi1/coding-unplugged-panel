@@ -108,6 +108,28 @@ button:focus-visible, a:focus-visible { outline: 4px solid #f59e0b; outline-offs
 .start-icon { font-size: 4rem; }
 .meta { color: var(--muted); margin: 0.2rem 0; }
 .goal { font-size: 1.15rem; max-width: 40rem; }
+.pengantar { max-width: 46rem; margin: 0.4rem 0; padding: 1rem 1.4rem; border-radius: 1rem; background: #fffbeb; border: 1px solid #fde68a; text-align: left; font-size: clamp(1rem, 1.5vw, 1.25rem); line-height: 1.6; font-weight: 400; color: #1f2937; }
+.pengantar p { margin: 0 0 0.7em; }
+.pengantar p:last-child { margin-bottom: 0; }
+.start-isi { display: flex; flex-wrap: wrap; gap: 1.2rem; align-items: flex-start; justify-content: center; width: 100%; }
+.start-isi > .pengantar { flex: 1 1 30rem; min-width: 0; }
+.start-isi > .modes { flex: 1 1 26rem; display: grid; grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); margin: 0.4rem 0; }
+.start-isi .mode { width: auto; }
+.pengantar-layar { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); background: #0f172acc; }
+.pengantar-kartu { max-width: 52rem; max-height: 100%; overflow: auto; padding: 1.2rem 1.4rem; border-radius: 1.2rem; background: #fff; box-shadow: 0 1rem 3rem #0006; text-align: left; }
+.pengantar-kartu h2 { margin: 0 0 0.6rem; }
+.pengantar-kartu .pengantar { margin: 0; max-width: none; }
+.pengantar-tombol { display: flex; justify-content: flex-end; margin-top: 0.8rem; }
+.kat { display: inline-block; align-self: flex-start; margin-top: 0.25rem; font-size: 0.78rem; font-weight: 800; padding: 0.12rem 0.6rem; border-radius: 999px; white-space: nowrap; }
+.kat-coding { background: #dcfce7; color: #166534; }
+.kat-ct { background: #fef3c7; color: #92400e; }
+.kat-literasi { background: #e0f2fe; color: #075985; }
+.kat-pengayaan { background: #f3e8ff; color: #6b21a8; }
+.kat-baris { display: inline-flex; flex-wrap: wrap; gap: 0.3rem; align-self: flex-start; }
+.kat-tabs { margin-top: -0.6rem; }
+.kat-tabs .tab.on.kat-coding { background: #166534; border-color: #166534; }
+.kat-tabs .tab.on.kat-ct { background: #92400e; border-color: #92400e; }
+.kat-tabs .tab.on.kat-literasi { background: #075985; border-color: #075985; }
 .modes { display: flex; flex-wrap: wrap; justify-content: center; gap: 1rem; margin: 1rem 0; }
 .mode {
   font: inherit;

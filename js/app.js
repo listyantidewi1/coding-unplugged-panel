@@ -1,6 +1,6 @@
 // Shell: hash router, activity list, start screen and toolbar.
 // Routes (the QR code on each worksheet points at #/<id>):
-//   #/                          daftar aktivitas (?jenjang=paud untuk menyaring)
+//   #/                          daftar aktivitas (?jenjang=paud&kategori=coding untuk menyaring)
 //   #/<id>                      layar mulai satu aktivitas
 //   #/<id>?mode=sendiri         langsung main sendiri / satu kelas
 //   #/<id>?mode=giliran-3       3 tim bergiliran di satu papan
@@ -12,6 +12,22 @@ import { activities, findActivity, JENJANG } from './activities/registry.js';
 import { el, button, onTap, newSeed } from './core/util.js';
 import { runSession, PLAYER_COLORS } from './core/session.js';
 import { sound } from './core/sound.js';
+import { PENGANTAR, KATEGORI, PENGAYAAN } from './activities/meta.js';
+
+// Book categories; the third label is shown only once an activity uses it.
+const KATS = [
+  { id: 'coding', label: 'Coding', icon: '⌨️' },
+  { id: 'ct', label: 'Computational Thinking', icon: '🧠' },
+  { id: 'literasi', label: 'Literasi Digital & KA', icon: '🛡️' },
+];
+const katOf = (a) => KATS.find((k) => k.id === KATEGORI[a.id]);
+// "Pengayaan": the topic comes from CS Unplugged and is not in the Indonesian curriculum.
+const katBadge = (a) => {
+  const k = katOf(a);
+  const badges = [k ? el('span', { class: `kat kat-${k.id}` }, `${k.icon} ${k.label}`) : null,
+    PENGAYAAN.includes(a.id) ? el('span', { class: 'kat kat-pengayaan', title: 'Topik di luar kurikulum nasional, dari CS Unplugged' }, '✨ Pengayaan') : null].filter(Boolean);
+  return badges.length ? el('span', { class: 'kat-baris' }, badges) : null;
+};
 
 const app = document.getElementById('app');
 let current = null;
@@ -38,7 +54,7 @@ function route() {
     const mode = parseMode(a, params.get('mode'));
     return mode ? renderPlay(a, mode) : renderStart(a);
   }
-  renderHome(params.get('jenjang'));
+  renderHome(params.get('jenjang'), params.get('kategori'));
 }
 
 function parseMode(a, value) {
@@ -50,7 +66,7 @@ function parseMode(a, value) {
   return extra ? { mode: 'extra', players: 1, extra } : null;
 }
 
-function toolbar(title, backHash) {
+function toolbar(title, backHash, extra = null) {
   const soundBtn = button(sound.muted ? '🔇' : '🔊', () => {
     sound.setMuted(!sound.muted);
     soundBtn.textContent = sound.muted ? '🔇' : '🔊';
@@ -61,7 +77,7 @@ function toolbar(title, backHash) {
   return el('header', { class: 'toolbar' },
     backHash ? button('← Kembali', () => go(backHash), 'ghost') : el('span', { class: 'logo' }, '🧩'),
     el('h1', null, title),
-    soundBtn, fsBtn);
+    extra, soundBtn, fsBtn);
 }
 
 function toggleFullscreen() {
@@ -73,23 +89,27 @@ function jenjangOf(a) {
   return JENJANG.find((j) => j.id === a.jenjang);
 }
 
-function renderHome(filter) {
+function renderHome(filter, kat) {
+  const link = (j, k) => { const q = new URLSearchParams(); if (j) q.set('jenjang', j); if (k) q.set('kategori', k); const t = q.toString(); return t ? `#/?${t}` : '#/'; };
   const tabs = el('nav', { class: 'tabs' },
     [{ id: '', label: 'Semua' }, ...JENJANG].map((j) => {
-      const b = button(j.label, () => go(j.id ? `#/?jenjang=${j.id}` : '#/'), (filter || '') === j.id ? 'tab on' : 'tab');
+      const b = button(j.label, () => go(link(j.id, kat)), (filter || '') === j.id ? 'tab on' : 'tab');
       return b;
     }));
-  const list = activities.filter((a) => !filter || a.jenjang === filter);
+  const used = KATS.filter((k) => activities.some((a) => KATEGORI[a.id] === k.id));
+  const katTabs = used.length ? el('nav', { class: 'tabs kat-tabs' },
+    [{ id: '', label: 'Semua kategori', icon: '' }, ...used].map((k) => button(`${k.icon} ${k.label}`.trim(), () => go(link(filter, k.id)), (kat || '') === k.id ? `tab on ${k.id ? `kat-${k.id}` : ''}` : 'tab'))) : null;
+  const list = activities.filter((a) => (!filter || a.jenjang === filter) && (!kat || KATEGORI[a.id] === kat));
   const grid = el('div', { class: 'cards' },
     list.length ? list.map((a) => onTap(el('button', { class: 'card', type: 'button' },
       el('span', { class: 'card-icon' }, a.icon),
       el('span', { class: 'card-title' }, a.title),
       el('span', { class: 'card-topic' }, a.topic),
-      el('span', { class: 'badge' }, `${jenjangOf(a).label} · ${a.age}`)), () => go(`#/${a.id}`)))
+      el('span', { class: 'badge' }, `${jenjangOf(a).label} · ${a.age}`), katBadge(a)), () => go(`#/${a.id}`)))
       : el('p', { class: 'empty' }, 'Aktivitas untuk jenjang ini sedang disiapkan.'));
   app.append(
     toolbar('Coding & Computational Thinking'),
-    el('div', { class: 'page' }, tabs, grid,
+    el('div', { class: 'page' }, tabs, katTabs, grid,
       el('footer', { class: 'foot' },
         el('a', { href: '#/tentang' }, 'Tentang & lisensi'))));
 }
@@ -126,16 +146,33 @@ function renderStart(a) {
     toolbar(a.title, '#/'),
     el('div', { class: 'page start' },
       el('div', { class: 'start-icon' }, a.icon),
-      el('p', { class: 'meta' }, `${a.id} · ${jenjangOf(a).label} · ${a.age} · ${a.topic}`),
-      el('p', { class: 'goal' }, a.goal),
-      el('div', { class: 'modes' }, modes),
+      el('p', { class: 'meta' }, `${a.id} · ${jenjangOf(a).label} · ${a.age} · ${a.topic}`, ' ', katBadge(a)),
+      PENGANTAR[a.id] ? el('div', { class: 'start-isi' }, story(a), el('div', { class: 'modes' }, modes))
+        : [el('p', { class: 'goal' }, a.goal), el('div', { class: 'modes' }, modes)],
       a.source && el('p', { class: 'credit' }, 'Konsep terinspirasi dari ',
         el('a', { href: a.source.url, target: '_blank', rel: 'noopener' }, a.source.name), '.')));
 }
 
+// The worksheet's introduction: situation, problem and why it matters, the task.
+function story(a) {
+  const paras = PENGANTAR[a.id];
+  if (!paras) return null;
+  return el('section', { class: 'pengantar', 'aria-label': 'Pengantar' }, paras.map((p) => el('p', { html: p })));
+}
+
+function showStory(a) {
+  const close = () => box.remove();
+  const box = onTap(el('div', { class: 'pengantar-layar' },
+    onTap(el('div', { class: 'pengantar-kartu' }, el('h2', null, `${a.icon} ${a.title}`), story(a),
+      el('div', { class: 'pengantar-tombol' }, button('Tutup', close, 'primary'))), (e) => e.stopPropagation())), close);
+  document.body.append(box);
+}
+
 function renderPlay(a, { mode, players, extra }) {
   const back = `#/${a.id}`;
-  app.append(toolbar(a.title, back));
+  const storyBtn = PENGANTAR[a.id] ? button('📖', () => showStory(a), 'icon') : null;
+  storyBtn?.setAttribute('aria-label', 'Baca pengantar');
+  app.append(toolbar(a.title, back, storyBtn));
   const holder = el('div', { class: 'play' });
   app.append(holder);
   const start = () => {
