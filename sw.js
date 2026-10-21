@@ -46,6 +46,7 @@ const FILES = [
   'js/activities/sdl-10-cari-kata.js',
   'js/activities/sdl-11-gula-kurang.js',
   'js/activities/sdl-12-kancil.js',
+  'js/activities/sdl-13-kurir-kampung.js',
 ];
 
 self.addEventListener('install', (e) => {
