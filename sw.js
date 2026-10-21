@@ -156,6 +156,7 @@ const FILES = [
   'js/activities/sma-51-web-antrean.js',
   'js/activities/sma-52-pakai-library.js',
   'js/activities/sma-53-dua-kasir.js',
+  'js/activities/sma-55-git-kertas.js',
 ];
 
 self.addEventListener('install', (e) => {

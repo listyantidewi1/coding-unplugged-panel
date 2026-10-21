@@ -5002,3 +5002,62 @@ code.beda { background: #fee2e2 !important; color: #991b1b !important; }
 .dua-kasir .dk-daun { display: flex; flex-wrap: wrap; gap: 0.25em; justify-content: center; max-height: 14em; overflow: auto; }
 .dua-kasir .dk-urut { padding: 0.1em 0.4em; border: 0; border-radius: 0.3em; color: #fff; font-family: ui-monospace, monospace; font-size: clamp(0.45rem, 1.35cqmin, 0.78rem); cursor: pointer; }
 @container (max-width: 640px) { .dua-kasir .dk-pohon, .dua-kasir .dk-dua.k3 { grid-template-columns: minmax(0, 1fr); } }
+/* sma-55 Kerja Tim dengan Git di Atas Kertas */
+.git-kertas .gk-kode { font-size: clamp(0.5rem, 1.8cqmin, 1.05rem); max-width: 100%; overflow-x: auto; }
+.git-kertas .gk-mono .seg-btn { font-family: ui-monospace, monospace; }
+.git-kertas .gk-ket, .git-kertas .gk-narasi { margin: 0.2em 0; text-align: center; font-size: clamp(0.55rem, 1.7cqmin, 0.95rem); }
+.git-kertas .gk-ket { color: var(--muted); }
+.git-kertas .gk-kecil { font-size: clamp(0.65rem, 2.2cqmin, 1.2rem); margin: 0.2em 0; }
+.git-kertas .gk-graf-wadah { width: 100%; max-width: 100%; overflow-x: auto; display: flex; justify-content: center; }
+.git-kertas .gk-graf { width: min(100%, 52em); height: auto; max-height: 34cqh; }
+.git-kertas .gk-garis { stroke: var(--muted); stroke-width: 2.5; }
+.git-kertas .gk-ujung { fill: var(--muted); }
+.git-kertas .gk-simpul { cursor: pointer; }
+.git-kertas .gk-simpul circle { fill: var(--surface); stroke: #16a34a; stroke-width: 3; }
+.git-kertas .gk-simpul.gabung circle { stroke: #7c3aed; }
+.git-kertas .gk-simpul.on circle { fill: #fef08a; stroke-width: 4; }
+.git-kertas .gk-simpul text { font: 700 15px ui-monospace, monospace; fill: var(--text, #111827); pointer-events: none; }
+.git-kertas .gk-label { cursor: pointer; }
+.git-kertas .gk-label rect { fill: #fde68a; stroke: #b45309; }
+.git-kertas .gk-label.utama rect { fill: #bfdbfe; stroke: #1d4ed8; }
+.git-kertas .gk-label.on rect { stroke-width: 3; stroke-dasharray: 4 2; }
+.git-kertas .gk-label text { font: 700 13px ui-monospace, monospace; fill: #111827; pointer-events: none; }
+.git-kertas .gk-kontrol { display: flex; flex-wrap: wrap; gap: 0.5em; justify-content: center; }
+.git-kertas .gk-kontrol .btn { font-size: clamp(0.55rem, 1.7cqmin, 0.95rem); padding: 0.3em 0.8em; }
+.git-kertas .gk-kartu, .git-kertas .gk-panel { display: flex; flex-direction: column; gap: 0.3em; width: 100%; padding: 0.4em; border: 2px solid var(--line); border-radius: 0.6em; background: var(--surface); }
+.git-kertas .gk-meta { margin: 0; font-size: clamp(0.55rem, 1.7cqmin, 0.95rem); }
+.git-kertas .gk-beda { display: flex; flex-direction: column; gap: 0.15em; min-width: 0; }
+.git-kertas .gk-beda > small { color: var(--muted); font-weight: 700; font-size: clamp(0.5rem, 1.4cqmin, 0.8rem); }
+.git-kertas .gk-diff { margin: 0; padding: 0.3em 0.5em; list-style: none; border-radius: 0.5em; background: #1e293b; color: #e2e8f0; font-family: ui-monospace, monospace; font-size: clamp(0.45rem, 1.45cqmin, 0.85rem); text-align: left; overflow-x: auto; }
+.git-kertas .gk-diff li { display: flex; gap: 0.6em; white-space: pre; }
+.git-kertas .gk-diff li span { width: 0.8em; color: #94a3b8; }
+.git-kertas .gk-diff li.tambah { background: rgba(34, 197, 94, 0.25); }
+.git-kertas .gk-diff li.tambah span { color: #4ade80; }
+.git-kertas .gk-diff li.hapus { background: rgba(239, 68, 68, 0.25); text-decoration: line-through; }
+.git-kertas .gk-diff li.hapus span { color: #f87171; }
+.git-kertas .gk-tiga { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.4em; }
+.git-kertas .gk-keluar { margin: 0; font-family: ui-monospace, monospace; font-weight: 700; text-align: center; font-size: clamp(0.55rem, 1.8cqmin, 1rem); color: #0f766e; }
+.git-kertas .gk-pilih .seg-btn { font-size: clamp(0.5rem, 1.6cqmin, 0.9rem); }
+.git-kertas .gk-sunting { width: min(100%, 48em); min-height: 10em; padding: 0.4em; border-radius: 0.5em; border: 2px solid var(--line); background: #1e293b; color: #e2e8f0; font-family: ui-monospace, monospace; font-size: clamp(0.55rem, 1.7cqmin, 0.95rem); line-height: 1.35; white-space: pre; resize: vertical; }
+.git-kertas .gk-cek ul { margin: 0; padding: 0; list-style: none; text-align: left; font-size: clamp(0.55rem, 1.7cqmin, 0.95rem); }
+.git-kertas .gk-cek li.ok { color: #15803d; }
+.git-kertas .gk-cek li.tidak { color: #dc2626; }
+.git-kertas .gk-uji, .git-kertas .gk-dua { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 0.6em; align-items: center; width: 100%; }
+.git-kertas .gk-masuk, .git-kertas .gk-aksi { display: flex; flex-direction: column; gap: 0.35em; align-items: stretch; }
+.git-kertas .gk-masuk label { display: flex; justify-content: space-between; gap: 0.5em; align-items: center; font-size: clamp(0.55rem, 1.7cqmin, 0.95rem); }
+.git-kertas .gk-jawab { width: 7em; font-family: ui-monospace, monospace; }
+.git-kertas .gk-aksi .btn, .git-kertas .gk-masuk .btn { font-size: clamp(0.55rem, 1.7cqmin, 0.95rem); padding: 0.3em 0.8em; }
+.git-kertas .gk-seratus { display: grid; grid-template-columns: repeat(20, minmax(0, 1fr)); gap: 2px; width: min(100%, 52em); }
+.git-kertas .gk-sel { padding: 0.15em 0; border: 1px solid var(--line); border-radius: 0.25em; background: var(--surface); font-size: clamp(0.4rem, 1.2cqmin, 0.75rem); cursor: pointer; }
+.git-kertas .gk-sel.lolos { background: #16a34a; color: #fff; }
+.git-kertas .gk-sel.gagal { background: #dc2626; color: #fff; }
+.git-kertas .gk-sel.luar { opacity: 0.35; }
+.git-kertas .gk-ketemu { color: #15803d; font-weight: 800; }
+.git-kertas .gk-pita { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 0.25em; width: 100%; }
+.git-kertas .gk-pita span { display: flex; flex-direction: column; align-items: center; padding: 0.1em; border: 1px solid var(--line); border-radius: 0.35em; font-family: ui-monospace, monospace; font-weight: 700; font-size: clamp(0.5rem, 1.5cqmin, 0.85rem); }
+.git-kertas .gk-pita small { font-family: inherit; font-weight: 400; color: var(--muted); font-size: 0.75em; text-align: center; }
+.git-kertas .gk-pita .lolos { border-color: #16a34a; background: color-mix(in srgb, #16a34a 14%, var(--surface)); }
+.git-kertas .gk-pita .gagal { border-color: #dc2626; background: color-mix(in srgb, #dc2626 14%, var(--surface)); }
+.git-kertas .gk-fitur { display: flex; flex-wrap: wrap; gap: 0.6em; justify-content: center; width: 100%; }
+.git-kertas .gk-pilihan { display: flex; flex-direction: column; gap: 0.3em; flex: 1 1 16em; min-width: 0; padding: 0.5em; border: 2px solid var(--line); border-radius: 0.6em; background: var(--surface); cursor: pointer; font-size: clamp(0.6rem, 1.9cqmin, 1.05rem); text-align: left; }
+@container (max-width: 640px) { .git-kertas .gk-tiga, .git-kertas .gk-uji, .git-kertas .gk-dua { grid-template-columns: minmax(0, 1fr); } .git-kertas .gk-pita { grid-template-columns: repeat(4, minmax(0, 1fr)); } .git-kertas .gk-seratus { grid-template-columns: repeat(10, minmax(0, 1fr)); } }
