@@ -22,6 +22,11 @@ import sdaTabelHewan from './sda-10-tabel-hewan.js';
 import sdaCariHalaman from './sda-11-cari-halaman.js';
 import sdaBarisUpacara from './sda-12-baris-upacara.js';
 import sdaTombolLift from './sda-13-tombol-lift.js';
+import sdlPikselWarna from './sdl-02-piksel-warna.js';
+import sdlSandiSenter from './sdl-03-sandi-senter.js';
+import sdlHematKuota from './sdl-04-hemat-kuota.js';
+import sdlAnyamanRusak from './sdl-05-anyaman-rusak.js';
+import sdlKartuData from './sdl-06-kartu-data.js';
 
 export const JENJANG = [
   { id: 'paud', label: 'PAUD', detail: '4–6 tahun' },
@@ -37,7 +42,7 @@ export const activities = [
   paudPola, paudKelompok, paudLangkah, paudAntarAyam, paudKacangHijau,
   paudGerakUlang, paudJikaLampu, paudAyamTersesat, paudYaTidak, paudTombol,
   sdaMotifBatik, sdaRumahAdat, sdaRumahNenek, sdaResep, sdaSenamPagi, sdaJikaHujan, sdaRuteSalah, sdaTimbangan, sdaGambarRahasia, sdaTabelHewan, sdaCariHalaman, sdaBarisUpacara, sdaTombolLift,
-  sdlLampuGapura,
+  sdlLampuGapura, sdlPikselWarna, sdlSandiSenter, sdlHematKuota, sdlAnyamanRusak, sdlKartuData,
 ]
   .sort((a, b) => order(a) - order(b) || a.id.localeCompare(b.id));
 
