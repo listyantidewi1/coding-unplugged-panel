@@ -1800,3 +1800,45 @@ button.ab-luar { cursor: pointer; }
   .amplop .ab-tabel, .amplop .ab-luar, .amplop .ab-lapisan, .amplop .ab-alamat { font-size: clamp(0.45rem, 3cqh, 0.9rem); }
   .amplop .ab-chip { font-size: clamp(0.5rem, 4cqh, 1rem); }
 }
+
+/* Mesin kembalian */
+.kembalian { gap: 1cqmin; }
+.kb-samping { display: flex; gap: 2cqw; align-items: flex-start; justify-content: center; width: 100%; }
+.kb-kanan { display: flex; flex-direction: column; gap: 0.8cqmin; align-items: center; min-width: 0; }
+.kb-kode { margin: 0; padding: 0.6em 0.8em; border-radius: 0.8cqmin; background: #0f172a; color: #e2e8f0; font-size: clamp(0.5rem, 2.4cqmin, 1.2rem); display: flex; flex-direction: column; white-space: pre; }
+.kb-baris { padding: 0.05em 0.3em; border-radius: 0.3em; }
+.kb-baris i { display: inline-block; width: 1.6em; color: #64748b; font-style: normal; }
+.kb-baris.nyala { background: #facc15; color: #111827; }
+.kb-tabel { font-size: clamp(0.5rem, 2.6cqmin, 1.3rem); }
+.kb-tabel td, .kb-tabel th { padding: 0.15em 0.6em; text-align: center; }
+.kb-isi td { background: #fef3c7; font-weight: 800; }
+.kb-tangan { display: flex; flex-wrap: wrap; gap: 0.4em; justify-content: center; min-height: 2.4em; align-items: center; font-size: clamp(0.55rem, 2.3cqmin, 1.15rem); }
+.kb-uang { display: inline-flex; align-items: center; justify-content: center; font-weight: 900; color: #1e293b; border: 2px solid #0002; }
+.kb-uang.kertas { width: 4.2em; height: 2.1em; border-radius: 0.3em; }
+.kb-uang.koin { width: 2.3em; height: 2.3em; border-radius: 50%; background: #e5e7eb; }
+.kb-uang.u50000 { background: #93c5fd; }
+.kb-uang.u20000 { background: #86efac; }
+.kb-uang.u10000 { background: #d8b4fe; }
+.kb-uang.u5000 { background: #fdba74; }
+.kb-uang.u2000 { background: #a5b4fc; }
+.kb-uang.u1000 { background: #fca5a5; }
+.kb-uang.u500 { background: #fde68a; }
+.kb-laci { display: flex; gap: 0.6em; justify-content: center; flex-wrap: wrap; padding: 0.6em; border-radius: 1cqmin; background: #78350f; font-size: clamp(0.7rem, 3cqmin, 1.5rem); }
+.kb-laci .kb-uang { cursor: pointer; }
+.kb-jumlah { margin: 0; text-align: center; font-weight: 900; font-size: clamp(0.6rem, 2.6cqmin, 1.3rem); }
+.kb-var { display: flex; flex-wrap: wrap; gap: 0.6em; align-items: center; justify-content: center; font-weight: 800; font-family: ui-monospace, monospace; font-size: clamp(0.6rem, 2.8cqmin, 1.4rem); }
+.kb-var .ck-isi { font-size: inherit; width: auto; height: auto; padding: 0.3em 0.6em; }
+.kembalian .ab-pilihan { font-size: clamp(0.55rem, 2.6cqmin, 1.25rem); }
+.kb-catatan { margin: 0; font-weight: 900; font-size: clamp(0.6rem, 2.6cqmin, 1.3rem); }
+.kb-temuan { max-height: 20cqh; overflow: auto; }
+.kb-koin-atur { display: flex; gap: 2cqw; justify-content: center; flex-wrap: wrap; font-size: clamp(0.7rem, 3cqmin, 1.5rem); }
+.kb-koin-satu { display: flex; gap: 0.4em; align-items: center; }
+.kb-k { font-size: 1.4em; min-width: 1.6em; text-align: center; }
+@container (max-height: 520px) {
+  .kembalian > .prompt, .kembalian .reveal { font-size: clamp(0.55rem, 4cqh, 1.1rem); }
+  .kembalian .kb-kode { font-size: clamp(0.4rem, 2.8cqh, 0.8rem); }
+  .kembalian .kb-tabel { font-size: clamp(0.4rem, 2.6cqh, 0.8rem); }
+  .kembalian .kb-tabel-wadah { max-height: 50cqh; }
+  .kembalian .keys.keypad { grid-template-columns: repeat(11, min(4.5cqw, 8cqh)); }
+  .kembalian .kb-laci { font-size: clamp(0.5rem, 4cqh, 1rem); }
+}

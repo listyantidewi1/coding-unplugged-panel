@@ -66,6 +66,7 @@ const FILES = [
   'js/activities/smp-12-ojek.js',
   'js/activities/smp-13-meja-bundar.js',
   'js/activities/smp-14-amplop-berlapis.js',
+  'js/activities/smp-15-kembalian.js',
 ];
 
 self.addEventListener('install', (e) => {
