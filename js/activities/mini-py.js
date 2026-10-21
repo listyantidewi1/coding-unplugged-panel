@@ -35,6 +35,14 @@ export class PySet {
 export class PyObj { constructor(cls) { this.cls = cls; this.attrs = {}; } toJSON() { return { obj: this.cls.name, attrs: this.attrs }; } }
 // collections.deque, kept as an array so indexing, len and for work as on a list.
 export class PyDeque extends Array {}
+// datetime.date (proleptic Gregorian, ordinal 1 = 1 January of year 1) and datetime.timedelta in whole days.
+const kabisat = (y) => (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+const PANJANG = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+export const panjangBulan = (y, m) => (m === 2 && kabisat(y) ? 29 : PANJANG[m - 1]);
+export function ordinalOf(y, m, d) { const y1 = y - 1; let n = y1 * 365 + Math.floor(y1 / 4) - Math.floor(y1 / 100) + Math.floor(y1 / 400); for (let k = 1; k < m; k++) n += panjangBulan(y, k); return n + d; }
+export function fromOrdinal(n) { let y = Math.max(1, Math.floor((n - 1) / 365.2425) + 1); while (ordinalOf(y, 1, 1) > n) y--; while (ordinalOf(y + 1, 1, 1) <= n) y++; let m = 1; let r = n - ordinalOf(y, 1, 1) + 1; while (r > panjangBulan(y, m)) { r -= panjangBulan(y, m); m++; } return [y, m, r]; }
+export class PyDate { constructor(y, m, d) { this.y = y; this.m = m; this.d = d; } get ord() { return ordinalOf(this.y, this.m, this.d); } toJSON() { return { date: [this.y, this.m, this.d] }; } }
+export class PyDelta { constructor(days) { this.days = days; } toJSON() { return { timedelta: this.days }; } }
 export const tuple = (a) => { Object.defineProperty(a, 'tup', { value: true }); return a; };
 const isTup = (v) => Array.isArray(v) && v.tup === true;
 const isNum = (x) => typeof x === 'number' || x instanceof PyFloat;
@@ -54,13 +62,15 @@ export function pyRepr(v, inner = false) {
   if (v instanceof PySet) return v.size ? `{${v.items().map((x) => pyRepr(x, true)).join(', ')}}` : 'set()';
   if (v instanceof PyDict) return `{${[...v].map(([k, x]) => `${pyRepr(k, true)}: ${pyRepr(x, true)}`).join(', ')}}`;
   if (v && v.py === 'fn') return `<function ${v.name}>`;
+  if (v instanceof PyDate) { const iso = `${String(v.y).padStart(4, '0')}-${String(v.m).padStart(2, '0')}-${String(v.d).padStart(2, '0')}`; return inner ? `datetime.date(${v.y}, ${v.m}, ${v.d})` : iso; }
+  if (v instanceof PyDelta) { if (inner) return v.days ? `datetime.timedelta(days=${v.days})` : 'datetime.timedelta(0)'; return v.days ? `${v.days} day${Math.abs(v.days) === 1 ? '' : 's'}, 0:00:00` : '0:00:00'; }
   if (v && v.py === 'file') return `<_io.TextIOWrapper name='${v.name}' mode='${v.mode}' encoding='UTF-8'>`;
   if (v && v.py === 'mod') return `<module '${v.name}'>`;
   if (v instanceof PyObj) return `<__main__.${v.cls.name} object>`;
   if (v && v.py === 'class') return `<class '__main__.${v.name}'>`;
   return String(v);
 }
-export const pyType = (v) => (v instanceof PyObj ? v.cls.name : v instanceof PyDeque ? 'deque' : v && v.py === 'class' ? 'type' : v === null || v === undefined ? 'NoneType' : typeof v === 'boolean' ? 'bool' : v instanceof PyFloat ? 'float' : typeof v === 'number' ? 'int' : typeof v === 'string' ? 'str' : isTup(v) ? 'tuple' : Array.isArray(v) ? 'list' : v instanceof PyDict ? 'dict' : v instanceof PySet ? 'set' : v && v.py === 'mod' ? 'module' : v && v.py === 'file' ? '_io.TextIOWrapper' : 'function');
+export const pyType = (v) => (v instanceof PyObj ? v.cls.name : v instanceof PyDeque ? 'deque' : v && v.py === 'class' ? 'type' : v === null || v === undefined ? 'NoneType' : typeof v === 'boolean' ? 'bool' : v instanceof PyFloat ? 'float' : typeof v === 'number' ? 'int' : typeof v === 'string' ? 'str' : isTup(v) ? 'tuple' : Array.isArray(v) ? 'list' : v instanceof PyDict ? 'dict' : v instanceof PySet ? 'set' : v && v.py === 'mod' ? 'module' : v && v.py === 'file' ? '_io.TextIOWrapper' : v instanceof PyDate ? 'datetime.date' : v instanceof PyDelta ? 'datetime.timedelta' : 'function');
 
 // Screen display of a value: like repr, but objects show their attributes.
 export function pyShow(v, depth = 0) {
@@ -269,7 +279,12 @@ export function makePyRunner(lines, { builtins = {}, vars = {}, limit = 3000, in
       for (const [w, x] of [['true', true], ['false', false], ['null', null]]) if (t.startsWith(w, i)) { i += w.length; return x; }
       return fail(); };
     const r = val(); ws(); if (i < t.length) fail('Extra data'); return r; };
-  const MODS = { json: { dumps: (...a) => { const kw = kwOf(a); return jdump(a[0], kw.indent ?? null, 0); }, loads: (x) => { if (typeof x !== 'string') throw new PyError('TypeError', `the JSON object must be str, bytes or bytearray, not ${pyType(x)}`, null); return jload(x); } }, math: { sqrt: (x) => { if (num(x) < 0) throw new PyError('ValueError', 'math domain error', null); return new PyFloat(Math.sqrt(num(x))); }, floor: (x) => Math.floor(num(x)), ceil: (x) => Math.ceil(num(x)) }, collections: { deque: (x) => PyDeque.from(x === undefined ? [] : iter(x)) }, bisect: { bisect_left: (a, x) => bisectAt(a, x, false), bisect_right: (a, x) => bisectAt(a, x, true), bisect: (a, x) => bisectAt(a, x, true), insort: (a, x) => { a.splice(bisectAt(a, x, true), 0, x); return null; }, insort_left: (a, x) => { a.splice(bisectAt(a, x, false), 0, x); return null; }, insort_right: (a, x) => { a.splice(bisectAt(a, x, true), 0, x); return null; } } };
+  const intArg = (x) => { if (typeof x !== 'number' || !Number.isInteger(x)) throw new PyError('TypeError', `'${pyType(x)}' object cannot be interpreted as an integer`, null); return x; };
+  const buatTanggal = (y, m, d) => { [y, m, d].forEach((x) => intArg(x)); if (y < 1 || y > 9999) throw new PyError('ValueError', `year ${y} is out of range`, null, 'Tahun harus 1 sampai 9999.'); if (m < 1 || m > 12) throw new PyError('ValueError', 'month must be in 1..12', null, 'Bulan harus 1 sampai 12.'); if (d < 1 || d > panjangBulan(y, m)) throw new PyError('ValueError', 'day is out of range for month', null, 'Tanggal itu tidak ada di bulan tersebut.'); return new PyDate(y, m, d); };
+  const DATE = Object.assign((...a) => { if (a.length !== 3) throw new PyError('TypeError', `function missing required argument '${['year', 'month', 'day'][a.length] || 'day'}' (pos ${a.length + 1})`, null); return buatTanggal(...a); }, { attrs: { fromordinal: (n) => { const [y, m, d] = fromOrdinal(intArg(n)); return new PyDate(y, m, d); } } });
+  const DELTA = (...a) => { const kw = kwOf(a); const d = kw.days ?? a[0] ?? 0; const w = kw.weeks ?? 0; return new PyDelta(num(d) + 7 * num(w)); };
+  const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a; };
+  const MODS = { datetime: { date: DATE, timedelta: DELTA }, json: { dumps: (...a) => { const kw = kwOf(a); return jdump(a[0], kw.indent ?? null, 0); }, loads: (x) => { if (typeof x !== 'string') throw new PyError('TypeError', `the JSON object must be str, bytes or bytearray, not ${pyType(x)}`, null); return jload(x); } }, math: { gcd: (a, b) => gcd(a, b), lcm: (a, b) => (a && b ? Math.abs(a * b) / gcd(a, b) : 0), sqrt: (x) => { if (num(x) < 0) throw new PyError('ValueError', 'math domain error', null); return new PyFloat(Math.sqrt(num(x))); }, floor: (x) => Math.floor(num(x)), ceil: (x) => Math.ceil(num(x)) }, collections: { deque: (x) => PyDeque.from(x === undefined ? [] : iter(x)) }, bisect: { bisect_left: (a, x) => bisectAt(a, x, false), bisect_right: (a, x) => bisectAt(a, x, true), bisect: (a, x) => bisectAt(a, x, true), insort: (a, x) => { a.splice(bisectAt(a, x, true), 0, x); return null; }, insort_left: (a, x) => { a.splice(bisectAt(a, x, false), 0, x); return null; }, insort_right: (a, x) => { a.splice(bisectAt(a, x, true), 0, x); return null; } } };
   const scope = () => (st.frames.length ? st.frames[st.frames.length - 1].vars : st.vars);
   const look = (n, L) => { const s = scope(); if (n in s) return s[n]; const f = st.frames[st.frames.length - 1]; if (f?.locals?.has(n)) throw new PyError('UnboundLocalError', `cannot access local variable '${n}' where it is not associated with a value`, L, `${n} diberi nilai di dalam fungsi, jadi Python menganggapnya variabel lokal, padahal belum punya nilai.`); for (let e = f?.env; e; e = e.env) if (n in e.vars) return e.vars[n]; if (n in st.vars) return st.vars[n]; if (n in B) return B[n]; throw new PyError('NameError', `name '${n}' is not defined`, L, `Variabel atau fungsi ${n} belum dibuat.`); };
   function tick(L) { st.steps++; if (st.steps > limit) throw new PyError('Batas', `Program sudah menjalankan ${limit} langkah dan belum selesai. Mungkin ada perulangan yang tidak pernah berhenti.`, L, 'batas'); }
@@ -277,6 +292,18 @@ export function makePyRunner(lines, { builtins = {}, vars = {}, limit = 3000, in
     const fl = a instanceof PyFloat || b instanceof PyFloat;
     const mk = (v, f = fl) => (f ? new PyFloat(v) : v);
     const bad = () => { if (op === '+' && typeof a === 'string') throw new PyError('TypeError', `can only concatenate str (not "${pyType(b)}") to str`, L, 'Teks hanya bisa digabung dengan teks.'); throw new PyError('TypeError', `unsupported operand type(s) for ${op}: '${pyType(a)}' and '${pyType(b)}'`, L, 'Jenis data kedua nilai tidak cocok untuk operasi ini.'); };
+    if (a instanceof PyDate || b instanceof PyDate || a instanceof PyDelta || b instanceof PyDelta) {
+      const D = (n) => { if (n < 1 || n > 3652059) throw new PyError('OverflowError', 'date value out of range', L); const [y, m, d] = fromOrdinal(n); return new PyDate(y, m, d); };
+      if (op === '-' && a instanceof PyDate && b instanceof PyDate) return new PyDelta(a.ord - b.ord);
+      if (op === '+' && a instanceof PyDate && b instanceof PyDelta) return D(a.ord + b.days);
+      if (op === '+' && a instanceof PyDelta && b instanceof PyDate) return D(b.ord + a.days);
+      if (op === '-' && a instanceof PyDate && b instanceof PyDelta) return D(a.ord - b.days);
+      if ((op === '+' || op === '-') && a instanceof PyDelta && b instanceof PyDelta) return new PyDelta(op === '+' ? a.days + b.days : a.days - b.days);
+      if (['<', '>', '<=', '>='].includes(op) && ((a instanceof PyDate && b instanceof PyDate) || (a instanceof PyDelta && b instanceof PyDelta))) { const x = a instanceof PyDate ? a.ord : a.days; const y = b instanceof PyDate ? b.ord : b.days; return op === '<' ? x < y : op === '>' ? x > y : op === '<=' ? x <= y : x >= y; }
+      if (op === '==' || op === '!=') { const e = (a instanceof PyDate && b instanceof PyDate && a.ord === b.ord) || (a instanceof PyDelta && b instanceof PyDelta && a.days === b.days); return op === '==' ? e : !e; }
+      if (['<', '>', '<=', '>='].includes(op)) throw new PyError('TypeError', `'${op}' not supported between instances of '${pyType(a)}' and '${pyType(b)}'`, L);
+      return bad();
+    }
     switch (op) {
       case '+': if (typeof a === 'string' && typeof b === 'string') return a + b; if (Array.isArray(a) && Array.isArray(b)) return [...a, ...b]; if (isNum(a) && isNum(b)) return mk(num(a) + num(b)); return bad();
       case '-': if (isNum(a) && isNum(b)) return mk(num(a) - num(b)); return bad();
@@ -301,6 +328,8 @@ export function makePyRunner(lines, { builtins = {}, vars = {}, limit = 3000, in
   function methods(o, name, L) {
     if (o instanceof PyDeque) { if (name === 'popleft') return () => { if (!o.length) throw new PyError('IndexError', 'pop from an empty deque', L); return o.shift(); }; if (name === 'pop') return () => { if (!o.length) throw new PyError('IndexError', 'pop from an empty deque', L); return o.pop(); }; if (name === 'appendleft') return (x) => { o.unshift(x); return null; }; if (name === 'append') return (x) => { o.push(x); return null; }; }
     if (o && o.py === 'mod') { if (o.f[name]) return o.f[name]; throw new PyError('AttributeError', `module '${o.name}' has no attribute '${name}'`, L); }
+    if (o instanceof PyDate) { if (name === 'weekday') return () => (o.ord + 6) % 7; if (name === 'isoweekday') return () => ((o.ord + 6) % 7) + 1; if (name === 'toordinal') return () => o.ord; if (name === 'isoformat') return () => pyRepr(o); }
+    if (o && o.py === 'fn' && o.f && o.f.attrs && o.f.attrs[name]) return o.f.attrs[name];
     if (o && o.py === 'file') { const open1 = () => { if (o.closed) throw new PyError('ValueError', 'I/O operation on closed file.', L); }; const rd = () => { open1(); if (o.mode !== 'r') throw new PyError('UnsupportedOperation', 'not readable', L); };
       if (name === 'read') return () => { rd(); const t = files[o.name].slice(o.pos); o.pos = files[o.name].length; return t; };
       if (name === 'readlines') return () => { rd(); const t = files[o.name].slice(o.pos); o.pos = files[o.name].length; return t.match(/[^\n]*\n|[^\n]+$/g) || []; };
@@ -352,6 +381,8 @@ export function makePyRunner(lines, { builtins = {}, vars = {}, limit = 3000, in
         if (o instanceof PyObj) { if (n.name in o.attrs) return o.attrs[n.name]; const d = findMethod(o.cls, n.name); if (d) return { py: 'fn', name: n.name, def: d, self: o }; const ca = classAttr(o.cls, n.name); if (ca !== undefined) return ca; throw new PyError('AttributeError', `'${o.cls.name}' object has no attribute '${n.name}'`, L, 'Objek ini tidak punya atribut atau metode dengan nama itu.'); }
         if (o && o.py === 'super') { const d = o.cls.base && findMethod(o.cls.base, n.name); if (d) return { py: 'fn', name: n.name, def: d, self: o.obj }; throw new PyError('AttributeError', `'super' object has no attribute '${n.name}'`, L); }
         if (o && o.py === 'class') { const d = findMethod(o, n.name); if (d) return { py: 'fn', name: n.name, def: d }; const ca = classAttr(o, n.name); if (ca !== undefined) return ca; throw new PyError('AttributeError', `type object '${o.name}' has no attribute '${n.name}'`, L); }
+        if (o instanceof PyDate && ['year', 'month', 'day'].includes(n.name)) return { year: o.y, month: o.m, day: o.d }[n.name];
+        if (o instanceof PyDelta && n.name === 'days') return o.days;
         const M = methods(o, n.name, L); if (M) return { py: 'fn', name: n.name, f: M }; if (typeof o === 'string' && STRM[n.name]) return { py: 'fn', name: n.name, f: (...x) => STRM[n.name](o, ...x) }; throw new PyError('AttributeError', `'${pyType(o)}' object has no attribute '${n.name}'`, L); }
       case 'call': {
         const f = yield* ev(n.f, L); const args = []; for (const x of n.args) args.push(yield* ev(x, L));
