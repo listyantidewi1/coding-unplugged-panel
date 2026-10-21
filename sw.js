@@ -175,6 +175,7 @@ const FILES = [
   'js/activities/sdl-27-syarat-wahana.js',
   'js/activities/sdl-28-segi-banyak.js',
   'js/activities/sdl-29-kuis-buatanku.js',
+  'js/activities/sdl-30-lampu-penyeberangan.js',
 ];
 
 self.addEventListener('install', (e) => {

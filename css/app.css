@@ -5821,3 +5821,60 @@ button.pls-chip, .pls-pilih { cursor: pointer; }
 .kbk-soal .kbk-kiri { flex: 1 1 auto; }
 .kbk-soal .kbk-kode { max-width: 100%; max-height: 46cqh; }
 .kbk-soal .kbk-layar { width: 30cqmin; }
+
+/* sdl-30 Lampu Penyeberangan Sekolah */
+.act.lampu-penyeberangan { overflow-y: auto; justify-content: safe center; }
+.lpy-soal { display: flex; flex-direction: column; align-items: center; gap: 1.2cqmin; }
+.lpy-atas { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start; gap: 2cqmin; }
+.lpy-kiri, .lpy-kanan { display: flex; flex-direction: column; align-items: center; gap: 1cqmin; min-width: 0; }
+.lpy-kode { display: flex; flex-direction: column; gap: 0.1cqmin; padding: 1cqmin 1.4cqmin; border-radius: 1.5cqmin; background: #fefce8; color: #1c1917; font: 800 clamp(0.55rem, 2.1cqmin, 1rem)/1.3 ui-monospace, monospace; text-align: left; }
+.lpy-kode-tempat .lpy-kode { max-height: 46cqh; overflow: auto; }
+.lpy-baris { display: flex; align-items: center; gap: 0.8cqmin; padding: 0.1cqmin 0.6cqmin; padding-left: calc(var(--d, 0) * 3cqmin + 0.6cqmin); border-radius: 0.8cqmin; }
+.lpy-baris.nyala { background: #fde68a; box-shadow: inset 0 0 0 max(2px, 0.3cqmin) #ca8a04; }
+.lpy-baris.wadah { cursor: pointer; } .lpy-baris.buka { box-shadow: 0 0 0 max(3px, 0.5cqmin) #fbbf24; }
+.lpy-baris.kosong { color: var(--muted); }
+.lpy-no { min-width: 1.6em; color: #a8a29e; text-align: right; }
+.lpy-aksi { margin-left: auto; display: flex; gap: 0.4cqmin; }
+.lpy-pilih { font: inherit; padding: 0 0.5em; border-radius: 0.8cqmin; border: max(2px, 0.3cqmin) solid #b45309; background: #fff; color: #431407; cursor: pointer; }
+.lpy-geser, .lpy-hapus { font: inherit; border: 0; background: none; cursor: pointer; color: #475569; }
+.lpy-hapus { color: var(--bad); }
+.lpy-palet { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 0.6cqmin; padding: 0.8cqmin 1cqmin; border-radius: 2cqmin; background: #eef2f7; max-width: 60cqw; }
+.lpy-kartu { font: 900 clamp(0.55rem, 2cqmin, 0.95rem) system-ui, sans-serif; padding: 0.5cqmin 1cqmin; border-radius: 1cqmin; border: max(2px, 0.35cqmin) solid #b45309; background: #fff7ed; color: #431407; cursor: pointer; }
+.lpy-adegan { position: relative; display: flex; flex-direction: column; align-items: center; gap: 0.8cqmin; padding: 1cqmin; border-radius: 2cqmin; background: #e2e8f0; color: #0f172a; transition: background 0.2s; }
+.lpy-adegan.bahaya { animation: lpy-kedip 0.5s infinite alternate; }
+@keyframes lpy-kedip { to { background: #fca5a5; } }
+.lpy-jalan { position: relative; width: min(40cqmin, 44cqw); height: 9cqmin; border-radius: 1cqmin; background: #475569; overflow: hidden; }
+.lpy-zebra { position: absolute; left: 40%; width: 20%; top: 0; bottom: 0; background: repeating-linear-gradient(180deg, #f8fafc 0 1.2cqmin, transparent 1.2cqmin 2.4cqmin); }
+.lpy-mobil { position: absolute; top: 50%; left: 4%; transform: translateY(-50%) scaleX(-1); font-size: 5cqmin; transition: left 0.6s linear; }
+.lpy-adegan.jalan-kendaraan .lpy-mobil { animation: lpy-melaju 1.6s linear infinite; }
+@keyframes lpy-melaju { from { left: -10%; } to { left: 100%; } }
+.lpy-anak { position: absolute; left: 50%; bottom: -0.5cqmin; transform: translateX(-50%); font-size: 4.5cqmin; transition: bottom 0.6s; }
+.lpy-adegan.jalan-orang .lpy-anak { animation: lpy-seberang 2.4s linear infinite; }
+@keyframes lpy-seberang { from { bottom: -10%; } to { bottom: 70%; } }
+.lpy-tiang-tiang { display: flex; align-items: flex-end; gap: 2cqmin; }
+.lpy-tiang { display: flex; flex-direction: column; align-items: center; gap: 0.5cqmin; padding: 0.8cqmin; border-radius: 1.5cqmin; background: #1e293b; }
+.lpy-tiang small { color: #cbd5e1; font-weight: 800; font-size: clamp(0.45rem, 1.6cqmin, 0.75rem); }
+.lpy-lampu { display: grid; place-items: center; width: 5.4cqmin; height: 5.4cqmin; border-radius: 50%; font-style: normal; font-size: 3cqmin; opacity: 0.25; filter: grayscale(0.6); }
+.lpy-lampu.merah { background: #ef4444; } .lpy-lampu.kuning { background: #facc15; } .lpy-lampu.hijau { background: #22c55e; }
+.lpy-lampu.lpy-orang { border-radius: 1cqmin; }
+.lpy-lampu.on { opacity: 1; filter: none; box-shadow: 0 0 2cqmin currentColor; }
+.lpy-lampu.merah.on { color: #ef4444; } .lpy-lampu.kuning.on { color: #facc15; } .lpy-lampu.hijau.on { color: #22c55e; }
+.lpy-layar-kecil { min-width: 5.4cqmin; min-height: 3.2cqmin; border-radius: 0.6cqmin; background: #020617; color: #fbbf24; text-align: center; font: 900 clamp(0.6rem, 2.4cqmin, 1.1rem) ui-monospace, monospace; }
+.lpy-tombol { font: 900 clamp(0.5rem, 1.8cqmin, 0.85rem) system-ui, sans-serif; width: 14cqmin; padding: 1.4cqmin 0.8cqmin; border-radius: 50%; aspect-ratio: 1; border: max(3px, 0.6cqmin) solid #b45309; background: #fbbf24; color: #431407; cursor: pointer; }
+.lpy-tombol:active { transform: scale(0.94); }
+.lpy-jam { font-size: clamp(0.7rem, 2.6cqmin, 1.2rem); }
+.lpy-garis-waktu { display: flex; flex-direction: column; gap: 0.2cqmin; width: min(96cqw, 160cqmin); }
+.lpy-pita { display: grid; grid-template-columns: 11cqmin repeat(var(--n), minmax(0, 1fr)); gap: 1px; align-items: center; }
+.lpy-label { font-weight: 800; font-size: clamp(0.45rem, 1.6cqmin, 0.75rem); color: var(--muted); text-align: right; padding-right: 0.6cqmin; }
+.lpy-sel { display: block; height: 2.6cqmin; background: #f1f5f9; font-style: normal; }
+.lpy-sel.hijau { background: #22c55e; } .lpy-sel.kuning { background: #facc15; } .lpy-sel.merah { background: #ef4444; }
+.lpy-sel.bahaya { box-shadow: inset 0 0 0 max(2px, 0.3cqmin) #000; background-image: repeating-linear-gradient(45deg, transparent 0 3px, rgb(0 0 0 / 0.35) 3px 5px); }
+.lpy-sel.kini { outline: max(2px, 0.3cqmin) solid #1e3a8a; outline-offset: -1px; }
+.lpy-sel.tanda { background: none; height: auto; font-size: clamp(0.4rem, 1.4cqmin, 0.7rem); font-weight: 800; color: var(--muted); }
+.lpy-sel.tekan { background: none; height: 2cqmin; position: relative; }
+.lpy-sel.tekan.baca::after, .lpy-sel.tekan.abaikan::after { content: ''; position: absolute; left: 50%; top: 50%; width: 1.6cqmin; height: 1.6cqmin; transform: translate(-50%, -50%); border-radius: 50%; }
+.lpy-sel.tekan.baca::after { background: #1d4ed8; } .lpy-sel.tekan.abaikan::after { background: #94a3b8; }
+.lpy-catatan { margin: 0; font-weight: 700; font-size: clamp(0.55rem, 2cqmin, 0.95rem); }
+.lpy-info { font-weight: 700; text-align: center; max-width: 92cqw; min-height: 1.2em; }
+.lpy-angka { min-width: 2.5em; text-align: center; font-size: clamp(0.9rem, 3.6cqmin, 1.7rem); }
+.lampu-penyeberangan .row.kunci { pointer-events: none; opacity: 0.7; }
