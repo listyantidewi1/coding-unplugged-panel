@@ -258,28 +258,31 @@ button:focus-visible, a:focus-visible { outline: 4px solid #f59e0b; outline-offs
 .tools { min-height: 9cqmin; }
 .reveal { margin: 0; font-weight: 800; color: var(--good); font-size: clamp(0.8rem, 5cqmin, 2rem); }
 
-/* Kartu biner */
-.target { font-size: clamp(2rem, 18cqmin, 9rem); font-weight: 900; line-height: 1; color: var(--player, var(--primary)); }
-.bcards { display: flex; gap: 2.5cqw; }
-.bcard { width: min(calc(80cqw / var(--k)), 34cqh * 0.714); aspect-ratio: 100 / 140; position: relative; cursor: pointer; perspective: 600px; }
-.bcard .face {
-  position: absolute;
-  inset: 0;
-  border-radius: 8%;
-  border: max(2px, 0.5cqmin) solid #334155;
-  backface-visibility: hidden;
-  transition: transform 0.3s;
-}
-.bcard .front { background: #fff; transform: rotateY(180deg); fill: var(--ink); }
-.bcard .front svg { width: 100%; height: 100%; }
-.bcard .back { background: repeating-linear-gradient(45deg, #1e3a8a 0 8%, #1e40af 8% 16%); }
-.bcard.up .front { transform: rotateY(0); }
-.bcard.up .back { transform: rotateY(-180deg); }
-.bcard .num { position: absolute; bottom: -1.5em; left: 0; right: 0; text-align: center; font-weight: 800; font-size: clamp(0.7rem, 4cqmin, 1.6rem); }
-.bcard.locked { pointer-events: none; }
-.bits { display: flex; gap: 2.5cqw; margin-top: 4cqmin; }
-.bit { width: min(calc(80cqw / var(--k)), 34cqh * 0.714); text-align: center; font-family: ui-monospace, Menlo, Consolas, monospace; font-weight: 800; font-size: clamp(1rem, 9cqmin, 5rem); border-radius: 2cqmin; background: #eef2f7; }
+/* Bilangan biner: lampu gapura & anak timbangan */
+.target { font-size: clamp(2rem, 15cqmin, 8rem); font-weight: 900; line-height: 1; color: var(--player, var(--primary)); font-variant-numeric: tabular-nums; }
+.bitrow { display: flex; gap: 2.5cqw; justify-content: center; }
+.bits { display: flex; gap: 2.5cqw; }
+.bit { width: min(calc(80cqw / var(--k)), 16cqh); text-align: center; font-family: ui-monospace, Menlo, Consolas, monospace; font-weight: 800; font-size: clamp(1rem, 8cqmin, 4.5rem); border-radius: 2cqmin; background: #eef2f7; }
 .bits.correct .bit { background: #dcfce7; color: var(--good); }
+.locked { pointer-events: none; }
+
+.gapura { display: flex; flex-direction: column; align-items: center; padding: 0 3cqw 2cqmin; border: max(4px, 1.2cqmin) solid #b91c1c; border-bottom: 0; border-radius: 2cqmin 2cqmin 0 0; }
+.gapura-top { margin: -0.1em 0 2cqmin; padding: 0.4cqmin 3cqw; background: #b91c1c; color: #fff; font-weight: 900; letter-spacing: 0.12em; font-size: clamp(0.7rem, 3.5cqmin, 1.6rem); border-radius: 0 0 1cqmin 1cqmin; }
+.lamp { font: inherit; width: min(calc(80cqw / var(--k)), 16cqh); display: flex; flex-direction: column; align-items: center; gap: 1cqmin; background: none; border: 0; padding: 0; cursor: pointer; color: var(--ink); }
+.lamp .bulb { width: 80%; aspect-ratio: 1; border-radius: 50%; background: #475569; border: max(3px, 0.8cqmin) solid #1e293b; transition: background 0.2s, box-shadow 0.2s; }
+.lamp.on .bulb { background: #fde047; box-shadow: 0 0 4cqmin 1cqmin #facc15; }
+.lamp .val { font-weight: 900; font-size: clamp(0.9rem, 5cqmin, 2.4rem); }
+
+.scale-scene { display: flex; flex-direction: column; align-items: center; gap: 3cqmin; }
+.scale { position: relative; width: min(70cqw, 60cqh * 1.6); height: min(22cqh, 18cqw); }
+.beam { --tilt: 0deg; position: absolute; left: 0; right: 0; top: 20%; height: max(4px, 1.2cqmin); background: #78350f; border-radius: 1cqmin; transform: rotate(var(--tilt)); transition: transform 0.4s; }
+.pan { position: absolute; top: 0; width: 30%; transform: translateY(-100%); display: grid; place-items: end center; }
+.pan.left { left: 0; }
+.pan.right { right: 0; }
+.sack { font-weight: 800; font-size: clamp(0.8rem, 5cqmin, 2rem); white-space: nowrap; }
+.post { position: absolute; left: 50%; top: 20%; bottom: 0; width: max(6px, 1.6cqmin); transform: translateX(-50%); background: #a16207; border-radius: 1cqmin 1cqmin 0 0; }
+.weight { font: inherit; width: min(calc(80cqw / var(--k)), 18cqh); aspect-ratio: 1.2; display: grid; place-items: center; border: max(3px, 0.6cqmin) solid #334155; border-radius: 30% 30% 12% 12%; background: #cbd5e1; color: #0f172a; font-weight: 900; font-size: clamp(0.8rem, 5cqmin, 2.2rem); cursor: pointer; transition: transform 0.2s, background 0.2s; }
+.weight.on { background: #475569; color: #fff; transform: translateY(-1.5cqmin); box-shadow: 0 1cqmin 0 #1e293b; }
 
 /* ---------- motion ---------- */
 .shake { animation: shake 0.4s; }

@@ -14,7 +14,7 @@ const FILES = [
   'js/activities/registry.js',
   'js/activities/paud-01-pola.js',
   'js/activities/sda-09-gambar-rahasia.js',
-  'js/activities/kartu-titik.js',
+  'js/activities/bit-sum.js',
 ];
 
 self.addEventListener('install', (e) => {
