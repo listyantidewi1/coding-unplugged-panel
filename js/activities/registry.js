@@ -63,6 +63,7 @@ import smpMesinPencari from './smp-21-mesin-pencari.js';
 import smpPesanBerantai from './smp-22-pesan-berantai.js';
 import smpJejakDigital from './smp-23-jejak-digital.js';
 import smpDeepfake from './smp-24-deepfake.js';
+import smpChatbot from './smp-25-chatbot.js';
 
 export const JENJANG = [
   { id: 'paud', label: 'PAUD', detail: '4–6 tahun' },
@@ -81,7 +82,7 @@ export const activities = [
   sdlLampuGapura, sdlPikselWarna, sdlSandiSenter, sdlHematKuota, sdlAnyamanRusak, sdlKartuData, sdlCariRumah, sdlRakBuku, sdlRelKereta, sdlCariKata, sdlGulaKurang, sdlKancil, sdlKurirKampung, sdlMerpatiPos, sdlMesinKantin, sdlMesinCerdas, sdlLatihMesin, sdlDataPribadi,
   smpKartuPelajar, smpKodeHuruf, smpVideotron, smpLaguMampat, smpAngkaCek, smpTebakHuruf, smpKoperasi, smpLoker, smpKlasemen, smpSalaman, smpGotongRoyong, smpOjek,
   smpMejaBundar, smpAmplopBerlapis, smpKembalian, smpGerbangTol, smpKomputerKertas, smpSandiGeser, smpAplikasiJadwal, smpPenyiram, smpMesinPencari, smpPesanBerantai,
-  smpJejakDigital, smpDeepfake,
+  smpJejakDigital, smpDeepfake, smpChatbot,
 ]
   .sort((a, b) => order(a) - order(b) || a.id.localeCompare(b.id));
 
