@@ -3321,3 +3321,54 @@ code.beda { background: #fee2e2 !important; color: #991b1b !important; }
 .hc-dua-tanya { display: flex; gap: 1.2em; flex-wrap: wrap; justify-content: center; font-weight: 800; }
 .hc-dua-tanya .ya { color: #86efac; } .hc-dua-tanya .tidak { color: #fca5a5; }
 .hc-info { max-width: 60em; padding: 0.5em 0.9em; border-radius: 0.6em; background: #fef3c7; color: #111827; font-size: clamp(0.80rem, 3.5cqmin, 1.75rem); text-align: left; }
+
+/* sma-30 Kebun Hidroponik IoT (hk-) */
+.hk-dua { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 1.5cqmin; align-items: start; width: 100%; max-width: 90em; }
+.hk-langkah { display: flex; gap: 1.5cqmin; align-items: center; justify-content: center; flex-wrap: wrap; width: 100%; }
+.hk-langkah .hk-tanya { width: auto; flex: 1 1 20em; max-width: 40em; }
+.hk-papan { display: flex; flex-direction: column; gap: 0.8cqmin; min-width: 0; width: 100%; max-width: 50em; margin: 0 auto; font-size: clamp(0.7rem, 2.5cqmin, 1.4rem); }
+.hk-tiga { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1cqmin; align-items: center; padding: 0.4em; border-radius: 1em; background: #ecfdf5; border: 3px solid #10b981; }
+.hk-kol { display: flex; flex-direction: column; gap: 0.8cqmin; }
+.hk-node { display: flex; flex-direction: column; align-items: center; gap: 0.1em; padding: 0.2em 0.4em; border: 2px solid #94a3b8; border-radius: 0.7em; background: #fff; color: #111827; text-align: center; transition: transform 0.2s, box-shadow 0.2s, background 0.2s; }
+.hk-node > b { font-size: 0.85em; line-height: 1.15; }
+.hk-ikon { font-size: 1.15em; line-height: 1; }
+.hk-isi { display: flex; flex-wrap: wrap; gap: 0.1em 0.5em; justify-content: center; font-size: 0.85em; min-height: 1.1em; }
+.hk-isi .awas { color: #b91c1c; font-weight: 800; }
+.hk-node.n-perantara { border-color: #7c3aed; background: #f5f3ff; }
+.hk-node.n-pengendali { border-color: #0369a1; background: #f0f9ff; }
+.hk-node.kirim { transform: scale(1.06); box-shadow: 0 0 0 4px #facc15; background: #fef9c3; }
+.hk-node.terima { box-shadow: 0 0 0 4px #22c55e; background: #dcfce7; }
+.hk-node.hilang { box-shadow: 0 0 0 4px #ef4444; background: #fee2e2; }
+.hk-saklar { padding: 0.05em 0.6em; border-radius: 999px; background: #e2e8f0; color: #475569; font-weight: 900; }
+.hk-saklar.on { background: #16a34a; color: #fff; }
+.hk-alur { display: flex; flex-direction: column; gap: 0.15em; min-height: 2.4em; padding: 0.3em 0.7em; border-radius: 0.6em; background: #1e293b; color: #e2e8f0; font-family: ui-monospace, monospace; font-size: 0.8em; text-align: left; }
+.hk-alur .hilang { color: #fca5a5; font-weight: 800; }
+.hk-kanan { display: flex; flex-direction: column; gap: 1cqmin; flex: 1 1 28em; max-width: 44em; min-width: 0; }
+.hk-kode { padding: 0.5em 0.7em; border-radius: 0.6em; background: #0f172a; color: #cbd5e1; font-family: ui-monospace, monospace; font-size: clamp(0.65rem, 2.5cqmin, 1.35rem); text-align: left; }
+.hk-baris { white-space: pre-wrap; border-radius: 0.3em; }
+.hk-baris.baru { color: #fde68a; }
+.hk-baris.jalan { background: #facc15; color: #111827; font-weight: 800; }
+.hk-tanya { display: flex; flex-direction: column; gap: 0.6cqmin; width: 100%; max-width: 70em; }
+.hidroponik .opt-label { overflow-wrap: anywhere; }
+.hidroponik .hk-tanya .opts .opt { min-height: 0; padding-block: 0.4em; }
+.hk-tanya .prompt { font-size: clamp(0.8rem, 3cqmin, 1.6rem); margin: 0; }
+.hk-tanya .opt-label, .hidroponik .opts[style*="--cols: 2"] .opt-label { font-size: clamp(0.75rem, 2.6cqmin, 1.4rem); }
+.hk-kejadian { padding: 0.5em 0.8em; border: 3px solid #0f766e; border-radius: 0.8em; background: #f0fdfa; color: #111827; text-align: left; font-size: clamp(0.8rem, 3cqmin, 1.6rem); }
+.hk-kejadian > b { display: block; }
+.hk-kejadian code { font-weight: 800; }
+.hk-kejadian.hilang { border-color: #dc2626; background: #fef2f2; }
+.hk-pilih { display: flex; flex-direction: column; gap: 0.8cqmin; width: 100%; max-width: 64em; font-size: clamp(0.8rem, 3.2cqmin, 1.7rem); }
+.hk-pbaris { display: flex; gap: 1em; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: 0.35em 0.8em; border: 2px solid #cbd5e1; border-radius: 0.7em; background: #fff; color: #111827; text-align: left; }
+.hk-pbaris > span { flex: 1 1 12em; min-width: 0; }
+.hk-pbaris .seg-btn { font-size: 0.85em; }
+.hk-pbaris.beres { border-color: #16a34a; background: #f0fdf4; }
+.hk-pbaris.beres > b { color: #15803d; }
+.hk-tabel { border-collapse: collapse; background: #fff; color: #111827; font-size: clamp(0.7rem, 2.6cqmin, 1.4rem); text-align: left; }
+.hk-tabel th, .hk-tabel td { padding: 0.25em 0.6em; border: 2px solid #cbd5e1; }
+.hk-tabel td.on { color: #15803d; font-weight: 800; }
+.hk-tabel tr.hilang td { background: #fef2f2; }
+.hk-tabel.riwayat { width: 100%; max-width: 70em; }
+.hk-pre { margin: 0; padding: 0.6em 0.9em; border-radius: 0.6em; background: #0f172a; color: #e2e8f0; text-align: left; font-size: clamp(0.65rem, 2.4cqmin, 1.3rem); white-space: pre-wrap; }
+.hk-versi .seg-btn { font-size: clamp(0.75rem, 2.6cqmin, 1.4rem); }
+.hk-uji { display: flex; flex-wrap: wrap; gap: 0.6em; align-items: center; justify-content: center; font-size: clamp(0.75rem, 2.6cqmin, 1.4rem); }
+.hk-uji .reveal { flex-basis: 100%; }
