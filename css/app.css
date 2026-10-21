@@ -2206,3 +2206,30 @@ button.kk-kotak { cursor: pointer; }
 .jejakdigital .ab-lapisan { font-size: clamp(0.55rem, 2.6cqmin, 1.3rem); }
 @container (max-height: 520px) { .jd-lini { font-size: clamp(0.38rem, 1.6cqmin, 0.8rem); } .jd-profil { display: none; } }
 @container (max-aspect-ratio: 6/5) { .jd-lini { grid-template-columns: repeat(2, minmax(0, 1fr)); } .jd-samping { flex-direction: column; align-items: center; } }
+
+/* Deepfake */
+.deepfake { gap: 1cqmin; }
+.deepfake .reveal { font-size: clamp(0.6rem, 2.8cqmin, 1.4rem); }
+.df-pasangan { display: flex; gap: 2cqw; justify-content: center; width: 100%; }
+.df-gambar { position: relative; width: min(46cqw, 82cqh); max-width: 100%; border-radius: 0.6em; overflow: hidden; border: 3px solid #1e293b; background: #fff; cursor: crosshair; touch-action: manipulation; }
+.df-satu .df-gambar { width: min(70cqw, 62cqh); }
+.subject .df-gambar { width: min(60cqw, 48cqh); }
+.df-gambar svg { display: block; width: 100%; height: auto; }
+.df-huruf { position: absolute; top: 0.3em; left: 0.3em; padding: 0.05em 0.5em; border-radius: 0.3em; background: #1e293b; color: #fff; font-weight: 900; font-size: clamp(0.7rem, 3cqmin, 1.6rem); pointer-events: none; }
+.df-keterangan { position: absolute; bottom: 0.3em; right: 0.4em; padding: 0.1em 0.5em; border-radius: 1em; background: #0008; color: #fff; font-weight: 700; font-size: clamp(0.5rem, 2cqmin, 1rem); pointer-events: none; }
+.df-tanda { fill: none; stroke-width: 4; pointer-events: none; }
+.df-tanda.ketemu { stroke: #dc2626; }
+.df-tanda.lewat { stroke: #eab308; stroke-dasharray: 6 4; }
+.df-daftar { margin: 0; padding-left: 1.4em; text-align: left; font-size: clamp(0.5rem, 2.3cqmin, 1.15rem); min-height: 1em; }
+.df-naskah { display: flex; flex-direction: column; gap: 0.4em; width: min(100%, 48em); padding: 0.8em 1em; border-radius: 0.8em; background: #f8fafc; border: 2px solid #cbd5e1; text-align: left; color: #111827; font-size: clamp(0.6rem, 2.8cqmin, 1.45rem); }
+.df-naskah p { margin: 0; line-height: 1.45; }
+.df-narasi { font-style: italic; color: #475569; }
+.df-langkah { display: flex; flex-direction: column; gap: 0.45em; width: min(100%, 52em); font-size: clamp(0.55rem, 2.6cqmin, 1.3rem); }
+.df-kartu { display: flex; gap: 0.6em; align-items: center; padding: 0.35em 0.6em; border-radius: 0.5em; background: #fff; border: 2px solid #cbd5e1; text-align: left; color: #111827; }
+.df-kartu > span { flex: 1; }
+.df-kartu.urut { border-color: #1d4ed8; background: #eff6ff; }
+.df-kartu.buang { opacity: 0.55; text-decoration: line-through; background: #f1f5f9; }
+.df-nomor, .df-sampah { font: inherit; font-weight: 900; width: 2em; height: 2em; border-radius: 50%; border: 2px solid #94a3b8; background: #fff; cursor: pointer; color: #111827; padding: 0; flex: none; }
+.df-kartu.urut .df-nomor { background: #1d4ed8; color: #fff; border-color: #1d4ed8; }
+.df-sampah { border-radius: 0.4em; }
+@container (max-aspect-ratio: 6/5) { .df-pasangan { flex-direction: column; align-items: center; } .df-gambar { width: min(90cqw, 40cqh); } }

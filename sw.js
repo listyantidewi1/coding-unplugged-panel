@@ -75,6 +75,7 @@ const FILES = [
   'js/activities/smp-21-mesin-pencari.js',
   'js/activities/smp-22-pesan-berantai.js',
   'js/activities/smp-23-jejak-digital.js',
+  'js/activities/smp-24-deepfake.js',
 ];
 
 self.addEventListener('install', (e) => {
