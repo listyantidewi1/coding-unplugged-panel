@@ -60,6 +60,7 @@ import smpSandiGeser from './smp-18-sandi-geser.js';
 import smpAplikasiJadwal from './smp-19-aplikasi-jadwal.js';
 import smpPenyiram from './smp-20-penyiram.js';
 import smpMesinPencari from './smp-21-mesin-pencari.js';
+import smpPesanBerantai from './smp-22-pesan-berantai.js';
 
 export const JENJANG = [
   { id: 'paud', label: 'PAUD', detail: '4–6 tahun' },
@@ -77,7 +78,7 @@ export const activities = [
   sdaMotifBatik, sdaRumahAdat, sdaRumahNenek, sdaResep, sdaSenamPagi, sdaJikaHujan, sdaRuteSalah, sdaTimbangan, sdaGambarRahasia, sdaTabelHewan, sdaCariHalaman, sdaBarisUpacara, sdaTombolLift,
   sdlLampuGapura, sdlPikselWarna, sdlSandiSenter, sdlHematKuota, sdlAnyamanRusak, sdlKartuData, sdlCariRumah, sdlRakBuku, sdlRelKereta, sdlCariKata, sdlGulaKurang, sdlKancil, sdlKurirKampung, sdlMerpatiPos, sdlMesinKantin, sdlMesinCerdas, sdlLatihMesin, sdlDataPribadi,
   smpKartuPelajar, smpKodeHuruf, smpVideotron, smpLaguMampat, smpAngkaCek, smpTebakHuruf, smpKoperasi, smpLoker, smpKlasemen, smpSalaman, smpGotongRoyong, smpOjek,
-  smpMejaBundar, smpAmplopBerlapis, smpKembalian, smpGerbangTol, smpKomputerKertas, smpSandiGeser, smpAplikasiJadwal, smpPenyiram, smpMesinPencari,
+  smpMejaBundar, smpAmplopBerlapis, smpKembalian, smpGerbangTol, smpKomputerKertas, smpSandiGeser, smpAplikasiJadwal, smpPenyiram, smpMesinPencari, smpPesanBerantai,
 ]
   .sort((a, b) => order(a) - order(b) || a.id.localeCompare(b.id));
 

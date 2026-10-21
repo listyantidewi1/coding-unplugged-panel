@@ -73,6 +73,7 @@ const FILES = [
   'js/activities/smp-19-aplikasi-jadwal.js',
   'js/activities/smp-20-penyiram.js',
   'js/activities/smp-21-mesin-pencari.js',
+  'js/activities/smp-22-pesan-berantai.js',
 ];
 
 self.addEventListener('install', (e) => {
