@@ -268,6 +268,7 @@ export function makePyRunner(lines, { builtins = {}, vars = {}, limit = 3000, in
       if (name === 'sort') return (...a) => { const kw = kwOf(a); o.sort(truthy(kw.reverse) ? (x, y) => pyCmp(y, x) : pyCmp); return null; };
       if (name === 'copy') return () => [...o];
       if (name === 'reverse') return () => { o.reverse(); return null; };
+      if (name === 'remove') return (x) => { const i = o.findIndex((y) => eq(y, x)); if (i < 0) throw new PyError('ValueError', 'list.remove(x): x not in list', L); o.splice(i, 1); return null; };
       if (name === 'pop') return (i = o.length - 1) => { if (!o.length) throw new PyError('IndexError', 'pop from empty list', L); return o.splice(i < 0 ? i + o.length : i, 1)[0]; };
       if (name === 'insert') return (i, x) => { o.splice(i, 0, x); return null; };
     }

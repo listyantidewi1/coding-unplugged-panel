@@ -127,6 +127,7 @@ import PercepatKode from './sma-43-percepat-kode.js';
 import UrutCariKode from './sma-44-urut-cari-kode.js';
 import TumpukanKode from './sma-45-tumpukan-kode.js';
 import BfsAngkot from './sma-46-bfs-angkot.js';
+import OopPerpustakaan from './sma-47-oop-perpustakaan.js';
 
 export const JENJANG = [
   { id: 'paud', label: 'PAUD', detail: '4–6 tahun' },
@@ -188,6 +189,7 @@ export const activities = [
   UrutCariKode,
   TumpukanKode,
   BfsAngkot,
+  OopPerpustakaan,
 ]
   .sort((a, b) => order(a) - order(b) || a.id.localeCompare(b.id));
 
