@@ -128,6 +128,7 @@ const FILES = [
   'js/activities/smp-32-mesin-konversi.js',
   'js/activities/smp-33-olah-teks.js',
   'js/activities/smp-34-uji-program.js',
+  'js/activities/smp-35-kode-gelembung.js',
 ];
 
 self.addEventListener('install', (e) => {

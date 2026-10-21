@@ -3941,3 +3941,28 @@ code.beda { background: #fee2e2 !important; color: #991b1b !important; }
 .up-laporan .sk-baris span { flex: 0 0 11em; }
 @media (max-width: 700px) { .up-kerja, .up-form { grid-template-columns: 1fr; } }
 @media print { .up-kartu { border-color: #000; } }
+
+/* smp-35 Kode Gelembung */
+.kg-meja { display: flex; align-items: flex-end; gap: 1em; flex-wrap: wrap; justify-content: center; }
+.kg-gelas-baris { display: flex; gap: 0.35em; align-items: flex-end; }
+.kg-gelas { display: flex; flex-direction: column; align-items: center; min-width: 3.4em; padding: 0.3em 0.3em 0.5em; border: 3px solid #60a5fa; border-top: 0; border-radius: 0 0 0.9em 0.9em; background: linear-gradient(#ffffff 0 20%, #dbeafe 20%); color: #0f172a; font-size: clamp(0.7rem, 2.4cqmin, 1.3rem); transition: transform 0.25s; }
+.kg-gelas small { font-family: ui-monospace, monospace; font-size: 0.75em; color: #475569; }
+.kg-gelas b { font-family: ui-monospace, monospace; font-size: 1.5em; }
+.kg-gelas i { font-style: normal; font-size: 0.75em; color: #475569; }
+.kg-gelas.angkat { transform: translateY(-0.6em); border-color: #f59e0b; background: linear-gradient(#ffffff 0 20%, #fde68a 20%); }
+.kg-gelas.bantu { border-color: #a855f7; background: linear-gradient(#ffffff 0 20%, #f3e8ff 20%); }
+.kg-gelas.luar { border: 3px dashed #dc2626; background: #fee2e2; }
+.kg-ekstra { display: flex; flex-direction: column; gap: 0.5em; align-items: center; padding-top: 0.6em; }
+.kg-hitung { display: flex; gap: 1em; font-weight: 700; }
+.kg-hitung span { padding: 0.15em 0.6em; border-radius: 0.5em; background: #f1f5f9; color: #0f172a; }
+.kg-kode { font-size: clamp(0.65rem, 2.2cqmin, 1.15rem); }
+.kg-baris .sk-baris .seg-btn { font-family: ui-monospace, monospace; }
+.kg-catatan { color: #475569; text-align: center; }
+.kg-atur { display: flex; flex-wrap: wrap; gap: 0.5em; align-items: center; justify-content: center; }
+.kg-grafik { display: flex; flex-direction: column; gap: 0.6em; width: min(100%, 50em); margin: 0 auto; }
+.kg-batang-baris { display: grid; grid-template-columns: 7em 1fr; gap: 0.2em 0.6em; align-items: center; font-size: clamp(0.8rem, 2.5cqmin, 1.4rem); }
+.kg-batang-baris small { grid-column: 2; color: #64748b; font-family: ui-monospace, monospace; }
+.kg-batang { position: relative; height: 1.8em; border-radius: 0.4em; background: #f1f5f9; }
+.kg-batang i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0.4em; background: #60a5fa; transition: width 0.3s; }
+.kg-batang b { position: relative; padding-left: 0.5em; line-height: 1.8em; color: #0f172a; }
+.kg-giliran { display: flex; flex-direction: column; gap: 0.6em; align-items: center; }
