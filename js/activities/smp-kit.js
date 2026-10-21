@@ -141,7 +141,7 @@ export function pyTracer(lines, { opts = {}, onEnd = null, onStep = null, speed 
       el('div', { class: 'sk-jejak-kode' }, pyCode(lines, { hl: last && !st.done && !e ? [last.line] : [], warn: e && e.line != null ? [e.line] : [] })),
       el('div', { class: 'sk-jejak-samping' },
         el('div', { class: 'sk-tombol' }, button('▶ Langkah', () => go(1), 'primary'), button(timer ? '⏸ Berhenti' : '⏩ Otomatis', toggle), button('⏭ Sampai selesai', () => { stop(); go(100000); }), button('↺ Ulang', reset)),
-        el('p', { class: 'sk-catatan' }, last ? `Baris ${last.line + 1}: ${last.note}` : 'Ketuk Langkah untuk menjalankan baris pertama.'),
+        el('p', { class: 'sk-catatan' }, last ? `Baris ${last.line + 1}: ${last.note.length > 90 ? `${last.note.slice(0, 88)}…` : last.note}` : 'Ketuk Langkah untuk menjalankan baris pertama.'),
         msg,
         names.length ? el('div', { class: 'sk-var' }, names.map((n) => el('div', { class: `${changed.includes(n) ? 'ubah' : ''} t-py-${pyType(vars[n])}` }, el('small', null, n), el('b', null, pyRepr(vars[n], true)), el('i', null, pyType(vars[n]))))) : null,
         el('div', { class: 'sk-keluaran' }, el('small', null, 'Keluaran'), el('pre', null, st.out.join('\n') || ' ')),

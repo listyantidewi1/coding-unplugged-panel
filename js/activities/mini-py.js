@@ -150,7 +150,7 @@ export function makePyRunner(lines, { builtins = {}, vars = {}, limit = 3000, in
     int: fn('int', (x) => { if (typeof x === 'string') { if (!/^\s*[-+]?\d+\s*$/.test(x)) throw new PyError('ValueError', `invalid literal for int() with base 10: '${x}'`, null, 'Teks itu bukan bilangan bulat.'); return parseInt(x, 10); } return Math.trunc(num(x)); }),
     float: fn('float', (x) => new PyFloat(Number(typeof x === 'string' ? x : num(x)))),
     abs: fn('abs', (x) => (x instanceof PyFloat ? new PyFloat(Math.abs(x.v)) : Math.abs(x))),
-    round: fn('round', (x, d) => { const v = num(x); if (d === undefined) { const f = Math.floor(v); const diff = v - f; return diff > 0.5 ? f + 1 : diff < 0.5 ? f : (f % 2 === 0 ? f : f + 1); } const p = 10 ** d; return new PyFloat(Math.round(v * p) / p); }),
+    round: fn('round', (x, d) => { const v = num(x); const even = (y) => { const f = Math.floor(y); const diff = y - f; return diff > 0.5 ? f + 1 : diff < 0.5 ? f : (f % 2 === 0 ? f : f + 1); }; if (d === undefined || d === null) return even(v); const r = d >= 0 ? even(v * 10 ** d) / 10 ** d : even(v / 10 ** -d) * 10 ** -d; return x instanceof PyFloat ? new PyFloat(r) : r; }),
     input: fn('input', () => (inputs.length ? inputs.shift() : '')),
     ...Object.fromEntries(Object.entries(builtins).map(([k, f]) => [k, fn(k, f)])),
   };
@@ -164,7 +164,7 @@ export function makePyRunner(lines, { builtins = {}, vars = {}, limit = 3000, in
     switch (op) {
       case '+': if (typeof a === 'string' && typeof b === 'string') return a + b; if (Array.isArray(a) && Array.isArray(b)) return [...a, ...b]; if (isNum(a) && isNum(b)) return mk(num(a) + num(b)); return bad();
       case '-': if (isNum(a) && isNum(b)) return mk(num(a) - num(b)); return bad();
-      case '*': if (typeof a === 'string' && typeof b === 'number') return a.repeat(b); if (isNum(a) && isNum(b)) return mk(num(a) * num(b)); return bad();
+      case '*': if (typeof a === 'string' && typeof b === 'number') return a.repeat(Math.max(0, b)); if (typeof a === 'number' && typeof b === 'string') return b.repeat(Math.max(0, a)); if (isNum(a) && isNum(b)) return mk(num(a) * num(b)); return bad();
       case '/': if (!isNum(a) || !isNum(b)) return bad(); if (num(b) === 0) throw new PyError('ZeroDivisionError', 'division by zero', L, 'Pembagian dengan nol.'); return new PyFloat(num(a) / num(b));
       case '//': if (!isNum(a) || !isNum(b)) return bad(); if (num(b) === 0) throw new PyError('ZeroDivisionError', 'integer division or modulo by zero', L, 'Pembagian dengan nol.'); return mk(Math.floor(num(a) / num(b)));
       case '%': if (!isNum(a) || !isNum(b)) return bad(); if (num(b) === 0) throw new PyError('ZeroDivisionError', 'integer modulo by zero', L, 'Pembagian dengan nol.'); return mk(((num(a) % num(b)) + num(b)) % num(b));

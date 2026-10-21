@@ -4198,3 +4198,22 @@ code.beda { background: #fee2e2 !important; color: #991b1b !important; }
 .aplikasi-kantin .kn-kasus { display: flex; flex-direction: column; gap: 0.3em; padding: 0.4em; border: 1px dashed var(--line); border-radius: 0.6em; }
 .aplikasi-kantin .kn-pilih-kasus { display: flex; flex-wrap: wrap; gap: 0.3em; justify-content: center; }
 .aplikasi-kantin .kn-isi .sk-baris span { font-family: ui-monospace, monospace; }
+
+/* sma-35 Python di Atas Kertas: Kasir Koperasi */
+.python-kasir .pk-atur { display: flex; flex-wrap: wrap; gap: 0.5em 0.8em; align-items: center; justify-content: center; }
+.python-kasir .pk-input { display: flex; flex-direction: column; font-size: clamp(0.7rem, 2.2cqmin, 1.1rem); }
+.python-kasir .pk-input input { width: 7em; padding: 0.3em 0.5em; border: 2px solid var(--line); border-radius: 0.5em; font: inherit; font-family: ui-monospace, monospace; background: var(--surface); color: var(--ink); }
+.python-kasir .pk-isi .sk-baris span, .python-kasir .pk-isi .seg-btn { font-family: ui-monospace, monospace; }
+.python-kasir .pk-panjang { margin: 0; font-family: ui-monospace, monospace; color: #15803d; font-size: clamp(0.65rem, 2cqmin, 1rem); }
+.python-kasir .pk-galat, .python-kasir .pk-keluaran { margin: 0 auto; padding: 0.5em 0.8em; border-radius: 0.6em; background: #0f172a; color: #fca5a5; font-size: clamp(0.7rem, 2.3cqmin, 1.2rem); white-space: pre-wrap; }
+.python-kasir .pk-keluaran { color: #e2e8f0; }
+.python-kasir .pk-geser { display: flex; flex-direction: column; align-items: center; width: min(100%, 30em); margin: 0 auto; font-weight: 800; }
+.python-kasir .pk-geser input { width: 100%; }
+.python-kasir .pk-banding { display: grid; grid-template-columns: repeat(auto-fit, minmax(11em, 1fr)); gap: 0.5em; width: 100%; }
+.python-kasir .pk-banding div { display: flex; flex-direction: column; align-items: center; padding: 0.4em; border: 2px solid var(--line); border-radius: 0.6em; background: var(--surface); }
+.python-kasir .pk-banding small { font-family: ui-monospace, monospace; color: var(--muted); }
+.python-kasir .pk-banding b { font-size: clamp(1rem, 4cqmin, 2rem); font-family: ui-monospace, monospace; }
+.python-kasir .pk-banding div.beda { border-color: #ea580c; background: color-mix(in srgb, #ea580c 12%, var(--surface)); }
+.python-kasir .pk-ket { margin: 0; text-align: center; color: var(--muted); }
+.python-kasir .pk-kecil { font-size: clamp(0.6rem, 1.9cqmin, 1rem); }
+.python-kasir .pk-tebak .seg-btn { font-family: ui-monospace, monospace; }

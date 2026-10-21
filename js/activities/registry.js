@@ -115,6 +115,7 @@ import MenaraHanoi from './smp-39-menara-hanoi.js';
 import LampuOtomatis from './smp-40-lampu-otomatis.js';
 import UlarTangga from './smp-41-ular-tangga.js';
 import AplikasiKantin from './smp-42-aplikasi-kantin.js';
+import PythonKasir from './sma-35-python-kasir.js';
 
 export const JENJANG = [
   { id: 'paud', label: 'PAUD', detail: '4–6 tahun' },
@@ -164,6 +165,7 @@ export const activities = [
   LampuOtomatis,
   UlarTangga,
   AplikasiKantin,
+  PythonKasir,
 ]
   .sort((a, b) => order(a) - order(b) || a.id.localeCompare(b.id));
 
