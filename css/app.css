@@ -3985,3 +3985,39 @@ code.beda { background: #fee2e2 !important; color: #991b1b !important; }
 .bk-umum { margin: 0; font-size: clamp(0.8rem, 2.6cqmin, 1.4rem); font-family: ui-monospace, monospace; }
 .cari-biner-kode .sk-tumpukan { display: none; }
 .bk-giliran .bk-kartu { font-size: clamp(0.7rem, 2.4cqmin, 1.3rem); }
+
+/* smp-37 Simulasi Dadu */
+.sd-tabel { border-collapse: collapse; margin: 0 auto; font-family: ui-monospace, monospace; font-size: clamp(0.75rem, 2.6cqmin, 1.4rem); }
+.sd-tabel th, .sd-tabel td { border: 1px solid #cbd5e1; padding: 0.1em 0.6em; text-align: center; }
+.sd-tabel th.merah { color: #b91c1c; } .sd-tabel th.biru { color: #1d4ed8; }
+.sd-tabel td.tujuh { background: #fef3c7; font-weight: 800; }
+.sd-kotak-baris { display: flex; flex-wrap: wrap; gap: 0.25em; justify-content: center; }
+.sd-kotak { display: flex; flex-direction: column; align-items: center; min-width: 2.8em; padding: 0.1em 0.3em; border: 2px solid #94a3b8; border-radius: 0.4em; background: #fff; color: #111827; font-size: clamp(0.65rem, 2.2cqmin, 1.2rem); }
+.sd-kotak small { font-family: ui-monospace, monospace; font-size: 0.75em; color: #64748b; }
+.sd-kotak b { font-family: ui-monospace, monospace; font-size: 1.3em; }
+.sd-kotak.baru { border-color: #f59e0b; background: #fef3c7; }
+.sd-grafik { display: grid; grid-template-columns: repeat(11, 1fr); gap: 0.3em; width: min(100%, 44em); margin: 0 auto; align-items: end; }
+.sd-kolom { display: flex; flex-direction: column; align-items: center; gap: 0.15em; }
+.sd-wadah { position: relative; width: 100%; height: clamp(5rem, 22cqmin, 13rem); border-bottom: 2px solid #475569; }
+.sd-batang { position: absolute; left: 12%; right: 12%; bottom: 0; background: #60a5fa; border-radius: 0.3em 0.3em 0 0; transition: height 0.15s; }
+.sd-harap { position: absolute; left: 0; right: 0; height: 0; border-top: 3px solid #f97316; }
+.sd-kolom small { font-family: ui-monospace, monospace; font-weight: 700; }
+.sd-ket { grid-column: 1 / -1; margin: 0.2em 0 0; color: #475569; text-align: center; font-size: 0.85em; }
+.sd-dua { display: grid; grid-template-columns: 1fr 1fr; gap: 1em; }
+.sd-ekstra { display: flex; flex-direction: column; gap: 0.4em; }
+.sd-deret { display: flex; flex-wrap: wrap; gap: 0.2em; align-items: center; font-family: ui-monospace, monospace; }
+.sd-deret span { padding: 0 0.3em; border-radius: 0.3em; background: #f1f5f9; color: #0f172a; }
+.sd-deret span.pakai { opacity: 0.4; text-decoration: line-through; }
+.sd-deret span.berikut { background: #fde68a; font-weight: 800; }
+.sd-atur { display: flex; flex-wrap: wrap; gap: 0.5em; align-items: center; justify-content: center; }
+.sd-input { display: flex; flex-direction: column; }
+.sd-input input { font: inherit; font-size: clamp(0.9rem, 2.5cqmin, 1.3rem); padding: 0.2em 0.5em; border: 2px solid #94a3b8; border-radius: 0.5em; width: 6em; font-family: ui-monospace, monospace; }
+.sd-input.lebar input { width: min(70vw, 26em); }
+.sd-dadu { display: flex; gap: 0.4em; align-items: center; justify-content: center; min-height: 2.6em; }
+.sd-dadu span { font-size: clamp(2rem, 8cqmin, 4.5rem); line-height: 1; }
+.sd-dadu .merah { color: #dc2626; } .sd-dadu .biru { color: #2563eb; }
+.sd-dadu b { font-size: clamp(1rem, 3cqmin, 1.8rem); }
+.sd-tebak { display: flex; flex-wrap: wrap; gap: 0.8em; justify-content: center; }
+.sd-tim { display: flex; flex-direction: column; gap: 0.3em; align-items: center; padding: 0.5em; border: 2px solid #cbd5e1; border-radius: 0.8em; }
+.sd-lcg .sk-baris .seg-btn { font-family: ui-monospace, monospace; }
+@media (max-width: 700px) { .sd-dua { grid-template-columns: 1fr; } }
