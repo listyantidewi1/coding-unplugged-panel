@@ -4566,3 +4566,45 @@ code.beda { background: #fee2e2 !important; color: #991b1b !important; }
 .urut-cari .uc-uji > small { color: var(--muted); font-weight: 800; font-family: ui-monospace, monospace; }
 .urut-cari .uc-input { padding: 0.35em 0.5em; border: 2px solid var(--line); border-radius: 0.5em; background: var(--surface); color: var(--ink); font: inherit; font-family: ui-monospace, monospace; font-size: clamp(0.8rem, 2.4cqmin, 1.25rem); min-width: 0; }
 .urut-cari .uc-baris { display: flex; flex-wrap: wrap; gap: 0.5em; align-items: center; }
+
+/* sma-45 Tumpukan dan Antrean */
+.tumpukan-kode .tk-kecil { font-size: clamp(0.55rem, 1.8cqmin, 1rem); }
+.tumpukan-kode .sk-kode.py code { white-space: pre-wrap; overflow-wrap: anywhere; }
+.tumpukan-kode .sk-kode.tk-kolom2 { columns: 2; column-gap: 2em; width: min(100%, 64em); } .tumpukan-kode .sk-kode.tk-kolom2 li { break-inside: avoid; }
+.tumpukan-kode .tk-isi .seg-btn { font-size: clamp(0.58rem, 1.8cqmin, 1rem); font-family: ui-monospace, monospace; }
+.tumpukan-kode .tk-dua { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1em; align-items: start; width: 100%; }
+.tumpukan-kode .tk-tiga { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2.4fr) minmax(0, 1fr); gap: 1em; align-items: start; width: 100%; }
+.tumpukan-kode .tk-dua > *, .tumpukan-kode .tk-tiga > * { min-width: 0; }
+.tumpukan-kode .tk-app { display: flex; flex-direction: column; gap: 0.5em; align-items: stretch; }
+.tumpukan-kode .tk-layar { min-height: 2.4em; padding: 0.4em 0.7em; border: 3px solid var(--line); border-radius: 0.6em; background: var(--surface); font-family: ui-monospace, monospace; font-size: clamp(0.85rem, 3cqmin, 1.6rem); white-space: pre-wrap; overflow-wrap: anywhere; }
+.tumpukan-kode .tk-layar i { color: var(--muted); }
+.tumpukan-kode .tk-kursor { color: var(--primary); animation: tk-kedip 1s steps(1) infinite; }
+@keyframes tk-kedip { 50% { opacity: 0; } }
+.tumpukan-kode .tk-kata { flex-wrap: wrap; justify-content: center; }
+.tumpukan-kode .tk-atur { display: flex; flex-wrap: wrap; gap: 0.5em; align-items: center; justify-content: center; }
+.tumpukan-kode .tk-keluaran { margin: 0; padding: 0.4em 0.7em; border-radius: 0.5em; background: #0f172a; color: #e2e8f0; font-family: ui-monospace, monospace; font-size: clamp(0.6rem, 1.9cqmin, 1rem); white-space: pre-wrap; overflow-wrap: anywhere; min-height: 1.6em; }
+.tumpukan-kode .tk-tumpuk, .tumpukan-kode .tk-antre { display: flex; flex-direction: column; gap: 0.3em; align-items: center; }
+.tumpukan-kode .tk-tumpuk > small, .tumpukan-kode .tk-antre > small { color: var(--muted); font-weight: 800; text-align: center; }
+.tumpukan-kode .tk-tumpuk > code, .tumpukan-kode .tk-antre > code { font-size: clamp(0.55rem, 1.6cqmin, 0.9rem); overflow-wrap: anywhere; text-align: center; }
+.tumpukan-kode .tk-piring { display: flex; flex-direction: column; gap: 0.2em; align-items: stretch; justify-content: flex-end; min-width: 6em; max-width: 100%; min-height: 4em; padding: 0.3em; border: 3px solid var(--line); border-top: 0; border-radius: 0 0 0.6em 0.6em; }
+.tumpukan-kode .tk-piring > i { color: var(--muted); text-align: center; }
+.tumpukan-kode .tk-kotak { padding: 0.15em 0.45em; border: 2px solid #64748b; border-radius: 0.4em; background: var(--surface); font-family: ui-monospace, monospace; font-size: clamp(0.6rem, 2cqmin, 1.1rem); text-align: center; white-space: pre; overflow: hidden; text-overflow: ellipsis; }
+.tumpukan-kode .tk-kotak.puncak { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 16%, var(--surface)); font-weight: 800; }
+.tumpukan-kode .tk-kotak.salah { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 18%, var(--surface)); }
+.tumpukan-kode .tk-kotak.pergi { opacity: 0.25; }
+.tumpukan-kode .tk-kotak.depan { border-color: var(--good); background: color-mix(in srgb, var(--good) 20%, var(--surface)); font-weight: 800; }
+.tumpukan-kode .tk-baris { display: flex; flex-wrap: wrap; gap: 0.25em; align-items: center; justify-content: flex-start; }
+.tumpukan-kode .tk-loket { padding: 0.2em 0.5em; border-radius: 0.4em; background: color-mix(in srgb, var(--good) 25%, var(--surface)); font-weight: 800; }
+.tumpukan-kode .tk-tabel { border-collapse: collapse; font-size: clamp(0.6rem, 1.9cqmin, 1rem); }
+.tumpukan-kode .tk-tabel th, .tumpukan-kode .tk-tabel td { padding: 0.2em 0.6em; border: 1px solid var(--line); text-align: right; }
+.tumpukan-kode .tk-input { padding: 0.35em 0.5em; border: 2px solid var(--line); border-radius: 0.5em; background: var(--surface); color: var(--ink); font: inherit; font-family: ui-monospace, monospace; font-size: clamp(0.8rem, 2.4cqmin, 1.25rem); min-width: 0; width: min(100%, 18em); }
+.tumpukan-kode .tk-rumus { display: flex; flex-wrap: wrap; justify-content: center; font-family: ui-monospace, monospace; font-size: clamp(1rem, 4cqmin, 2.2rem); }
+.tumpukan-kode .tk-rumus span { min-width: 0.6em; padding: 0 0.05em; border-radius: 0.2em; white-space: pre; }
+.tumpukan-kode .tk-rumus span.kurung { color: var(--primary); font-weight: 800; }
+.tumpukan-kode .tk-rumus span.kini { background: #fde047; color: #713f12; }
+.tumpukan-kode .tk-rumus span.salah { background: var(--bad); color: #fff; }
+.tumpukan-kode .tk-samping { display: flex; flex-direction: column; gap: 0.4em; align-items: center; }
+.tumpukan-kode .tk-ket { margin: 0; color: var(--muted); text-align: center; }
+.tumpukan-kode .tk-hitung { display: flex; flex-direction: column; align-items: center; gap: 0.1em; }
+.tumpukan-kode .tk-hitung b { font-size: clamp(1.4rem, 6cqmin, 3rem); color: var(--primary); }
+@container (max-width: 640px) { .tumpukan-kode .tk-tiga, .tumpukan-kode .tk-dua { grid-template-columns: minmax(0, 1fr); } .tumpukan-kode .sk-kode.tk-kolom2 { columns: 1; } }

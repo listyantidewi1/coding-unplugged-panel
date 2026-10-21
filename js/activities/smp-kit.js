@@ -129,13 +129,13 @@ export function pyCode(lines, { hl = [], warn = [], cls = '', onLine = null, cou
   }));
 }
 // Step player for mini-py programs (same buttons as tracer).
-import { makePyRunner, pyRepr, pyType } from './mini-py.js';
+import { makePyRunner, pyRepr, pyType, pyShow } from './mini-py.js';
 export function pyTracer(lines, { opts = {}, onEnd = null, onStep = null, speed = 450, hideVars = [], extra = null, cls = '', counts: showCounts = false, labels = null } = {}) {
   let r; let last = null; let timer = null; let prev = {}; let counts = {};
   const host = el('div', { class: `sk-jejak ${cls}` });
   const draw = () => {
     const st = r.state; const vars = st.frames.length ? { ...st.vars, ...st.frames[st.frames.length - 1].vars } : st.vars;
-    const names = Object.keys(vars).filter((n) => !hideVars.includes(n) && !(vars[n] && vars[n].py === 'fn'));
+    const names = Object.keys(vars).filter((n) => !hideVars.includes(n) && !(vars[n] && ['fn', 'class', 'mod', 'superfn'].includes(vars[n].py)));
     const changed = names.filter((n) => JSON.stringify(vars[n]) !== JSON.stringify(prev[n]));
     const e = st.error;
     const msg = e ? el('div', { class: `sk-galat ${e.type === 'Batas' ? 'batas' : ''}` }, e.type === 'Batas' ? `⏱ ${e.message}` : `⚠ Baris ${labels?.[e.line] ?? e.line + 1} · ${e.type}: ${e.message}`, e.type !== 'Batas' && e.penjelasan ? el('small', { class: 'sk-penjelasan' }, e.penjelasan) : null)
@@ -146,7 +146,7 @@ export function pyTracer(lines, { opts = {}, onEnd = null, onStep = null, speed 
         el('div', { class: 'sk-tombol' }, button('▶ Langkah', () => go(1), 'primary'), button(timer ? '⏸ Berhenti' : '⏩ Otomatis', toggle), button('⏭ Sampai selesai', () => { stop(); go(100000); }), button('↺ Ulang', reset)),
         el('p', { class: 'sk-catatan' }, last ? `Baris ${labels?.[last.line] ?? last.line + 1}: ${last.note.length > 90 ? `${last.note.slice(0, 88)}…` : last.note}` : 'Ketuk Langkah untuk menjalankan baris pertama.'),
         msg,
-        names.length ? el('div', { class: 'sk-var' }, names.map((n) => el('div', { class: `${changed.includes(n) ? 'ubah' : ''} t-py-${pyType(vars[n])}` }, el('small', null, n), el('b', null, pyRepr(vars[n], true)), el('i', null, pyType(vars[n]))))) : null,
+        names.length ? el('div', { class: 'sk-var' }, names.map((n) => el('div', { class: `${changed.includes(n) ? 'ubah' : ''} t-py-${pyType(vars[n])}` }, el('small', null, n), el('b', null, pyShow(vars[n])), el('i', null, pyType(vars[n]))))) : null,
         el('div', { class: 'sk-keluaran' }, el('small', null, 'Keluaran'), el('pre', null, st.out.join('\n') || ' ')),
         extra ? extra(st) : null));
     prev = JSON.parse(JSON.stringify(vars, (k, v) => (v && v.py === 'fn' ? undefined : v)));
