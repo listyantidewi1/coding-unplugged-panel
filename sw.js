@@ -84,6 +84,7 @@ const FILES = [
   'js/activities/sma-01-aksara-unicode.js',
   'js/activities/sma-kit.js',
   'js/activities/sma-02-kode-hemat.js',
+  'js/activities/sma-03-antrean-tumpukan.js',
 ];
 
 self.addEventListener('install', (e) => {
