@@ -114,6 +114,7 @@ const FILES = [
   'js/activities/sma-30-hidroponik.js',
   'js/activities/sma-31-mahadata.js',
   'js/activities/sma-32-pekerjaan-ka.js',
+  'js/activities/sma-33-dua-langkah.js',
 ];
 
 self.addEventListener('install', (e) => {

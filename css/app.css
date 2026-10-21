@@ -3514,3 +3514,65 @@ code.beda { background: #fee2e2 !important; color: #991b1b !important; }
 .kj-baris-baris.prinsip .seg-btn { font-size: 0.85em; }
 .kj-dua .kj-baris-baris { font-size: clamp(0.75rem, 3cqmin, 1.55rem); }
 .kj-dua .kj-grafik { font-size: clamp(0.7rem, 2.8cqmin, 1.45rem); }
+
+/* sma-33 Satu Sandi Tidak Cukup (dl-) */
+.dl-baris-baris { display: flex; flex-direction: column; gap: 0.8cqmin; width: 100%; max-width: 76em; font-size: clamp(0.8rem, 3.1cqmin, 1.65rem); }
+.dl-baris { display: flex; gap: 1em; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: 0.35em 0.8em; border: 2px solid #cbd5e1; border-radius: 0.7em; background: #fff; color: #111827; text-align: left; }
+.dl-baris > span { flex: 1 1 16em; min-width: 0; }
+.dl-baris .seg-btn { font-size: 0.85em; }
+.dl-baris.beres { border-color: #16a34a; background: #f0fdf4; }
+.dl-baris.beres > b { color: #15803d; }
+.dl-baris-baris.pesan { font-size: clamp(0.75rem, 2.8cqmin, 1.5rem); }
+.dl-baris-baris.pesan .seg-btn { min-width: 2.6em; font-size: 1.1em; }
+.dl-pasang { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr); gap: 2cqmin; width: 100%; max-width: 84em; }
+.dl-kol { display: flex; flex-direction: column; gap: 0.8cqmin; width: 100%; max-width: 70em; }
+.dl-item { display: flex; gap: 0.6em; align-items: center; padding: 0.45em 0.8em; border: 2px solid #94a3b8; border-radius: 0.7em; background: #fff; color: #111827; font: inherit; font-size: clamp(0.75rem, 2.9cqmin, 1.55rem); text-align: left; cursor: pointer; }
+.dl-item > b { flex: none; display: inline-grid; place-items: center; min-width: 1.8em; height: 1.8em; border-radius: 50%; background: #1e293b; color: #fff; }
+.dl-item em { margin-left: auto; color: #15803d; font-weight: 800; font-style: normal; }
+.dl-item.pilih { outline: 4px solid #f59e0b; }
+.dl-item.beres { border-color: #16a34a; background: #f0fdf4; }
+.dl-item.serang { border-color: #dc2626; background: #fef2f2; }
+.dl-item.serang > b { background: #b91c1c; }
+.dl-jam { align-self: center; font-size: clamp(1.2rem, 6cqmin, 3rem); color: #dc2626; }
+.dl-sim-wadah { display: flex; flex-direction: column; gap: 1.2cqmin; align-items: center; width: 100%; max-width: 90em; }
+.dl-sim { display: flex; flex-direction: column; gap: 1cqmin; width: 100%; padding: 0.6em; border: 3px solid #cbd5e1; border-radius: 1em; background: #f8fafc; font-size: clamp(0.7rem, 2.7cqmin, 1.45rem); }
+.dl-sim.bobol { border-color: #dc2626; background: #fef2f2; }
+.dl-sim.aman { border-color: #16a34a; background: #f0fdf4; }
+.dl-panggung { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1cqmin; }
+.dl-aktor { display: flex; flex-direction: column; align-items: center; gap: 0.15em; padding: 0.4em; border: 2px solid #94a3b8; border-radius: 0.8em; background: #fff; color: #111827; text-align: center; transition: transform 0.2s, box-shadow 0.2s; }
+.dl-aktor.aktif { transform: scale(1.05); box-shadow: 0 0 0 4px #facc15; }
+.dl-aktor.a-P { border-color: #dc2626; }
+.dl-ikon { font-size: 1.6em; line-height: 1; }
+.dl-isi { min-height: 1.3em; font-family: ui-monospace, monospace; font-weight: 800; color: #1d4ed8; }
+.dl-bawah { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1cqmin; align-items: start; }
+.dl-log { margin: 0; padding: 0.4em 0.4em 0.4em 2em; border-radius: 0.6em; background: #1e293b; color: #e2e8f0; text-align: left; min-height: 4em; }
+.dl-log li.akhir { list-style: none; margin-left: -1.4em; font-weight: 900; }
+.dl-log li.bobol { color: #fca5a5; } .dl-log li.aman { color: #86efac; }
+.dl-otp { display: flex; flex-direction: column; align-items: center; gap: 0.1em; max-width: 12em; padding: 0.5em 0.8em; border: 2px solid #0f766e; border-radius: 0.8em; background: #f0fdfa; color: #134e4a; text-align: center; }
+.dl-otp b { font-family: ui-monospace, monospace; font-size: 2em; letter-spacing: 0.1em; }
+.dl-otp small { font-size: 0.7em; }
+.dl-tabel { border-collapse: collapse; background: #fff; color: #111827; font-size: clamp(0.6rem, 2.1cqmin, 1.1rem); text-align: left; }
+.dl-tabel th, .dl-tabel td { padding: 0.2em 0.5em; border: 2px solid #cbd5e1; vertical-align: top; }
+.subject .dl-tabel { width: min(64em, 90cqw); }
+.dl-ponsel-wadah { display: flex; flex-direction: column; gap: 1cqmin; align-items: center; width: 100%; }
+.dl-ponsel { display: flex; flex-direction: column; gap: 0.8cqmin; width: 100%; max-width: 64em; padding: 0.7em 1em; border: 4px solid #1e293b; border-radius: 1.4em; background: #fff; color: #111827; font-size: clamp(0.75rem, 3cqmin, 1.6rem); text-align: left; }
+.dl-ponsel-judul { font-size: 1.1em; }
+.dl-meter { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 0.6em; align-items: center; }
+.dl-batang { height: 0.9em; border-radius: 999px; background: #e2e8f0; overflow: hidden; }
+.dl-batang i { display: block; height: 100%; border-radius: 999px; background: #f59e0b; transition: width 0.3s; }
+.dl-batang i.penuh { background: #16a34a; }
+.dl-setelan { display: flex; flex-direction: column; gap: 0.4em; }
+.dl-set { display: flex; flex-wrap: wrap; gap: 0.2em 1em; align-items: center; justify-content: space-between; padding: 0.3em 0.5em; border-bottom: 1px solid #e2e8f0; }
+.dl-set > span { flex: 1 1 14em; }
+.dl-set .seg-btn { font-size: 0.9em; }
+.dl-set small { flex-basis: 100%; color: #475569; }
+.dl-set.salah { background: #fef2f2; }
+.dl-catatan { max-width: 60em; color: #475569; font-size: clamp(0.65rem, 2.3cqmin, 1.2rem); }
+.dl-jenis .seg-btn { font-size: clamp(0.7rem, 2.5cqmin, 1.35rem); }
+.dl-panjang { display: flex; gap: 1em; align-items: center; font-size: clamp(1rem, 4cqmin, 2.2rem); }
+.dl-hasil { display: flex; flex-direction: column; gap: 1cqmin; width: 100%; max-width: 56em; font-size: clamp(0.8rem, 3.2cqmin, 1.7rem); text-align: left; }
+.dl-hasil > div { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.2em 1em; align-items: center; padding: 0.4em 0.8em; border: 2px solid #cbd5e1; border-radius: 0.8em; background: #fff; color: #111827; }
+.dl-hasil .dl-batang { grid-column: 1 / -1; }
+.dl-hasil .lemah { color: #b91c1c; } .dl-hasil .sedang { color: #b45309; } .dl-hasil .kuat { color: #15803d; }
+.dl-sim { font-size: clamp(0.75rem, 3.1cqmin, 1.6rem); }
+.dl-set { padding-block: 0.15em; }
