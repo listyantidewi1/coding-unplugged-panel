@@ -1,4 +1,4 @@
-# Coding Unplugged · Panel Interaktif
+# Coding & Computational Thinking · Panel Interaktif
 
 Versi digital lembar kerja buku *Unplugged Coding & Computational Thinking*,
 dibuat untuk interactive flat panel (layar sentuh besar di kelas).
