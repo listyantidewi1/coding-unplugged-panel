@@ -2686,3 +2686,123 @@ button.kk-kotak { cursor: pointer; }
 .sk-item { text-align: left; padding: 0.3em 0.7em; border: 2px solid #cbd5e1; border-radius: 0.5em; background: #fff; color: #111827; font: inherit; font-size: clamp(0.7rem, 3.2cqmin, 1.7rem); cursor: pointer; }
 .sk-item.pilih { border-color: #2563eb; background: #dbeafe; }
 .sk-item.cocok { border-color: #16a34a; background: #dcfce7; opacity: 0.7; }
+
+/* sma-19 Teknisi Lab Komputer */
+.lj-cocok { display: flex; gap: 2cqmin; width: 100%; justify-content: center; }
+.lj-kolom { display: flex; flex-direction: column; gap: 0.5cqmin; flex: 1 1 0; min-width: 0; max-width: 22em; }
+.lj-kolom.lebar { max-width: 36em; flex-grow: 2; }
+.lj-item { text-align: left; padding: 0.3em 0.7em; border: 2px solid #cbd5e1; border-radius: 0.5em; background: #fff; color: #111827; font: inherit; font-size: clamp(0.65rem, 2.8cqmin, 1.5rem); cursor: pointer; }
+.lj-item.pilih { border-color: #2563eb; background: #dbeafe; }
+.lj-item.cocok { border-color: #16a34a; background: #dcfce7; opacity: 0.7; }
+.lj-alamat { display: flex; flex-direction: column; gap: 0.6cqmin; width: min(100%, 52em); }
+.lj-baris { display: flex; align-items: center; gap: 1em; padding: 0.3em 0.8em; border-radius: 0.6em; background: #fff; color: #111827; border: 2px solid #cbd5e1; font-size: clamp(0.7rem, 3cqmin, 1.6rem); }
+.lj-baris code { font-weight: 800; min-width: 9.5em; }
+.lj-baris.ya { border-color: #16a34a; background: #dcfce7; }
+.lj-baris.tidak { border-color: #dc2626; background: #fee2e2; }
+.lj-dua { display: flex; gap: 0.5em; }
+.lj-kartu-kartu { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1cqmin; width: 100%; }
+.lj-kartu { display: flex; flex-direction: column; gap: 0.3cqmin; padding: 0.4em; border: 3px solid #64748b; border-radius: 0.7em; background: #f8fafc; color: #111827; font-size: clamp(0.55rem, 2.2cqmin, 1.2rem); }
+.lj-kartu.beres { border-color: #16a34a; background: #f0fdf4; }
+.lj-kartu > b { font-size: 1.3em; }
+.lj-isian { display: flex; justify-content: space-between; gap: 0.5em; padding: 0.15em 0.5em; border: 2px solid #cbd5e1; border-radius: 0.4em; background: #fff; color: #111827; font: inherit; cursor: pointer; text-align: left; }
+.lj-isian small { color: #64748b; }
+.lj-isian span { font-family: ui-monospace, monospace; font-weight: 700; }
+.lj-isian.salah { border-color: #dc2626; background: #fee2e2; }
+.lj-catat { color: #166534; font-weight: 700; }
+.lj-peta { width: 100%; display: flex; justify-content: center; }
+.lj-peta svg { width: 100%; max-width: 56em; max-height: 50cqh; background: #eef2ff; border-radius: 1em; touch-action: none; }
+.lj-peta.kecil svg { max-height: 46cqh; }
+.lj-node { cursor: pointer; }
+.lj-diag { display: flex; gap: 2cqmin; width: 100%; align-items: flex-start; }
+.lj-kiri { flex: 6 1 0; min-width: 0; display: flex; flex-direction: column; gap: 1cqmin; }
+.lj-kanan { flex: 5 1 0; min-width: 0; display: flex; flex-direction: column; gap: 1cqmin; }
+.lj-diag > .lj-peta { flex: 6 1 0; min-width: 0; }
+.lj-laporan { margin: 0; padding-left: 1.2em; color: inherit; font-size: clamp(0.6rem, 2.4cqmin, 1.3rem); }
+.lj-pohon { display: flex; flex-direction: column; gap: 0.5cqmin; }
+.lj-langkah { display: grid; grid-template-columns: 2em 1fr auto; align-items: center; gap: 0.2em 0.6em; padding: 0.25em 0.6em; border: 2px solid #cbd5e1; border-radius: 0.6em; background: #fff; color: #111827; font-size: clamp(0.6rem, 2.4cqmin, 1.3rem); }
+.lj-langkah > b { display: grid; place-items: center; width: 1.6em; height: 1.6em; border-radius: 50%; background: #1e293b; color: #fff; }
+.lj-langkah small { grid-column: 2 / 4; color: #334155; }
+.lj-langkah.ya { border-color: #16a34a; background: #f0fdf4; }
+.lj-langkah.tidak { border-color: #dc2626; background: #fef2f2; }
+.lj-ekor { display: flex; flex-direction: column; gap: 0.6cqmin; }
+.lj-ekor .opts { width: 100%; }
+.lj-tanya { margin: 0; font-weight: 800; font-size: clamp(0.65rem, 2.6cqmin, 1.4rem); }
+.lj-kode { font-family: ui-monospace, monospace; font-weight: 700; font-size: clamp(0.6rem, 2.6cqmin, 1.4rem); }
+.lj-meter { position: relative; width: min(100%, 40em); height: clamp(1.4rem, 5cqmin, 2.6rem); border-radius: 999px; background: #e2e8f0; overflow: hidden; }
+.lj-meter i { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #f97316, #16a34a); transition: width 0.4s; }
+.lj-meter span { position: relative; z-index: 1; display: block; text-align: center; font-weight: 900; color: #111827; line-height: clamp(1.4rem, 5cqmin, 2.6rem); font-size: clamp(0.65rem, 2.6cqmin, 1.4rem); }
+.lj-wifi { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.8cqmin; width: 100%; }
+.lj-atur { display: flex; flex-direction: column; gap: 0.3em; padding: 0.4em 0.7em; border: 2px solid #f97316; border-radius: 0.7em; background: #fff7ed; color: #111827; font-size: clamp(0.55rem, 2.2cqmin, 1.2rem); }
+.lj-atur.aman { border-color: #16a34a; background: #f0fdf4; }
+.lj-atur small { color: #166534; }
+.lj-subnet { position: relative; display: flex; width: min(100%, 48em); margin-bottom: 1.6em; border-radius: 0.6em; overflow: visible; font-size: clamp(0.6rem, 2.4cqmin, 1.3rem); }
+.lj-bagian { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 0.4em; color: #111827; }
+.lj-bagian.lab { background: #bfdbfe; border-radius: 0.6em 0 0 0.6em; }
+.lj-bagian.kantor { background: #fde68a; border-radius: 0 0.6em 0.6em 0; }
+.lj-tanda { position: absolute; top: 100%; transform: translateX(-50%); font-style: normal; font-weight: 900; color: #b91c1c; }
+.lj-tanda::before { content: '▲'; display: block; text-align: center; line-height: 1; }
+.lj-lab { display: flex; gap: 2cqmin; width: 100%; align-items: flex-start; }
+.lj-lab > .lj-peta { flex: 3 1 0; min-width: 0; }
+.lj-panel { flex: 2 1 0; min-width: 0; display: flex; flex-direction: column; gap: 0.8cqmin; font-size: clamp(0.6rem, 2.3cqmin, 1.2rem); }
+.lj-judul { font-size: 1.3em; }
+.lj-isian-isian { display: flex; flex-direction: column; gap: 0.5cqmin; }
+.lj-isi { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4em; }
+.lj-isi > small { min-width: 6em; font-weight: 800; }
+.lj-tebak { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4em; }
+@container (max-aspect-ratio: 1/1) { .lj-diag, .lj-lab { flex-direction: column; } .lj-kartu-kartu { grid-template-columns: repeat(2, minmax(0, 1fr)); } .lj-wifi { grid-template-columns: 1fr; } }
+
+/* sma-20 Di Balik Halaman Web */
+.ht-urut { display: flex; gap: 0.6cqmin; justify-content: center; flex-wrap: wrap; }
+.ht-slot { display: grid; place-items: center; width: clamp(1.8rem, 6cqmin, 3.4rem); height: clamp(1.8rem, 6cqmin, 3.4rem); border: 3px dashed #94a3b8; border-radius: 0.5em; font-weight: 900; font-size: clamp(0.8rem, 3.4cqmin, 1.8rem); color: #64748b; background: #fff; }
+.ht-slot.isi { border-style: solid; border-color: #2563eb; color: #1d4ed8; background: #dbeafe; }
+.ht-kartu-kartu { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.8cqmin; width: 100%; }
+.ht-kartu { display: flex; gap: 0.6em; align-items: center; text-align: left; padding: 0.35em 0.7em; border: 2px solid #cbd5e1; border-radius: 0.6em; background: #fff; color: #111827; font: inherit; font-size: clamp(0.6rem, 2.5cqmin, 1.35rem); cursor: pointer; }
+.ht-kartu b { display: grid; place-items: center; flex: none; width: 1.8em; height: 1.8em; border-radius: 50%; background: #1e293b; color: #fff; }
+.ht-kartu.pakai { opacity: 0.35; }
+.ht-anim { width: 100%; display: flex; justify-content: center; }
+.ht-anim svg { width: min(100%, 50em); max-height: 40cqh; background: #f0f9ff; border-radius: 1em; }
+.ht-golongan, .ht-pesan { font-size: clamp(0.65rem, 2.6cqmin, 1.4rem); font-weight: 700; color: #334155; }
+.ht-pesan { font-family: ui-monospace, monospace; background: #f1f5f9; color: #0f172a; padding: 0.3em 0.7em; border-radius: 0.4em; overflow-wrap: anywhere; }
+.ht-buku { width: min(100%, 60em); font-size: clamp(0.6rem, 2.3cqmin, 1.2rem); }
+.ht-buku summary { cursor: pointer; font-weight: 800; }
+.ht-tabel { border-collapse: collapse; width: 100%; background: #fff; color: #111827; }
+.ht-tabel td { border: 1px solid #cbd5e1; padding: 0.15em 0.6em; }
+.ht-server { display: flex; flex-direction: column; gap: 0.6cqmin; width: 100%; }
+.ht-minta { display: grid; grid-template-columns: 2em minmax(0, 1fr) auto; align-items: center; gap: 0.6em; padding: 0.3em 0.6em; border: 2px solid #cbd5e1; border-radius: 0.6em; background: #fff; color: #111827; font-size: clamp(0.55rem, 2.2cqmin, 1.2rem); }
+.ht-minta > b { display: grid; place-items: center; width: 1.7em; height: 1.7em; border-radius: 50%; background: #1e293b; color: #fff; }
+.ht-minta.beres { border-color: #16a34a; background: #f0fdf4; }
+.ht-minta .seg { flex-wrap: wrap; justify-content: flex-end; }
+.ht-kode { font-weight: 900; font-family: ui-monospace, monospace; padding: 0.1em 0.5em; border-radius: 0.4em; }
+.ht-kode.k2 { background: #dcfce7; color: #166534; }
+.ht-kode.k3 { background: #dbeafe; color: #1e40af; }
+.ht-kode.k4 { background: #fef3c7; color: #92400e; }
+.ht-kode.k5 { background: #fee2e2; color: #991b1b; }
+.ht-sadap { display: flex; flex-direction: column; gap: 0.5cqmin; width: min(100%, 60em); }
+.ht-sadap-baris { display: grid; grid-template-columns: minmax(0, 1fr) 9em 9em; align-items: center; gap: 0.6em; padding: 0.25em 0.6em; border-radius: 0.5em; background: #fff; color: #111827; border: 2px solid #e2e8f0; font-size: clamp(0.6rem, 2.4cqmin, 1.3rem); }
+.ht-sadap-baris.kepala { background: #1e293b; color: #fff; border-color: #1e293b; }
+.ht-sel { font-weight: 800; }
+.ht-sel.lihat { color: #b45309; }
+.ht-sel.tutup { color: #166534; }
+.ht-air { display: flex; flex-direction: column; gap: 0.3em; width: 40em; max-width: 100%; font-size: clamp(0.55rem, 2.2cqmin, 1.15rem); }
+.ht-air-baris { display: grid; grid-template-columns: 6em 1fr; align-items: center; gap: 0.5em; }
+.ht-air-jalur { position: relative; height: 1.3em; background: #f1f5f9; border-radius: 0.3em; }
+.ht-air-jalur i { position: absolute; top: 0; bottom: 0; background: #3b82f6; border-radius: 0.3em; }
+.ht-air-jalur.skala { background: none; }
+.ht-air-jalur.skala small { position: absolute; transform: translateX(-50%); color: #475569; }
+.ht-air-catat { font-weight: 800; text-align: right; }
+.ht-url { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start; gap: 0.2em; font-family: ui-monospace, monospace; font-size: clamp(0.8rem, 3.6cqmin, 2rem); }
+.ht-bagian { display: flex; flex-direction: column; align-items: center; padding: 0.2em 0.3em; border: 2px solid #94a3b8; border-radius: 0.4em; background: #fff; color: #0f172a; font: inherit; font-weight: 800; cursor: pointer; }
+.ht-bagian small { font-family: system-ui, sans-serif; font-size: 0.45em; color: #166534; }
+.ht-bagian.kena { border-color: #16a34a; background: #dcfce7; }
+.ht-pisah { padding: 0.25em 0; font-weight: 800; }
+.ht-lab { display: flex; gap: 2cqmin; width: 100%; align-items: flex-start; }
+.ht-kiri { flex: 3 1 0; min-width: 0; display: flex; flex-direction: column; gap: 1cqmin; }
+.ht-susun { display: flex; flex-direction: column; gap: 0.6cqmin; font-size: clamp(0.6rem, 2.3cqmin, 1.2rem); }
+.ht-susun .seg { flex-wrap: wrap; }
+.ht-log { display: flex; flex-direction: column; gap: 0.4cqmin; }
+.ht-catat { display: flex; flex-wrap: wrap; align-items: center; gap: 0.2em 0.7em; padding: 0.25em 0.6em; border-radius: 0.5em; background: #fff; color: #111827; border: 1px solid #e2e8f0; font-size: clamp(0.55rem, 2.1cqmin, 1.1rem); }
+.ht-penyadap { flex: 2 1 0; min-width: 0; display: flex; flex-direction: column; gap: 0.4em; padding: 0.6em 0.9em; border-radius: 0.8em; background: #0f172a; color: #e2e8f0; font-size: clamp(0.55rem, 2.2cqmin, 1.15rem); }
+.ht-penyadap > div { display: grid; grid-template-columns: 8em minmax(0, 1fr); gap: 0.5em; font-family: ui-monospace, monospace; }
+.ht-penyadap small { color: #94a3b8; font-family: system-ui, sans-serif; }
+.ht-tutup { color: #4ade80; letter-spacing: 0.05em; }
+@container (max-aspect-ratio: 1/1) { .ht-lab { flex-direction: column; } .ht-kartu-kartu { grid-template-columns: 1fr; } .ht-sadap-baris { grid-template-columns: minmax(0, 1fr) 6em 6em; } }

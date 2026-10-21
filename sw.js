@@ -100,6 +100,8 @@ const FILES = [
   'js/activities/sma-16-kelas-objek.js',
   'js/activities/sma-17-plat-nomor.js',
   'js/activities/sma-18-satu-koki.js',
+  'js/activities/sma-19-lab-jaringan.js',
+  'js/activities/sma-20-kode-http.js',
 ];
 
 self.addEventListener('install', (e) => {
