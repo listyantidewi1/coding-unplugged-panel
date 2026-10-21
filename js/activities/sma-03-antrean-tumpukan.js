@@ -126,11 +126,11 @@ function clinicRound(wrap, ctx, { list = PASIEN, rule = 'prioritas', done, free 
     if (served.length < list.length && !arrivedAll().length) t = Math.min(...list.filter((q) => !served.includes(q[0])).map((q) => q[1]));
     const waiting = arrivedAll();
     const notYet = list.filter((p) => !served.includes(p[0]) && p[1] > t);
-    stage.replaceChildren(el('div', { class: 'at-jam' }, `🕗 ${jam(t)}`),
+    stage.replaceChildren(...[el('div', { class: 'at-jam' }, `🕗 ${jam(t)}`),
       el('div', { class: 'at-ruang' },
         el('div', { class: 'at-tunggu' }, el('b', null, 'Ruang tunggu (ketuk pasien berikutnya)'), el('div', { class: 'at-pasien-baris' }, waiting.map((p) => onTap(el('button', { class: `at-pasien g-${p[2]}`, type: 'button' }, el('b', null, p[0]), el('small', null, `datang ${jam(p[1])}`)), () => pick(p))))),
         el('div', { class: 'at-tunggu' }, el('b', null, 'Belum datang'), el('div', { class: 'at-pasien-baris' }, notYet.length ? notYet.map((p) => el('span', { class: `at-pasien nanti g-${p[2]}` }, el('b', null, p[0]), el('small', null, jam(p[1])))) : el('small', null, '–')))),
-      rows.length ? table(rows) : null);
+      rows.length ? table(rows) : null].filter(Boolean));
   }
   function pick(p) {
     if (served.length >= list.length) return;
