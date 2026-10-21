@@ -867,3 +867,26 @@ span.code-cell { border-style: solid; cursor: default; }
 .duel .pair { flex: 1; width: 100%; display: flex; }
 .duel-bar { padding: 0.5rem; }
 .rak-inner { display: flex; flex-direction: column; align-items: center; gap: 2cqmin; width: 100%; }
+
+/* Rel kereta */
+.yard-net { --wh: min(5.2cqh, 6cqw); width: min(80cqw, calc(var(--lanes) * 15cqh)); display: flex; flex-direction: column; }
+.lane-nums, .wagon-row { display: grid; grid-template-columns: repeat(var(--lanes), 1fr); justify-items: center; }
+.lane-nums span { font-weight: 800; color: var(--muted); font-size: clamp(0.5rem, 2cqmin, 0.95rem); }
+.wagon { font: inherit; min-width: 70%; height: var(--wh); padding: 0 0.3em; border-radius: 0.8cqmin; border: max(2px, 0.4cqmin) solid #1e3a8a; background: #dbeafe; color: #0f172a; font-weight: 900; font-size: clamp(0.55rem, calc(var(--wh) * 0.5), 1.6rem); white-space: nowrap; cursor: default; }
+.wagon-row.hidden .wagon { visibility: hidden; }
+.wagon.picked { background: #fde68a; border-color: #b45309; }
+.post-band { position: relative; height: calc(var(--depth) * min(4.2cqh, 5cqw)); }
+.post-band .track { position: absolute; top: 0; bottom: 0; width: max(3px, 0.5cqmin); margin-left: max(-1.5px, -0.25cqmin); background: #94a3b8; }
+.band-num { position: absolute; left: -2.2em; top: 50%; transform: translateY(-50%); font-weight: 900; color: var(--muted); font-size: clamp(0.5rem, 2cqmin, 0.95rem); }
+.post { position: absolute; height: max(6px, 1.2cqmin); transform: translateY(-50%); padding: 0; border: 0; border-radius: 1cqmin; background: #64748b; cursor: pointer; }
+.post::before { content: ""; position: absolute; inset: -1.2cqmin 0; }
+.post-end { position: absolute; left: 0; top: 50%; width: max(10px, 2cqmin); aspect-ratio: 1; border-radius: 50%; background: inherit; transform: translate(-50%, -50%); }
+.post-end.right { left: 100%; }
+.post.active { background: #2563eb; }
+.post.on { background: #f59e0b; box-shadow: 0 0 1.5cqmin #f59e0b; }
+.post.flash { background: #f59e0b; box-shadow: 0 0 2cqmin #f59e0b; }
+.post.gone { opacity: 0.15; }
+.perm-chips { display: flex; flex-wrap: wrap; gap: 0.6cqmin; justify-content: center; max-width: 90cqw; }
+.chip-perm { padding: 0.1em 0.6em; border-radius: 999px; font-weight: 800; font-size: clamp(0.55rem, 2.2cqmin, 1rem); }
+.chip-perm.ok { background: #dcfce7; color: #166534; }
+.chip-perm.bad { background: #fee2e2; color: #991b1b; }

@@ -42,6 +42,7 @@ const FILES = [
   'js/activities/sdl-06-kartu-data.js',
   'js/activities/sdl-07-cari-rumah.js',
   'js/activities/sdl-08-rak-buku.js',
+  'js/activities/sdl-09-rel-kereta.js',
 ];
 
 self.addEventListener('install', (e) => {
