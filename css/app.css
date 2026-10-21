@@ -2433,3 +2433,31 @@ button.kk-kotak { cursor: pointer; }
 .gb-karung.ke-kanan { box-shadow: 0.4em 0 0 #f87171; }
 .gb-tabel { display: flex; flex-direction: column; gap: 0.15em; font-size: clamp(0.5rem, 2.4cqmin, 1.25rem); font-family: ui-monospace, monospace; text-align: left; }
 .gb-ketik { width: 18em; }
+
+/* sma-06 Server Pendaftaran Murid Baru */
+.pendaftaran { gap: 1cqmin; }
+.pd-kartu-baris { display: flex; flex-wrap: wrap; gap: 0.5em; justify-content: center; }
+.pd-kartu { font: inherit; font-weight: 900; font-size: clamp(0.7rem, 3.8cqmin, 2rem); padding: 0.3em 0.6em; border-radius: 0.5em; border: 3px solid #1d4ed8; background: #fff; color: #111827; cursor: pointer; font-variant-numeric: tabular-nums; }
+.pd-kartu.dipakai { opacity: 0.3; }
+.pd-rumus .pd-kartu { min-width: 4.5em; }
+.pd-hasil { font-size: clamp(0.6rem, 3cqmin, 1.6rem); }
+.pd-kode { display: flex; flex-wrap: wrap; gap: 0.3em; justify-content: center; font-size: clamp(0.55rem, 2.6cqmin, 1.4rem); font-weight: 800; }
+.pd-kode span { display: flex; flex-direction: column; align-items: center; padding: 0.1em 0.4em; background: #f1f5f9; border-radius: 0.3em; }
+.pd-kode small { color: #64748b; font-weight: 400; }
+.pd-datang { display: flex; gap: 1.5em; justify-content: center; align-items: baseline; font-size: clamp(0.6rem, 3.4cqmin, 1.8rem); }
+.pd-hitung { color: #1d4ed8; font-weight: 800; }
+.pd-laci { display: grid; grid-template-columns: repeat(10, 1fr); gap: 0.4em; width: 100%; font-size: clamp(0.5rem, 2.4cqmin, 1.25rem); }
+.pd-laci.bebas { grid-template-columns: repeat(auto-fill, minmax(5.5em, 1fr)); }
+.pd-laci.kecil { grid-template-columns: repeat(3, 1fr); max-width: 30em; }
+.pd-laci-1 { font: inherit; display: flex; flex-direction: column; align-items: center; gap: 0.15em; min-height: 6em; padding: 0.3em 0.2em; border: 3px solid #a16207; border-radius: 0.4em; background: #fef9c3; color: #111827; cursor: pointer; }
+.pd-laci-1 > b { font-size: 1.3em; color: #a16207; }
+.pd-laci-1.kena { outline: 4px solid #f97316; }
+.pd-laci-1.penuh { background: #fee2e2; border-color: #b91c1c; }
+.pd-laci-1 span { font-variant-numeric: tabular-nums; font-weight: 700; }
+.ganda { color: var(--bad); font-weight: 900; }
+.pd-mini { width: 100%; display: flex; justify-content: center; }
+.pd-mini svg { width: min(100%, 44em); max-height: 34cqh; }
+.pd-mini.besar svg { max-height: 50cqh; }
+.pd-kalk { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 0.6cqmin; }
+.pd-kalk .ab-lapisan { font-size: clamp(0.55rem, 2.8cqmin, 1.5rem); }
+.pd-geser { width: min(40em, 60cqw); }
