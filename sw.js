@@ -45,6 +45,7 @@ const FILES = [
   'js/activities/sdl-09-rel-kereta.js',
   'js/activities/sdl-10-cari-kata.js',
   'js/activities/sdl-11-gula-kurang.js',
+  'js/activities/sdl-12-kancil.js',
 ];
 
 self.addEventListener('install', (e) => {
