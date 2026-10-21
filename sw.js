@@ -40,6 +40,8 @@ const FILES = [
   'js/activities/sdl-04-hemat-kuota.js',
   'js/activities/sdl-05-anyaman-rusak.js',
   'js/activities/sdl-06-kartu-data.js',
+  'js/activities/sdl-07-cari-rumah.js',
+  'js/activities/sdl-08-rak-buku.js',
 ];
 
 self.addEventListener('install', (e) => {

@@ -829,3 +829,41 @@ span.code-cell { border-style: solid; cursor: default; }
 .bar { height: 1.2em; border-radius: 0.3em; background: var(--player, var(--primary)); min-width: 2px; transition: width 0.3s; }
 .bar-n { font-weight: 900; }
 .row.guess { gap: 1em; }
+
+/* Cari rumah */
+.street { --w: min(max(calc(90cqw / var(--n)), 11cqmin), 16cqh); display: grid; grid-template-columns: repeat(auto-fill, var(--w)); gap: 0.3cqmin; justify-content: center; width: 100%; }
+.house { font: inherit; position: relative; width: var(--w); aspect-ratio: 0.8; padding: 0; border: 0; background: none; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; cursor: pointer; color: var(--ink); }
+.house::before { content: ""; position: absolute; left: 6%; right: 6%; bottom: 18%; top: 34%; background: var(--h); border: max(2px, 0.3cqmin) solid #334155; border-radius: 0.4cqmin; }
+.house .roof { position: absolute; top: 4%; left: 0; right: 0; height: 32%; background: #b45309; clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+.house.same .roof { background: #64748b; }
+.house .plate { position: relative; z-index: 1; margin-bottom: 26%; min-width: 60%; padding: 0.1em 0.2em; border-radius: 0.3em; background: #fff; border: 2px solid #334155; font-weight: 900; font-size: calc(var(--w) * 0.26); text-align: center; }
+.house small { position: relative; font-size: calc(var(--w) * 0.18); color: var(--muted); font-weight: 700; }
+.house.open .plate { background: #fef9c3; }
+.house.found .plate { background: var(--good); color: #fff; }
+.house.out { opacity: 0.25; }
+.street.long .house small { display: none; }
+
+/* Rak buku */
+.rak-layout { display: flex; gap: 3cqw; align-items: flex-end; justify-content: center; flex-wrap: wrap; }
+.book-row, .shelf { display: flex; gap: 0.6cqmin; align-items: flex-end; justify-content: center; }
+.shelf { padding: 0.6cqmin 1cqmin 0; border-bottom: max(5px, 1.2cqmin) solid #78350f; min-height: 20cqh; }
+.shelf-wrap { display: flex; flex-direction: column; align-items: center; gap: 0.5cqmin; }
+.shelf-wrap > small, .hand > small { font-weight: 800; color: var(--muted); font-size: clamp(0.55rem, 2.2cqmin, 1rem); }
+.hand { display: flex; flex-direction: column; align-items: center; gap: 0.5cqmin; padding: 1cqmin; border-radius: 1.5cqmin; background: #fef3c7; }
+.book-spine { width: min(9cqw, 13cqh); height: min(26cqh, 22cqw); display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 0.8cqmin 0.3cqmin; border-radius: 0.6cqmin 0.6cqmin 0.2cqmin 0.2cqmin; background: var(--c); color: #fff; border: max(2px, 0.3cqmin) solid rgb(0 0 0 / 0.3); user-select: none; touch-action: none; }
+.book-spine b { font-size: clamp(0.7rem, 3.6cqmin, 1.8rem); background: #fff; color: #0f172a; border-radius: 0.3em; padding: 0 0.2em; }
+.book-spine small { writing-mode: vertical-rl; transform: rotate(180deg); font-size: clamp(0.45rem, 1.6cqmin, 0.8rem); font-weight: 700; overflow: hidden; max-height: 70%; }
+.book-spine.closed { background: repeating-linear-gradient(45deg, #64748b 0 6px, #475569 6px 12px); }
+.book-spine.pair { outline: max(3px, 0.6cqmin) solid #f59e0b; outline-offset: 0.3cqmin; }
+.book-spine.inserting { transform: translateY(-2cqmin); }
+.book-spine.mini { width: min(5cqw, 8cqh); height: min(14cqh, 12cqw); }
+.book-spine.mini small { display: none; }
+.book-spine[data-drag] { cursor: grab; }
+.book-spine.selected { outline: max(3px, 0.6cqmin) solid var(--player, var(--primary)); }
+.book-slot { width: min(9cqw, 13cqh); height: min(26cqh, 22cqw); border: max(2px, 0.3cqmin) dashed #a16207; border-radius: 0.6cqmin; display: flex; }
+.shelf .book-slot:has(.book-spine) { border-color: transparent; }
+.hand + .book-row .book-spine:not(.pair) { opacity: 0.85; }
+.duel { padding: 0; gap: 0; }
+.duel .pair { flex: 1; width: 100%; display: flex; }
+.duel-bar { padding: 0.5rem; }
+.rak-inner { display: flex; flex-direction: column; align-items: center; gap: 2cqmin; width: 100%; }
