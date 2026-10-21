@@ -88,7 +88,7 @@ function renderHome(filter) {
       el('span', { class: 'badge' }, `${jenjangOf(a).label} · ${a.age}`)), () => go(`#/${a.id}`)))
       : el('p', { class: 'empty' }, 'Aktivitas untuk jenjang ini sedang disiapkan.'));
   app.append(
-    toolbar('Coding Unplugged · Panel Interaktif'),
+    toolbar('Coding & Computational Thinking'),
     el('div', { class: 'page' }, tabs, grid,
       el('footer', { class: 'foot' },
         el('a', { href: '#/tentang' }, 'Tentang & lisensi'))));
