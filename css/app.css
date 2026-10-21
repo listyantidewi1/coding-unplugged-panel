@@ -1744,3 +1744,59 @@ button.bit-sel { cursor: pointer; }
   .mejabundar .mb-tabel { font-size: clamp(0.4rem, 2.8cqh, 0.8rem); }
   .mejabundar .mb-orang { font-size: clamp(0.4rem, 2.8cqh, 0.8rem); }
 }
+
+/* Amplop berlapis */
+.amplop { gap: 1cqmin; }
+.ab-samping { display: flex; gap: 2cqw; align-items: center; justify-content: center; width: 100%; }
+.ab-kanan { display: flex; flex-direction: column; gap: 0.8cqmin; align-items: center; min-width: 0; }
+.ab-peta { position: relative; width: min(56cqw, 90cqh, 50rem); aspect-ratio: 100 / 64; flex: none; font-size: clamp(0.45rem, 1.8cqmin, 0.95rem); }
+.ab-kabel, .ab-kabel svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.ab-kabel .ruang { fill: #f8fafc; stroke: #cbd5e1; stroke-width: 0.4; }
+.ab-kabel line { stroke: #475569; stroke-width: max(3px, 0.4cqmin); vector-effect: non-scaling-stroke; }
+.ab-kabel line.wifi { stroke: #0ea5e9; stroke-dasharray: 4 5; }
+.ab-kabel line.cadangan { stroke: #16a34a; }
+.ab-ruang { position: absolute; top: 0.4em; transform: translateX(-50%); font-weight: 900; color: var(--muted); white-space: nowrap; }
+.ab-simpul { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; padding: 0.25em 0.45em; border-radius: 0.6em; background: #fff; border: 2px solid #94a3b8; line-height: 1.1; white-space: nowrap; }
+.ab-simpul b { font-size: 1.6em; }
+.ab-simpul.router { background: #ede9fe; border-color: #7c3aed; font-weight: 800; }
+.ab-simpul.mati { background: #fee2e2; border-color: #dc2626; }
+.ab-simpul.hi { outline: 3px solid #f59e0b; }
+.ab-ip { font-family: ui-monospace, monospace; color: #1d4ed8; font-weight: 800; }
+.ab-amplop { position: absolute; transform: translate(-50%, -50%); font-size: 2.6em; transition: left 0.5s, top 0.5s; filter: drop-shadow(0 0.1em 0.1em #0004); }
+.ab-tabel { display: flex; flex-direction: column; gap: 0.3em; font-size: clamp(0.6rem, 2.4cqmin, 1.25rem); }
+.ab-baris { font: inherit; display: grid; grid-template-columns: 7em 1.2em 1fr; gap: 0.3em; text-align: left; padding: 0.45em 0.7em; border-radius: 0.5em; border: 2px solid #94a3b8; background: #fff; cursor: pointer; color: #1e293b; }
+.ab-baris.salah { background: #fee2e2; border-color: #dc2626; }
+.ab-jejak { margin: 0; font-weight: 800; text-align: center; font-size: clamp(0.55rem, 2.2cqmin, 1.1rem); }
+.ab-amplop-baris { display: flex; gap: 1.5cqw; justify-content: center; flex-wrap: wrap; }
+.ab-luar { font: inherit; display: flex; flex-direction: column; gap: 0.25em; padding: 0.4em; border-radius: 0.5em; background: #fef3c7; border: 2px solid #d97706; color: #1e293b; font-size: clamp(0.55rem, 2.2cqmin, 1.1rem); }
+button.ab-luar { cursor: pointer; }
+.ab-luar.salah { border-color: #dc2626; background: #fee2e2; }
+.ab-luar.hilang { opacity: 0.4; border-style: dashed; }
+.ab-luar > small, .ab-tengah > small { font-weight: 800; font-family: ui-monospace, monospace; }
+.ab-tengah { display: flex; flex-direction: column; gap: 0.2em; padding: 0.35em; border-radius: 0.4em; background: #dbeafe; border: 2px solid #2563eb; }
+.ab-isi { padding: 0.3em 0.6em; background: #fff; border-radius: 0.3em; font-family: ui-monospace, monospace; font-weight: 900; font-size: 1.3em; min-width: 6em; text-align: center; }
+.ab-amplop-baris.kecil .ab-luar { font-size: clamp(0.45rem, 1.7cqmin, 0.85rem); }
+.ab-potongan { display: flex; gap: 1cqw; justify-content: center; margin-bottom: 1cqmin; }
+.ab-chip { font: inherit; font-family: ui-monospace, monospace; font-weight: 900; font-size: clamp(0.7rem, 3cqmin, 1.5rem); padding: 0.3em 0.7em; border-radius: 0.4em; border: 2px solid #64748b; background: #fff; cursor: pointer; color: #1e293b; }
+.ab-chip.pegang { background: #fde68a; border-color: #ca8a04; }
+.ab-alamat { display: grid; grid-template-columns: auto 1fr; gap: 0.4em 0.8em; align-items: center; margin-top: 1cqmin; font-size: clamp(0.55rem, 2.2cqmin, 1.05rem); font-weight: 800; }
+.ab-alamat .seg-btn { font-family: ui-monospace, monospace; }
+.ab-tiba { cursor: pointer; }
+.ab-tiba.sudah { opacity: 0.35; }
+.ab-lapisan { display: flex; flex-direction: column; gap: 0.4em; font-size: clamp(0.55rem, 2.2cqmin, 1.1rem); }
+.ab-lap-baris { display: grid; grid-template-columns: 1fr auto; gap: 1em; align-items: center; padding: 0.3em 0.6em; border-radius: 0.5em; background: #f8fafc; }
+.ab-lap-baris.salah { background: #fee2e2; }
+.ab-dns { font-size: clamp(0.7rem, 3.2cqmin, 1.6rem); font-family: ui-monospace, monospace; }
+.ab-pilihan { display: grid; grid-template-columns: auto 1fr; gap: 0.4em 0.8em; align-items: center; font-size: clamp(0.5rem, 2cqmin, 1rem); font-weight: 800; }
+.ab-pesan { margin: 0; font-family: ui-monospace, monospace; font-weight: 900; font-size: clamp(0.7rem, 3cqmin, 1.5rem); }
+.ab-skor { font-weight: 800; }
+@container (max-aspect-ratio: 6/5) {
+  .ab-samping { flex-direction: column; }
+  .ab-peta { width: min(92cqw, 50cqh); }
+}
+@container (max-height: 520px) {
+  .amplop > .prompt, .amplop .reveal { font-size: clamp(0.55rem, 4cqh, 1.1rem); }
+  .amplop .ab-peta { width: min(52cqw, 100cqh); font-size: clamp(0.4rem, 2.4cqh, 0.8rem); }
+  .amplop .ab-tabel, .amplop .ab-luar, .amplop .ab-lapisan, .amplop .ab-alamat { font-size: clamp(0.45rem, 3cqh, 0.9rem); }
+  .amplop .ab-chip { font-size: clamp(0.5rem, 4cqh, 1rem); }
+}
