@@ -30,6 +30,7 @@ import sdlKartuData from './sdl-06-kartu-data.js';
 import sdlCariRumah from './sdl-07-cari-rumah.js';
 import sdlRakBuku from './sdl-08-rak-buku.js';
 import sdlRelKereta from './sdl-09-rel-kereta.js';
+import sdlCariKata from './sdl-10-cari-kata.js';
 
 export const JENJANG = [
   { id: 'paud', label: 'PAUD', detail: '4–6 tahun' },
@@ -45,7 +46,7 @@ export const activities = [
   paudPola, paudKelompok, paudLangkah, paudAntarAyam, paudKacangHijau,
   paudGerakUlang, paudJikaLampu, paudAyamTersesat, paudYaTidak, paudTombol,
   sdaMotifBatik, sdaRumahAdat, sdaRumahNenek, sdaResep, sdaSenamPagi, sdaJikaHujan, sdaRuteSalah, sdaTimbangan, sdaGambarRahasia, sdaTabelHewan, sdaCariHalaman, sdaBarisUpacara, sdaTombolLift,
-  sdlLampuGapura, sdlPikselWarna, sdlSandiSenter, sdlHematKuota, sdlAnyamanRusak, sdlKartuData, sdlCariRumah, sdlRakBuku, sdlRelKereta,
+  sdlLampuGapura, sdlPikselWarna, sdlSandiSenter, sdlHematKuota, sdlAnyamanRusak, sdlKartuData, sdlCariRumah, sdlRakBuku, sdlRelKereta, sdlCariKata,
 ]
   .sort((a, b) => order(a) - order(b) || a.id.localeCompare(b.id));
 
