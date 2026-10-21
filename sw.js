@@ -1,6 +1,6 @@
 // Offline support: cache the app shell so a panel keeps working when the
 // school network drops. Bump VERSION whenever files change.
-const VERSION = 'cu-v5';
+const VERSION = 'cu-v6';
 const FILES = [
   './',
   'index.html',
@@ -52,6 +52,8 @@ const FILES = [
   'js/activities/sdl-16-mesin-cerdas.js',
   'js/activities/sdl-17-latih-mesin.js',
   'js/activities/sdl-18-data-pribadi.js',
+  'js/activities/smp-01-kartu-pelajar.js',
+  'js/activities/smp-02-kode-huruf.js',
 ];
 
 self.addEventListener('install', (e) => {
