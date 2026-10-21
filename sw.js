@@ -171,6 +171,7 @@ const FILES = [
   'js/activities/sdl-23-robot-labirin.js',
   'js/activities/sdl-24-tangkap-mangga.js',
   'js/activities/sdl-25-motif-tenun.js',
+  'js/activities/sdl-26-daftar-belanja.js',
 ];
 
 self.addEventListener('install', (e) => {

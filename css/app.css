@@ -5625,3 +5625,54 @@ button.pls-chip, .pls-pilih { cursor: pointer; }
 /* Panel sempit (lomba): aktivitas SD Lanjut yang padat boleh digulir. */
 .act.ubin-teras, .act.pilah-sampah, .act.celengan, .act.sampai-penuh,
 .act.robot-labirin, .act.tangkap-mangga, .act.motif-tenun { overflow-y: auto; justify-content: safe center; }
+
+/* sdl-26 Daftar Belanja ke Pasar */
+.dbl-tempat, .dbl-soal { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start; gap: 2cqmin; }
+.dbl-samping { display: flex; flex-direction: column; align-items: center; gap: 1.2cqmin; min-width: 0; }
+.dbl-kode { display: flex; flex-direction: column; gap: 0.2cqmin; padding: 1cqmin 1.5cqmin; border-radius: 2cqmin; background: #fefce8; color: #1c1917; font: 800 clamp(0.6rem, 2.3cqmin, 1.1rem)/1.3 ui-monospace, monospace; text-align: left; }
+.opt .dbl-kode { font-size: clamp(0.5rem, 1.8cqmin, 0.9rem); }
+.dbl-baris { display: flex; flex-wrap: wrap; align-items: center; gap: 0.8cqmin; padding: 0.2cqmin 0.8cqmin; padding-left: calc(var(--d, 0) * 3cqmin + 0.8cqmin); border-radius: 1cqmin; }
+.dbl-baris.nyala { background: #fde68a; box-shadow: inset 0 0 0 max(2px, 0.3cqmin) #ca8a04; }
+.dbl-baris.ya { background: #bbf7d0; } .dbl-baris.tidak { background: #fecaca; }
+.dbl-no { min-width: 1.6em; color: #78716c; }
+.dbl-kertas { display: flex; flex-direction: column; gap: 0.6cqmin; min-width: 30cqmin; padding: 1cqmin 1.5cqmin; border-radius: 1.5cqmin; background: repeating-linear-gradient(180deg, #fffdf5 0 4.6cqmin, #dbeafe 4.6cqmin 4.8cqmin); border: max(2px, 0.3cqmin) solid #d6d3d1; color: #1c1917; box-shadow: 0 0.6cqmin 1.2cqmin rgb(0 0 0 / 0.12); }
+.dbl-judul { font-size: clamp(0.7rem, 2.6cqmin, 1.2rem); color: #9a3412; }
+.dbl-daftar { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5cqmin; }
+.dbl-daftar li { display: flex; align-items: center; gap: 1cqmin; max-height: 6cqmin; overflow: hidden; padding: 0.3cqmin 0.8cqmin; border-radius: 1cqmin; font-weight: 800; font-size: clamp(0.65rem, 2.4cqmin, 1.15rem); transition: max-height 0.35s, opacity 0.35s, padding 0.35s, background 0.2s; }
+.dbl-belum { color: #78716c; font-style: italic; }
+.dbl-nomor { display: grid; place-items: center; width: 3.6cqmin; height: 3.6cqmin; border-radius: 50%; background: #9a3412; color: #fff; font-size: 0.85em; }
+.dbl-nama { flex: 1; }
+.dbl-harga { color: #57534e; font-weight: 700; }
+.dbl-daftar li.masuk { animation: dbl-masuk 0.4s; }
+@keyframes dbl-masuk { from { transform: translateX(-3cqmin); opacity: 0; } }
+.dbl-daftar li.keluar { max-height: 0; opacity: 0; padding-block: 0; background: #fecaca; text-decoration: line-through; }
+.dbl-daftar li.sudah { background: #ecfccb; }
+.dbl-daftar li.periksa { background: #fde68a; box-shadow: inset 0 0 0 max(2px, 0.3cqmin) #ca8a04; }
+.dbl-daftar li.lewat { background: #fee2e2; box-shadow: inset 0 0 0 max(2px, 0.3cqmin) #dc2626; }
+.dbl-daftar li.lewat::after { content: 'tidak diperiksa'; font-size: 0.7em; color: #b91c1c; }
+.dbl-kotak-kotak { display: flex; flex-wrap: wrap; justify-content: center; gap: 1cqmin; }
+.dbl-kotak { display: grid; justify-items: center; min-width: 14cqmin; padding: 0.5cqmin 1.4cqmin; border-radius: 1.5cqmin; border: max(3px, 0.5cqmin) solid #7c2d12; background: #fff7ed; color: #431407; }
+.dbl-kotak.baru { animation: dbl-baru 0.4s; }
+@keyframes dbl-baru { 50% { transform: scale(1.08); background: #fed7aa; } }
+.dbl-var { font-weight: 800; font-style: italic; font-size: clamp(0.55rem, 2cqmin, 0.95rem); }
+.dbl-nilai { font-size: clamp(0.9rem, 3.8cqmin, 1.8rem); line-height: 1.1; }
+.dbl-pilih { font: inherit; padding: 0.1em 0.6em; border-radius: 1cqmin; border: max(2px, 0.3cqmin) solid #b45309; background: #fff; color: #431407; cursor: pointer; }
+.dbl-pilih.op { font-weight: 900; border-color: #9a3412; }
+.dbl-pilih.aktif { background: #fbbf24; }
+.dbl-pilih.kecil { font-size: 0.85em; }
+.dbl-jelajah .dbl-pilih { font: 800 clamp(0.6rem, 2.2cqmin, 1rem) system-ui, sans-serif; padding: 0.5cqmin 1.2cqmin; }
+.dbl-hapus { font: inherit; border: 0; background: none; color: #dc2626; cursor: pointer; margin-left: auto; }
+.dbl-program { min-width: 50cqmin; }
+.daftar-belanja.jalan .dbl-pilih, .daftar-belanja.jalan .dbl-hapus { pointer-events: none; }
+.dbl-info { font-weight: 700; text-align: center; max-width: 92cqw; }
+.dbl-lapak { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1cqmin; width: min(92cqw, 110cqmin); }
+.dbl-lapak.kecil { width: min(60cqw, 64cqmin); }
+.dbl-barang { font: inherit; display: flex; flex-direction: column; align-items: center; gap: 0.2cqmin; padding: 0.8cqmin; border-radius: 1.5cqmin; border: max(2px, 0.4cqmin) solid #b45309; background: #fff7ed; color: #431407; cursor: pointer; }
+.dbl-barang span { font-size: clamp(1rem, 4cqmin, 2rem); }
+.dbl-barang b { font-size: clamp(0.55rem, 2cqmin, 0.95rem); }
+.dbl-lapak.kecil .dbl-barang span { font-size: clamp(0.8rem, 3cqmin, 1.5rem); }
+.dbl-barang.aktif { background: #fbbf24; }
+.dbl-tebakan { display: flex; flex-direction: column; align-items: center; gap: 1cqmin; }
+.dbl-tebakan.kunci { pointer-events: none; opacity: 0.75; }
+.dbl-tebak { min-width: 2.5em; text-align: center; font-size: clamp(1rem, 4.5cqmin, 2.2rem); }
+.act.daftar-belanja { overflow-y: auto; justify-content: safe center; }
