@@ -1619,3 +1619,34 @@ button.bit-sel { cursor: pointer; }
   .salaman .lingkar { width: min(64cqh, 40cqw); }
   .salaman .orang { font-size: clamp(0.6rem, 4.4cqh, 1.2rem); }
 }
+
+/* Gotong royong */
+.gotong { gap: 1cqmin; }
+.gabung { display: flex; gap: 3cqw; align-items: center; justify-content: center; }
+.gabung-asal { display: flex; gap: 1.5cqw; }
+.gabung-tumpuk { font: inherit; display: flex; flex-direction: column; gap: 0.25em; align-items: center; min-width: 3.4em; min-height: 6em; padding: 0.4em; border-radius: 1cqmin; border: max(3px, 0.5cqmin) solid #94a3b8; background: #f8fafc; cursor: pointer; font-size: clamp(0.65rem, 3cqmin, 1.5rem); color: #1e293b; }
+.gabung-tumpuk span { width: 2.6em; padding: 0.15em 0; border-radius: 0.3em; background: #fff; border: 1px solid #cbd5e1; font-weight: 800; }
+.gabung-tumpuk span.atas { background: #fde68a; border-color: #ca8a04; font-size: 1.25em; }
+.gabung-tumpuk:disabled { opacity: 0.5; cursor: default; }
+.gabung-hasil { display: flex; flex-direction: column; align-items: center; gap: 0.3em; }
+.gabung-hasil small { font-weight: 800; color: var(--muted); font-size: clamp(0.5rem, 2cqmin, 0.9rem); }
+.gabung-hitung { margin: 0; font-weight: 900; font-size: clamp(0.7rem, 3.2cqmin, 1.5rem); }
+.tumpuk { display: flex; gap: 0.15em; padding: 0.15em; border-radius: 0.4em; background: #e0f2fe; min-height: 1.6em; font-weight: 800; font-size: clamp(0.5rem, 2.2cqmin, 1.05rem); }
+.tumpuk span { min-width: 1.5em; text-align: center; background: #fff; border-radius: 0.25em; padding: 0 0.15em; }
+.tumpuk.hasil { background: #dcfce7; font-size: clamp(0.6rem, 2.8cqmin, 1.3rem); }
+.tumpuk.aktif { background: #fde68a; outline: 2px solid #ca8a04; }
+.pohon { display: flex; flex-direction: column; gap: 0.5cqmin; align-items: center; }
+.pohon-tahap { display: flex; flex-direction: column; align-items: center; gap: 0.15em; }
+.pohon-tahap small { font-weight: 700; color: var(--muted); font-size: clamp(0.45rem, 1.8cqmin, 0.85rem); }
+.pohon-baris { display: flex; gap: 0.5cqw; flex-wrap: wrap; justify-content: center; }
+.pohon .tumpuk { font-size: clamp(0.55rem, 2.6cqmin, 1.2rem); }
+.pekerja { display: flex; flex-direction: column; gap: 0.5cqmin; width: min(60cqw, 36rem); }
+.pekerja-baris { display: grid; grid-template-columns: 4.5em 1fr 4.5em; align-items: center; gap: 0.6em; font-size: clamp(0.6rem, 2.8cqmin, 1.3rem); }
+.pekerja-batang { height: 1.2em; width: var(--w); min-width: 2px; background: linear-gradient(90deg, #22c55e, #16a34a); border-radius: 0.3em; }
+.pekerja-total { margin: 0; text-align: center; font-weight: 900; font-size: clamp(0.7rem, 3.4cqmin, 1.6rem); }
+@container (max-height: 520px) {
+  .gotong > .prompt, .gotong .reveal { font-size: clamp(0.55rem, 4.2cqh, 1.2rem); }
+  .gotong .gabung-tumpuk { font-size: clamp(0.6rem, 6cqh, 1.3rem); min-height: 0; }
+  .gotong .tumpuk.hasil { font-size: clamp(0.6rem, 5.5cqh, 1.2rem); }
+  .gotong .pohon .tumpuk { font-size: clamp(0.4rem, 3cqh, 0.8rem); }
+}
