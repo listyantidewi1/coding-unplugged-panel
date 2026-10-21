@@ -3892,3 +3892,23 @@ code.beda { background: #fee2e2 !important; color: #991b1b !important; }
 .mk-log { display: flex; flex-wrap: wrap; gap: 0.4em; max-width: 30em; font-family: ui-monospace, monospace; }
 .mk-log span { padding: 0.1em 0.5em; border-radius: 0.4em; background: #fff; }
 @media (max-width: 700px) { .mk-dua, .mk-kerja { grid-template-columns: 1fr; } }
+
+/* smp-33 Olah Teks */
+.ot-teks { display: flex; flex-wrap: wrap; gap: 0.2em; justify-content: center; }
+.ot-kar { display: flex; flex-direction: column; align-items: center; min-width: 1.9em; padding: 0.1em 0.25em; border: 2px solid #94a3b8; border-radius: 0.4em; background: #f8fafc; color: #111827; font-size: clamp(0.8rem, 3.4cqmin, 2rem); }
+.sk-jejak .ot-kar { font-size: clamp(0.65rem, 2.2cqmin, 1.2rem); }
+.ot-kar small { font-size: 0.65em; color: #64748b; }
+.ot-kar b { font-family: ui-monospace, monospace; font-size: 1.3em; }
+.ot-kar.spasi { border-style: dashed; background: #ede9fe; color: #6d28d9; }
+.ot-kar.baca { border-color: #f59e0b; background: #fef3c7; box-shadow: 0 0 0 3px #fcd34d; }
+.ot-pilih { display: flex; flex-direction: column; gap: 0.5em; align-items: center; }
+.ot-input { display: flex; flex-direction: column; gap: 0.2em; }
+.ot-input small { color: #475569; }
+.ot-input input { font: inherit; font-size: clamp(1rem, 3cqmin, 1.6rem); padding: 0.3em 0.6em; border: 2px solid #94a3b8; border-radius: 0.5em; min-width: 12em; font-family: ui-monospace, monospace; }
+.ot-tabel { border-collapse: collapse; margin: 0 auto; font-size: clamp(0.7rem, 2.3cqmin, 1.2rem); }
+.ot-tabel th, .ot-tabel td { border: 1px solid #cbd5e1; padding: 0.2em 0.6em; text-align: left; }
+.ot-tabel tr.mirip td { background: #fef3c7; }
+.ot-tabel tr.baru td { font-weight: 700; outline: 2px solid #2563eb; }
+.ot-palin { display: flex; flex-direction: column; gap: 0.4em; align-items: center; }
+.ot-giliran { display: flex; flex-direction: column; gap: 0.6em; align-items: center; }
+.ot-catatan { color: #475569; text-align: center; }

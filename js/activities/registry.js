@@ -105,6 +105,7 @@ import TargetTabungan from './smp-29-target-tabungan.js';
 import OngkosKirim from './smp-30-ongkos-kirim.js';
 import SuhuSeminggu from './smp-31-suhu-seminggu.js';
 import MesinKonversi from './smp-32-mesin-konversi.js';
+import OlahTeks from './smp-33-olah-teks.js';
 
 export const JENJANG = [
   { id: 'paud', label: 'PAUD', detail: '4–6 tahun' },
@@ -144,6 +145,7 @@ export const activities = [
   OngkosKirim,
   SuhuSeminggu,
   MesinKonversi,
+  OlahTeks,
 ]
   .sort((a, b) => order(a) - order(b) || a.id.localeCompare(b.id));
 
