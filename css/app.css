@@ -5141,3 +5141,53 @@ code.beda { background: #fee2e2 !important; color: #991b1b !important; }
 .proyek-umkm .ua-uji { display: flex; flex-wrap: wrap; gap: 0.4em; justify-content: center; }
 @container (max-width: 640px) { .proyek-umkm .ua-dua, .proyek-umkm .ua-papan { grid-template-columns: minmax(0, 1fr); } }
 .proyek-umkm .ua-geser .btn { min-height: 0; min-width: 0; padding: 0.1em 0.6em; }
+
+/* paud-11 Kalau Bel Berbunyi */
+.kalau-bel { gap: 2cqmin; }
+.kbl-kentongan { width: 1em; height: 1.2em; vertical-align: middle; }
+.kbl-rules { display: flex; flex-wrap: wrap; gap: 1.5cqmin 3cqmin; justify-content: center; padding: 1cqmin 2cqmin; border-radius: 2cqmin; background: #fef3c7; }
+.kbl-rule { display: flex; align-items: center; gap: 1cqmin; }
+.kbl-rule .opt-icon { font-size: clamp(1.2rem, 6cqmin, 3rem); }
+.kbl-rule-label { font-weight: 800; font-size: clamp(0.7rem, 3cqmin, 1.3rem); }
+.kbl-arrow { font-size: clamp(0.8rem, 4cqmin, 2rem); }
+.kbl-sub { margin: 0; text-align: center; color: var(--muted); font-weight: 700; font-size: clamp(0.7rem, 3cqmin, 1.3rem); }
+.kbl-listen { min-width: min(40cqw, 24rem); }
+.kbl-stage { display: flex; flex-direction: column; align-items: center; gap: 1cqmin; }
+.kbl-robi { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 26cqmin; min-width: 30cqmin; }
+.kbl-robi-body { display: inline-block; margin-bottom: 0.25em; font-size: clamp(2.4rem, 16cqmin, 9rem); line-height: 1; }
+.kbl-note { min-height: 1.4em; font-weight: 900; font-size: clamp(0.8rem, 4cqmin, 1.8rem); color: var(--ink); }
+.kbl-duduk { animation: kbl-duduk 1.6s ease; }
+.kbl-lompat { animation: kbl-lompat 0.55s ease 3; }
+.kbl-putar { animation: kbl-putar 1.2s ease; }
+.kbl-lambai { animation: kbl-lambai 0.4s ease 4; transform-origin: bottom center; }
+@keyframes kbl-duduk { 30%, 75% { transform: translateY(25%) scaleY(0.7); } }
+@keyframes kbl-lompat { 50% { transform: translateY(-45%); } }
+@keyframes kbl-putar { to { transform: rotate(360deg); } }
+@keyframes kbl-lambai { 25% { transform: rotate(-15deg); } 75% { transform: rotate(15deg); } }
+@media (prefers-reduced-motion: reduce) { .kbl-duduk, .kbl-lompat, .kbl-putar, .kbl-lambai { animation: none; } }
+.kbl-board { display: flex; gap: 4cqw; flex-wrap: wrap; justify-content: center; align-items: center; }
+.kbl-rows { display: flex; flex-direction: column; gap: 1.5cqmin; }
+.kbl-row { display: flex; align-items: center; gap: 1.5cqmin; }
+.kbl-sound { font: inherit; display: flex; flex-direction: column; align-items: center; min-width: 18cqmin; padding: 1cqmin; border-radius: 2cqmin; border: max(3px, 0.6cqmin) solid #b45309; background: #fffbeb; font-weight: 900; cursor: pointer; }
+.kbl-sound .opt-icon { font-size: clamp(1.4rem, 8cqmin, 4rem); }
+.kbl-sound.ring { background: #fde68a; transform: scale(1.06); }
+.kbl-slot { display: flex; align-items: center; justify-content: center; min-width: 20cqmin; min-height: 13cqmin; border: max(3px, 0.6cqmin) dashed var(--line); border-radius: 2cqmin; background: var(--surface); cursor: pointer; }
+.kbl-slot.on { border-style: solid; border-color: #6d28d9; }
+.kbl-empty { color: var(--muted); font-weight: 700; }
+.kbl-set, .kbl-card { display: flex; flex-direction: column; align-items: center; font-weight: 800; }
+.kbl-set span, .kbl-card span { font-size: clamp(1.2rem, 7cqmin, 3.4rem); line-height: 1.1; }
+.kbl-set small, .kbl-card small { font-size: clamp(0.6rem, 2.6cqmin, 1.1rem); }
+.kbl-cover { font-size: clamp(1.4rem, 8cqmin, 4rem); }
+.kbl-side { display: flex; flex-direction: column; align-items: center; gap: 2cqmin; }
+.kbl-tray { display: flex; flex-wrap: wrap; gap: 1.5cqmin; justify-content: center; max-width: 60cqmin; }
+.kbl-card { padding: 1cqmin 1.5cqmin; border: max(3px, 0.6cqmin) solid #6d28d9; border-radius: 2cqmin; background: #f5f3ff; color: var(--ink); cursor: grab; touch-action: none; }
+.kbl-card.selected { outline: max(3px, 0.6cqmin) solid #f59e0b; }
+.kbl-row { padding: 0.5cqmin 1cqmin; border-radius: 2cqmin; }
+.kbl-guess-opts { display: flex; gap: 1cqmin; flex-wrap: wrap; margin-left: 2cqmin; }
+.kbl-row.benar { background: #dcfce7; }
+.kbl-row.salah { background: #fee2e2; }
+.kbl-row .move-btn.kunci { outline: max(3px, 0.6cqmin) solid var(--good); }
+.kbl-board.tebak { flex-wrap: nowrap; gap: 2cqw; }
+.kbl-board.tebak .kbl-sound { width: 19cqmin; padding: 0.5cqmin; }
+.kbl-board.tebak .kbl-sound .opt-icon, .kbl-guess-opts .move-btn span { font-size: clamp(1rem, 5cqmin, 2.6rem); }
+.kbl-board.tebak .kbl-slot { min-width: 13cqmin; min-height: 10cqmin; }
