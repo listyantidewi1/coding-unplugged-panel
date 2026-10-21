@@ -4127,3 +4127,42 @@ code.beda { background: #fee2e2 !important; color: #991b1b !important; }
 .lampu-otomatis .lo-log div:first-child { color: var(--ink); font-weight: 800; }
 .lampu-otomatis .lo-geser { display: flex; flex-direction: column; min-width: 10em; }
 .lampu-otomatis .lo-tabel .sk-baris span { font-variant-numeric: tabular-nums; }
+
+/* smp-41 Ular Tangga dalam Kode */
+.ular-tangga .ut-atur { display: flex; flex-wrap: wrap; gap: 0.5em 0.8em; align-items: center; justify-content: center; }
+.ular-tangga .ut-dua { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0.8em; width: 100%; align-items: start; }
+@container (max-width: 640px) { .ular-tangga .ut-dua { grid-template-columns: 1fr; } }
+.ular-tangga .ut-kiri, .ular-tangga .ut-kanan { display: flex; flex-direction: column; gap: 0.5em; min-width: 0; }
+.ular-tangga .ut-papan-wadah { display: flex; flex-direction: column; gap: 0.3em; width: 100%; max-width: 40em; margin: 0 auto; }
+.ular-tangga .ut-papan { position: relative; display: grid; grid-template-columns: repeat(6, 1fr); grid-template-rows: repeat(5, 1fr); aspect-ratio: 6 / 4; max-width: 100%; border: 3px solid #78350f; border-radius: 0.6em; overflow: hidden; }
+.ular-tangga .ut-kotak { position: relative; display: flex; flex-direction: column; align-items: flex-start; padding: 0.15em 0.3em; border: 1px solid color-mix(in srgb, var(--line) 80%, transparent); background: #fefce8; color: #1f2937; font-size: clamp(0.55rem, 1.9cqmin, 1rem); cursor: pointer; }
+.ular-tangga .ut-kotak:nth-child(odd) { background: #ecfccb; }
+.ular-tangga .ut-kotak.naik { background: #dcfce7; }
+.ular-tangga .ut-kotak.turun { background: #fee2e2; }
+.ular-tangga .ut-kotak.finis { background: #fde68a; font-weight: 900; }
+.ular-tangga .ut-kotak.hl { box-shadow: inset 0 0 0 3px var(--primary); }
+.ular-tangga .ut-kotak.pilih { box-shadow: inset 0 0 0 3px #f59e0b; }
+.ular-tangga .ut-kotak small { font-size: 0.85em; }
+.ular-tangga .ut-garis { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.ular-tangga .ut-garis path { fill: none; stroke-width: 0.08; stroke-linecap: round; opacity: 0.75; }
+.ular-tangga .ut-garis path.tangga { stroke: #15803d; stroke-dasharray: 0.12 0.06; stroke-width: 0.12; }
+.ular-tangga .ut-garis path.ular { stroke: #dc2626; stroke-width: 0.1; }
+.ular-tangga .ut-bidak-bidak { position: absolute; left: 50%; top: 58%; transform: translate(-50%, -50%); display: flex; gap: 0.1em; z-index: 1; }
+.ular-tangga .ut-kotak .ut-bidak { width: 2em; height: 2em; font-size: clamp(0.7rem, 2.6cqmin, 1.3rem); }
+.ular-tangga .ut-bidak { display: inline-grid; place-items: center; width: 1.5em; height: 1.5em; border-radius: 50%; border: 2px solid #fff; color: #fff; font-style: normal; font-weight: 900; font-size: clamp(0.6rem, 2cqmin, 1rem); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4); }
+.ular-tangga .ut-luar { display: flex; gap: 0.3em; align-items: center; min-height: 1.6em; color: var(--muted); }
+.ular-tangga .ut-dadu-deret { margin: 0; text-align: center; font-weight: 800; }
+.ular-tangga .ut-tabel-wadah { overflow-x: auto; max-width: 100%; }
+.ular-tangga .ut-tabel { border-collapse: collapse; margin: 0 auto; font-size: clamp(0.65rem, 2cqmin, 1rem); }
+.ular-tangga .ut-tabel th, .ular-tangga .ut-tabel td { padding: 0.15em 0.6em; border: 1px solid var(--line); text-align: center; }
+.ular-tangga .ut-tabel tr.menang td { background: #fef9c3; color: #713f12; font-weight: 800; }
+.ular-tangga .ut-tabel tr.galat td { background: #fee2e2; color: #991b1b; }
+.ular-tangga .ut-var { display: flex; flex-wrap: wrap; gap: 0.4em; justify-content: center; }
+.ular-tangga .ut-var span { display: flex; flex-direction: column; align-items: center; padding: 0.15em 0.6em; border: 2px solid var(--line); border-radius: 0.6em; background: var(--surface); }
+.ular-tangga .ut-var small { color: var(--muted); }
+.ular-tangga .ut-larik { display: flex; flex-wrap: wrap; gap: 0.15em; justify-content: center; align-items: center; font-size: clamp(0.55rem, 1.7cqmin, 0.9rem); }
+.ular-tangga .ut-larik span { display: flex; flex-direction: column; align-items: center; min-width: 1.9em; border: 1px solid var(--line); border-radius: 0.3em; background: var(--surface); }
+.ular-tangga .ut-larik span small { color: var(--muted); }
+.ular-tangga .ut-larik span.naik { background: #dcfce7; color: #14532d; }
+.ular-tangga .ut-larik span.turun { background: #fee2e2; color: #7f1d1d; }
+.ular-tangga .ut-isi .sk-baris span { font-variant-numeric: tabular-nums; }

@@ -113,6 +113,7 @@ import SimulasiDadu from './smp-37-simulasi-dadu.js';
 import BlokKeTeks from './smp-38-blok-ke-teks.js';
 import MenaraHanoi from './smp-39-menara-hanoi.js';
 import LampuOtomatis from './smp-40-lampu-otomatis.js';
+import UlarTangga from './smp-41-ular-tangga.js';
 
 export const JENJANG = [
   { id: 'paud', label: 'PAUD', detail: '4–6 tahun' },
@@ -160,6 +161,7 @@ export const activities = [
   BlokKeTeks,
   MenaraHanoi,
   LampuOtomatis,
+  UlarTangga,
 ]
   .sort((a, b) => order(a) - order(b) || a.id.localeCompare(b.id));
 
