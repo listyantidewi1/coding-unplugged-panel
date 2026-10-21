@@ -1,6 +1,6 @@
 // Offline support: cache the app shell so a panel keeps working when the
 // school network drops. Bump VERSION whenever files change.
-const VERSION = 'cu-v11';
+const VERSION = 'cu-v12';
 const FILES = [
   './',
   'index.html',
