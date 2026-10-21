@@ -920,3 +920,25 @@ span.code-cell { border-style: solid; cursor: default; }
 .chart-key .k.urut::before { background: #2563eb; }
 .chart-key .k.tengah::before { background: #dc2626; }
 .chart-key .k.dot::before { background: #f59e0b; border-radius: 50%; }
+
+/* Gula kurang */
+.scale-yard { display: flex; flex-direction: column; align-items: center; gap: 1.5cqmin; width: 100%; }
+.scale-top { display: grid; grid-template-columns: 1fr auto 1fr; align-items: end; gap: 1cqw; width: min(92cqw, 70rem); }
+.scale-mid { position: relative; width: min(18cqw, 12rem); height: min(14cqh, 9rem); }
+.scale-beam { --tilt: 0deg; position: absolute; left: -40%; right: -40%; top: 10%; height: max(5px, 1.2cqmin); border-radius: 1cqmin; background: #78350f; transform: rotate(var(--tilt)); transition: transform 0.5s; }
+.scale-post { position: absolute; left: 50%; top: 10%; bottom: 0; width: max(6px, 1.4cqmin); transform: translateX(-50%); background: #a16207; border-radius: 1cqmin 1cqmin 0 0; }
+.pan-zone { display: flex; flex-direction: column; align-items: center; gap: 0.5cqmin; min-height: 14cqh; padding: 0.8cqmin; border-radius: 0 0 50% 50% / 0 0 30% 30%; border: max(3px, 0.5cqmin) solid #a16207; background: #fef3c7; }
+.pan-zone.luar { border-radius: 1.5cqmin; border-style: dashed; border-color: #94a3b8; background: #f8fafc; min-height: 10cqh; width: min(92cqw, 70rem); }
+.pan-zone small { font-weight: 800; color: var(--muted); font-size: clamp(0.5rem, 2cqmin, 0.95rem); }
+.pan-bags { display: flex; flex-wrap: wrap; gap: 0.6cqmin; justify-content: center; }
+.bag { font: inherit; width: min(6.4cqw, 9cqh); aspect-ratio: 0.8; display: grid; place-items: center; border-radius: 20% 20% 30% 30%; background: #fff; border: max(2px, 0.4cqmin) solid #64748b; box-shadow: inset 0 -0.8cqmin 0 #e2e8f0; font-weight: 900; font-size: clamp(0.6rem, 3cqmin, 1.5rem); color: var(--ink); cursor: grab; user-select: none; touch-action: none; }
+.bag.selected { outline: max(3px, 0.6cqmin) solid var(--player, var(--primary)); }
+.bag.found { background: var(--good); color: #fff; }
+.bag.big { width: min(9cqw, 14cqh); cursor: pointer; }
+.gula-log { font-size: clamp(0.5rem, 2cqmin, 0.95rem); }
+.gula-log td { padding: 0.15em 0.5em; }
+.sly { font-weight: 800; color: #9333ea; }
+.gula-inner { display: flex; flex-direction: column; align-items: center; gap: 1.2cqmin; width: 100%; }
+.plan-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2cqw; width: min(94cqw, 80rem); }
+.plan-card { display: flex; flex-direction: column; gap: 1cqmin; padding: 1.5cqmin; border-radius: 1.5cqmin; background: #f1f5f9; border: max(2px, 0.4cqmin) solid var(--line); font-size: clamp(0.6rem, 2.5cqmin, 1.2rem); }
+.plan-card small { color: var(--muted); }
