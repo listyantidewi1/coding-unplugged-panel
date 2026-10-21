@@ -1423,3 +1423,49 @@ button.bit-sel { cursor: pointer; }
   .angka-cek .ck-tabel.ean { font-size: clamp(0.6rem, min(4.4cqh, 2.4cqw), 1.2rem); }
   .angka-cek > .prompt { font-size: clamp(0.65rem, 5cqh, 1.3rem); }
 }
+
+/* Tebak provinsi, tebak huruf */
+.tebak-huruf { gap: 0.9cqmin; }
+.prov-tanya { display: flex; flex-direction: column; gap: 0.5cqmin; align-items: center; margin-bottom: 0.8cqmin; }
+.templat { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.3em; font-weight: 700; font-size: clamp(0.55rem, 2.4cqmin, 1.1rem); }
+.templat .seg-btn { padding: 0.15em 0.45em; }
+.templat-n { min-width: 1.6em; text-align: center; font-size: 1.2em; }
+.prov-papan { display: flex; flex-wrap: wrap; gap: 0.6cqmin 1cqw; justify-content: center; max-width: 96cqw; }
+.prov-wilayah { display: flex; flex-direction: column; gap: 0.2em; padding: 0.3em; border-radius: 0.8cqmin; background: var(--w); }
+.prov-wilayah > small { font-size: clamp(0.45rem, 1.7cqmin, 0.8rem); font-weight: 800; color: #334155; }
+.w-jawa { --w: #fef3c7; } .w-sumatera { --w: #dcfce7; } .w-kalimantan { --w: #e0f2fe; } .w-sulawesi { --w: #fae8ff; } .w-papua { --w: #ffedd5; } .w-nusa { --w: #fee2e2; } .w-maluku { --w: #e0e7ff; } .w-kepri { --w: #ccfbf1; }
+.prov-ubin { display: flex; flex-wrap: wrap; gap: 0.2em; max-width: 30cqw; }
+.prov { font: inherit; display: flex; align-items: center; gap: 0.3em; padding: 0.15em 0.4em; border-radius: 0.4em; border: 1px solid #94a3b8; background: #fff; cursor: pointer; color: #111827; font-size: clamp(0.45rem, 1.8cqmin, 0.85rem); }
+.prov b { font-size: 1.1em; }
+.prov.gugur { opacity: 0.22; background: #cbd5e1; }
+.prov.hi { background: #fde047; border-color: #ca8a04; opacity: 1; }
+.prov-log { display: flex; flex-wrap: wrap; gap: 0.3em; justify-content: center; max-width: 92cqw; max-height: 10cqh; overflow: hidden; font-size: clamp(0.45rem, 1.8cqmin, 0.85rem); }
+.prov-log span { padding: 0.1em 0.5em; border-radius: 0.4em; background: #f1f5f9; }
+.prov-log .ya { background: #dcfce7; } .prov-log .tidak { background: #fee2e2; }
+.prov-milik { font-weight: 800; }
+.catatan { display: flex; flex-wrap: wrap; gap: 0.2em; justify-content: center; }
+.cat-sel { display: flex; flex-direction: column; align-items: center; width: 1.8em; padding: 0.1em 0; border-radius: 0.3em; background: #fef9c3; font-size: clamp(0.6rem, 3cqmin, 1.4rem); }
+.cat-sel small { font-size: 0.6em; }
+.cat-sel.mudah, .slot-huruf.mudah { background: #bbf7d0; } .cat-sel.sulit, .slot-huruf.sulit { background: #fecaca; }
+.tebak-slot { display: flex; flex-wrap: wrap; gap: 0.3em; justify-content: center; max-width: 94cqw; }
+.slot-huruf { display: flex; flex-direction: column; align-items: center; width: 1.6em; min-height: 2.4em; border-bottom: max(3px, 0.5cqmin) solid #111827; font-size: clamp(0.8rem, 4.4cqmin, 2.2rem); font-weight: 900; }
+.slot-huruf small { font-size: 0.45em; color: #475569; }
+.slot-huruf.sedang { background: #fef9c3; }
+.slot-huruf.aktif { border-color: #1d4ed8; background: #dbeafe; }
+.tebak-huruf .keys { grid-template-columns: repeat(9, min(7cqw, 8.5cqh)); }
+.key.coba { opacity: 0.3; }
+.isi-tabel { display: flex; flex-direction: column; gap: 0.4cqmin; font-family: ui-monospace, Menlo, Consolas, monospace; font-weight: 800; font-size: clamp(0.6rem, 3cqmin, 1.4rem); }
+.isi-baris { display: flex; gap: 0.3em; }
+.isi-baris > * { width: 4.2em; height: 1.8em; display: grid; place-items: center; }
+.isi-baris.kepala span { font-size: 0.75em; color: var(--muted); }
+.isi-tetap { background: #f1f5f9; border-radius: 0.3em; }
+@container (max-height: 520px) {
+  .prov span { display: none; }
+  .prov-log { display: none; }
+  .tebak-huruf .templat { font-size: clamp(0.5rem, 3.6cqh, 1rem); }
+  .tebak-huruf .templat .btn { font-size: inherit; padding: 0.2em 0.8em; }
+  .tebak-huruf .prov { font-size: clamp(0.5rem, 3.6cqh, 1rem); }
+  .tebak-huruf .prov-ubin { max-width: 40cqw; }
+  .tebak-huruf .prov-wilayah > small { font-size: clamp(0.45rem, 3.4cqh, 0.8rem); }
+  .tebak-huruf > .prompt, .tebak-huruf > .reveal { font-size: clamp(0.55rem, 4.2cqh, 1.2rem); }
+}
