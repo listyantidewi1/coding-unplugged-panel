@@ -3638,3 +3638,83 @@ code.beda { background: #fee2e2 !important; color: #991b1b !important; }
 .sq-tebak .opt { min-height: 0; padding-block: 0.5em; }
 .sq-tebak .opt-label { white-space: normal; font-size: clamp(0.85rem, 3cqmin, 1.6rem); line-height: 1.3; }
 .sq-tebak .sq-alur { max-width: 70em; }
+
+/* smp-kit (sk-) shared by the SMP coding activities */
+.sk-baris-baris { display: flex; flex-direction: column; gap: 0.8cqmin; width: 100%; max-width: 76em; font-size: clamp(0.8rem, 3.1cqmin, 1.65rem); }
+.sk-baris { display: flex; gap: 1em; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: 0.35em 0.8em; border: 2px solid #cbd5e1; border-radius: 0.7em; background: #fff; color: #111827; text-align: left; }
+.sk-baris > span { flex: 1 1 16em; min-width: 0; }
+.sk-baris .seg-btn { font-size: 0.85em; }
+.sk-baris.beres { border-color: #16a34a; background: #f0fdf4; }
+.sk-baris.beres > b { color: #15803d; }
+.sk-pasang { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 2cqmin; width: 100%; max-width: 84em; }
+.sk-kol { display: flex; flex-direction: column; gap: 0.8cqmin; }
+.sk-item { display: flex; flex-wrap: wrap; gap: 0.3em 0.6em; align-items: center; padding: 0.45em 0.8em; border: 2px solid #94a3b8; border-radius: 0.7em; background: #fff; color: #111827; font: inherit; font-size: clamp(0.8rem, 3cqmin, 1.6rem); text-align: left; cursor: pointer; }
+.sk-item em { margin-left: auto; color: #15803d; font-weight: 800; font-style: normal; font-size: 0.85em; }
+.sk-item.pilih { outline: 4px solid #f59e0b; }
+.sk-item.beres { border-color: #16a34a; background: #f0fdf4; }
+.sk-set { display: flex; flex-wrap: wrap; gap: 1cqmin; justify-content: center; max-width: 80em; }
+.sk-chip { padding: 0.4em 0.9em; border: 3px solid #94a3b8; border-radius: 0.8em; background: #fff; color: #111827; font: inherit; font-weight: 700; font-size: clamp(0.85rem, 3.2cqmin, 1.7rem); cursor: pointer; }
+.sk-chip.on { border-color: #2563eb; background: #dbeafe; color: #1e3a8a; }
+.sk-kode { margin: 0; padding: 0.5em 0.8em 0.5em 3em; border-radius: 0.7em; background: #1e293b; color: #e2e8f0; font-size: clamp(0.7rem, 2.6cqmin, 1.4rem); text-align: left; }
+.sk-kode li { padding: 0.05em 0.4em; border-radius: 0.3em; white-space: pre-wrap; }
+.sk-kode li::marker { color: #64748b; }
+.sk-kode code { font-family: ui-monospace, monospace; }
+.sk-kode li.hl { background: #facc15; color: #111827; }
+.sk-kode li.warn { background: #7f1d1d; color: #fff; }
+.sk-var { display: flex; flex-wrap: wrap; gap: 0.6em; font-size: clamp(0.75rem, 2.8cqmin, 1.5rem); }
+.sk-var > div { display: flex; flex-direction: column; align-items: center; min-width: 4.5em; padding: 0.25em 0.6em; border: 2px solid #94a3b8; border-radius: 0.6em; background: #fff; color: #111827; }
+.sk-var small { color: #475569; font-family: ui-monospace, monospace; }
+.sk-var b { font-family: ui-monospace, monospace; font-size: 1.2em; }
+.sk-var .ubah { border-color: #f59e0b; background: #fffbeb; }
+
+/* smp-26 Diagram Alir Pendaftaran Ekskul (fa-) */
+.fa-bagan { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-flow: column; gap: 0.5cqmin 1.2cqmin; width: 100%; font-size: clamp(0.65rem, 2.3cqmin, 1.25rem); }
+.fa-bagan.kecil { font-size: clamp(0.55rem, 1.9cqmin, 1.05rem); }
+.fa-kotak { display: flex; flex-direction: column; justify-content: center; gap: 0.1em; min-height: 3em; padding: 0.3em 1.4em; color: #111827; text-align: left; transition: transform 0.15s, box-shadow 0.15s; }
+.fa-isi { display: flex; gap: 0.5em; align-items: baseline; }
+.fa-no { flex: none; display: inline-grid; place-items: center; min-width: 1.6em; height: 1.6em; border-radius: 50%; background: #1e293b; color: #fff; font-size: 0.85em; }
+.fa-panah { color: #334155; font-family: ui-monospace, monospace; font-weight: 700; font-size: 0.8em; padding-left: 2.2em; }
+.fa-kotak.s-oval { border-radius: 999px; background: #bbf7d0; }
+.fa-kotak.s-proses { border-radius: 0.2em; background: #bfdbfe; }
+.fa-kotak.s-io { border-radius: 0.2em; background: #e9d5ff; clip-path: polygon(0.9em 0, 100% 0, calc(100% - 0.9em) 100%, 0 100%); }
+.fa-kotak.s-kep { background: #fed7aa; clip-path: polygon(1.1em 0, calc(100% - 1.1em) 0, 100% 50%, calc(100% - 1.1em) 100%, 1.1em 100%, 0 50%); }
+.fa-kotak.lewat { box-shadow: inset 0 0 0 3px #2563eb; }
+.fa-kotak.s-io.lewat, .fa-kotak.s-kep.lewat { filter: saturate(1.6) brightness(0.95); }
+.fa-kotak.token { transform: scale(1.04); filter: drop-shadow(0 0 6px #facc15) brightness(1.05); outline: 4px solid #facc15; }
+.fa-kotak.buruk { background: #fecaca !important; }
+.fa-main { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 1.5cqmin; align-items: start; width: 100%; }
+.fa-main.susun { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); }
+.fa-samping { display: flex; flex-direction: column; gap: 0.8cqmin; min-width: 0; font-size: clamp(0.7rem, 2.5cqmin, 1.35rem); text-align: left; }
+.fa-baris-tombol { display: flex; flex-wrap: wrap; gap: 0.6em; align-items: center; justify-content: center; }
+.fa-info { margin: 0; padding: 0.3em 0.6em; border-radius: 0.5em; background: #f1f5f9; color: #0f172a; font-size: clamp(0.75rem, 2.6cqmin, 1.4rem); }
+.fa-form { margin: 0; padding: 0.35em 0.7em; border: 2px dashed #7c3aed; border-radius: 0.6em; background: #faf5ff; color: #3b0764; font-size: clamp(0.75rem, 2.7cqmin, 1.45rem); font-weight: 700; }
+.fa-peringatan { margin: 0; padding: 0.4em 0.7em; border: 2px solid #dc2626; border-radius: 0.6em; background: #fef2f2; color: #991b1b; font-weight: 800; font-size: clamp(0.75rem, 2.6cqmin, 1.4rem); }
+.fa-selesai { margin: 0; padding: 0.3em 0.7em; border-radius: 0.6em; background: #dcfce7; color: #14532d; font-weight: 800; }
+.fa-log { margin: 0; padding-left: 1.4em; font-family: ui-monospace, monospace; font-size: 0.9em; }
+.fa-log em { color: #15803d; font-style: normal; font-weight: 800; }
+.fa-log li.loop, .fa-log li.loop em { color: #b91c1c; }
+.fa-tabel { border-collapse: collapse; background: #fff; color: #111827; font-size: clamp(0.65rem, 2.3cqmin, 1.25rem); text-align: left; }
+.fa-tabel th, .fa-tabel td { padding: 0.15em 0.5em; border: 1.5px solid #cbd5e1; }
+.fa-tabel th { background: #e2e8f0; }
+.fa-tabel td.n { text-align: right; }
+.fa-tabel tr.hl td { background: #fef08a; }
+.fa-tabel tr.penuh td:last-child { color: #b91c1c; font-weight: 800; }
+.fa-tabel.periksa td.ok { color: #15803d; font-weight: 900; text-align: center; }
+.fa-tabel.periksa td.ng { color: #b91c1c; font-weight: 900; text-align: center; }
+.fa-dua { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 1.5cqmin; align-items: center; width: min(88em, 92cqw); }
+.fa-kiri { display: flex; flex-direction: column; gap: 0.8cqmin; min-width: 0; }
+.fa-daftar { display: flex; flex-direction: column; gap: 0.5cqmin; max-height: 62cqh; overflow: auto; font-size: clamp(0.65rem, 2.2cqmin, 1.2rem); }
+.fa-edit { display: flex; flex-wrap: wrap; gap: 0.4em; align-items: center; padding: 0.25em 0.5em; border-radius: 0.5em; background: #f8fafc; border-left: 0.5em solid #94a3b8; }
+.fa-edit.s-oval { border-left-color: #22c55e; } .fa-edit.s-proses { border-left-color: #3b82f6; } .fa-edit.s-io { border-left-color: #a855f7; } .fa-edit.s-kep { border-left-color: #f97316; }
+.fa-edit input { flex: 1 1 10em; min-width: 6em; padding: 0.25em 0.4em; border: 2px solid #94a3b8; border-radius: 0.4em; font: inherit; }
+.fa-edit select { font: inherit; padding: 0.15em; }
+.fa-edit .seg-btn { font-size: 1em; min-width: 2em; }
+.fa-pilih-panah { display: inline-flex; gap: 0.25em; align-items: center; font-family: ui-monospace, monospace; }
+.fa-pengecoh { display: flex; flex-direction: column; gap: 0.8cqmin; align-items: center; width: 100%; max-width: 80em; }
+.fa-pengecoh .sk-baris { width: 100%; box-sizing: border-box; }
+.fa-main.ringkas .fa-bagan { font-size: clamp(0.55rem, 2cqmin, 1.1rem); }
+.fa-bagan.mini { font-size: clamp(0.5rem, 1.6cqmin, 0.9rem); }
+.fa-bagan.mini .fa-kotak { min-height: 2.2em; padding-block: 0.15em; }
+.fa-main.susun .fa-tabel.periksa { font-size: clamp(0.6rem, 2.1cqmin, 1.15rem); }
+.fa-tabel.periksa .seg { display: flex; flex-wrap: nowrap; }
+.fa-tabel.periksa .seg-btn { font-size: 1.1em; }

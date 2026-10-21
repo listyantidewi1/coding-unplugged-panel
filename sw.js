@@ -117,6 +117,8 @@ const FILES = [
   'js/activities/sma-33-dua-langkah.js',
   'js/activities/sql-mini.js',
   'js/activities/sma-34-basis-data.js',
+  'js/activities/smp-kit.js',
+  'js/activities/smp-26-diagram-alir.js',
 ];
 
 self.addEventListener('install', (e) => {
