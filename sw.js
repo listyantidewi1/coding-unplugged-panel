@@ -158,6 +158,7 @@ const FILES = [
   'js/activities/sma-53-dua-kasir.js',
   'js/activities/sma-55-git-kertas.js',
   'js/activities/sma-56-mikrokontroler.js',
+  'js/activities/sma-57-proyek-aplikasi.js',
 ];
 
 self.addEventListener('install', (e) => {
