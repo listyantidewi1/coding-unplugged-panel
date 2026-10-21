@@ -88,6 +88,7 @@ const FILES = [
   'js/activities/sma-04-pohon-cari.js',
   'js/activities/sma-05-gudang-beras.js',
   'js/activities/sma-06-pendaftaran.js',
+  'js/activities/sma-07-pangkat-cepat.js',
 ];
 
 self.addEventListener('install', (e) => {
