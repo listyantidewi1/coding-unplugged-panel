@@ -97,6 +97,7 @@ const FILES = [
   'js/activities/sma-13-jadwal-ujian.js',
   'js/activities/sma-14-menara-bts.js',
   'js/activities/sma-15-pipa-air.js',
+  'js/activities/sma-16-kelas-objek.js',
 ];
 
 self.addEventListener('install', (e) => {
