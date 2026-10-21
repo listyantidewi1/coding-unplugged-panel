@@ -5878,3 +5878,55 @@ button.pls-chip, .pls-pilih { cursor: pointer; }
 .lpy-info { font-weight: 700; text-align: center; max-width: 92cqw; min-height: 1.2em; }
 .lpy-angka { min-width: 2.5em; text-align: center; font-size: clamp(0.9rem, 3.6cqmin, 1.7rem); }
 .lampu-penyeberangan .row.kunci { pointer-events: none; opacity: 0.7; }
+
+/* sdl-31 Detektif Bug */
+.act.detektif-bug { overflow-y: auto; justify-content: safe center; }
+.dtb-soal { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start; gap: 2cqmin; }
+.dtb-kiri { display: flex; flex-direction: column; align-items: center; gap: 1cqmin; min-width: 0; }
+.dtb-tugas { margin: 0; font-weight: 800; text-align: center; font-size: clamp(0.6rem, 2.3cqmin, 1.1rem); }
+.dtb-kode { display: flex; flex-direction: column; gap: 0.1cqmin; padding: 1cqmin 1.4cqmin; border-radius: 1.5cqmin; background: #fefce8; color: #1c1917; font: 800 clamp(0.6rem, 2.3cqmin, 1.1rem)/1.3 ui-monospace, monospace; text-align: left; }
+.dtb-baris { display: flex; gap: 0.8cqmin; padding: 0.1cqmin 0.6cqmin; padding-left: calc(var(--d, 0) * 3cqmin + 0.6cqmin); border-radius: 0.8cqmin; }
+.dtb-baris.nyala { background: #fde68a; box-shadow: inset 0 0 0 max(2px, 0.3cqmin) #ca8a04; }
+.dtb-baris.beda { background: #fecaca; box-shadow: inset 0 0 0 max(2px, 0.3cqmin) #dc2626; }
+.dtb-baris.dipilih { background: #dbeafe; box-shadow: inset 0 0 0 max(2px, 0.3cqmin) #2563eb; }
+.detektif-bug .dtb-pilihan ~ * .dtb-baris, .dtb-soal .dtb-kode .dtb-baris { cursor: default; }
+.dtb-no { min-width: 1.5em; color: #a8a29e; text-align: right; }
+.dtb-peta { display: grid; grid-template-columns: 3cqmin repeat(3, 10cqmin); grid-auto-rows: 6.4cqmin; gap: 0.4cqmin; align-items: stretch; }
+.dtb-tepi { display: grid; place-items: center; font-size: clamp(0.5rem, 1.8cqmin, 0.85rem); color: var(--muted); }
+.dtb-sel { position: relative; display: grid; place-items: center; border-radius: 0.8cqmin; background: #f1f5f9; color: #1c1917; font-weight: 800; font-size: clamp(0.4rem, 1.4cqmin, 0.7rem); text-align: center; line-height: 1.1; }
+.dtb-sel.jejak { background: #dbeafe; }
+.dtb-sel.beda { box-shadow: inset 0 0 0 max(2px, 0.35cqmin) #dc2626; }
+.dtb-sel.taruh::after { content: '🍱'; position: absolute; left: 0.3cqmin; bottom: 0.2cqmin; font-size: 2.6cqmin; }
+.dtb-robot { position: absolute; right: 0.3cqmin; top: 0.2cqmin; font-size: 3cqmin; display: flex; align-items: center; }
+.dtb-robot small { font-size: 2cqmin; }
+.dtb-jejak-tempat { max-height: 36cqh; overflow: auto; }
+.dtb-jejak { border-collapse: collapse; background: #fff; color: #1c1917; font-weight: 700; font-size: clamp(0.5rem, 1.9cqmin, 0.9rem); }
+.dtb-jejak th, .dtb-jejak td { border: 1px solid #cbd5e1; padding: 0.3cqmin 1cqmin; text-align: center; }
+.dtb-jejak th { background: #f1f5f9; }
+.dtb-jejak tr.beda td { background: #fee2e2; }
+.dtb-jejak td.tutup { color: transparent; background: #e2e8f0; }
+.dtb-kantin { position: relative; display: flex; flex-direction: column; gap: 0.6cqmin; width: min(60cqmin, 70cqw); }
+.dtb-lajur { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.6cqmin; }
+.dtb-meja { display: flex; flex-direction: column; align-items: center; gap: 0.2cqmin; padding: 0.6cqmin; border-radius: 1cqmin; background: #fef3c7; color: #431407; font-size: clamp(0.5rem, 1.8cqmin, 0.85rem); min-height: 8cqmin; }
+.dtb-meja.kantin { background: #e2e8f0; }
+.dtb-meja.dapat { background: #dcfce7; }
+.dtb-meja.kosong { background: #fee2e2; box-shadow: inset 0 0 0 max(2px, 0.35cqmin) #dc2626; }
+.dtb-mangkuk { font-size: 3cqmin; min-height: 3cqmin; }
+.dtb-robot-baris { position: relative; left: calc(var(--k, 0) * 20% + 10%); transform: translateX(-50%); width: max-content; font-size: 3.4cqmin; transition: left 0.35s; display: flex; align-items: center; gap: 0.4cqmin; }
+.dtb-robot-baris small { font-size: 1.8cqmin; font-weight: 800; }
+.dtb-porsi { display: flex; flex-direction: column; gap: 0.8cqmin; font-size: clamp(0.6rem, 2.2cqmin, 1.05rem); }
+.dtb-porsi small { color: var(--muted); font-weight: 700; }
+.dtb-batang { display: flex; flex-wrap: wrap; gap: 2px; max-width: 50cqmin; }
+.dtb-batang i { width: 2cqmin; height: 2cqmin; border-radius: 0.4cqmin; animation: dtb-muncul 0.25s backwards; }
+.dtb-batang.serah i { background: #f59e0b; } .dtb-batang.maaf i { background: #64748b; }
+@keyframes dtb-muncul { from { transform: scale(0); } }
+.dtb-info { font-weight: 700; text-align: center; max-width: 92cqw; min-height: 1.2em; }
+.dtb-angka { min-width: 4.5em; text-align: center; font-size: clamp(0.8rem, 3cqmin, 1.4rem); }
+.dtb-pilihan { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1cqmin; width: min(92cqw, 120cqmin); }
+.dtb-pilihan.baris { grid-template-columns: 1fr; width: auto; }
+.dtb-pilih { font: 800 clamp(0.6rem, 2.2cqmin, 1.05rem) system-ui, sans-serif; display: flex; flex-direction: column; gap: 0.3cqmin; padding: 1.2cqmin; border-radius: 1.5cqmin; border: max(2px, 0.35cqmin) solid #cbd5e1; background: #fff; color: #1c1917; cursor: pointer; }
+.dtb-pilih span { color: #b91c1c; font-weight: 700; }
+.dtb-pilih.aktif { background: #fde68a; border-color: #ca8a04; }
+.detektif-bug .btn.aktif { background: #fde68a; }
+.dtb-sel { align-content: start; padding-top: 0.4cqmin; }
+.dtb-robot { top: auto; bottom: 0.1cqmin; }
