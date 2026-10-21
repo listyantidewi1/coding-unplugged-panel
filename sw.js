@@ -104,6 +104,7 @@ const FILES = [
   'js/activities/sma-20-kode-http.js',
   'js/activities/sma-21-sandi-berkunci.js',
   'js/activities/sma-22-arisan-jujur.js',
+  'js/activities/sma-23-kunci-publik.js',
 ];
 
 self.addEventListener('install', (e) => {
