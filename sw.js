@@ -165,6 +165,7 @@ const FILES = [
   'js/activities/sda-15-gambar-perintah.js',
   'js/activities/sda-16-gerak-bernama.js',
   'js/activities/sdl-19-ubin-teras.js',
+  'js/activities/sdl-20-pilah-sampah.js',
 ];
 
 self.addEventListener('install', (e) => {
