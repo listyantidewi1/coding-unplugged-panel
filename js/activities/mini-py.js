@@ -77,7 +77,7 @@ function tokenize(src, line) {
     if (c === '#') break;
     if (c === '"' || c === "'") { let j = i + 1; let v = ''; const ESC = { n: '\n', t: '\t', '\\': '\\', '"': '"', "'": "'" }; while (j < src.length && src[j] !== c) { if (src[j] === '\\' && j + 1 < src.length) { v += ESC[src[j + 1]] ?? `\\${src[j + 1]}`; j += 2; } else v += src[j++]; } if (j >= src.length) throw new PyError('SyntaxError', `unterminated string literal (detected at line ${line + 1})`, line, 'Tanda petik penutup teks hilang.'); t.push({ k: 'str', v }); i = j + 1; continue; }
     if (/[0-9]/.test(c)) { let j = i; while (j < src.length && /[0-9_]/.test(src[j])) j++; let f = false; if (src[j] === '.' && /[0-9]/.test(src[j + 1] || '')) { f = true; j++; while (j < src.length && /[0-9]/.test(src[j])) j++; } const v = Number(src.slice(i, j).replace(/_/g, '')); t.push({ k: 'num', v: f ? new PyFloat(v) : v }); i = j; continue; }
-    if (/[A-Za-z_]/.test(c)) { let j = i; while (j < src.length && /\w/.test(src[j])) j++; const w = src.slice(i, j); t.push(['and', 'or', 'not', 'in', 'True', 'False', 'None'].includes(w) ? { k: 'kw', v: w } : { k: 'name', v: w }); i = j; continue; }
+    if (/[A-Za-z_]/.test(c)) { let j = i; while (j < src.length && /\w/.test(src[j])) j++; const w = src.slice(i, j); t.push(['and', 'or', 'not', 'in', 'is', 'True', 'False', 'None'].includes(w) ? { k: 'kw', v: w } : { k: 'name', v: w }); i = j; continue; }
     const two = src.slice(i, i + 2);
     if (['==', '!=', '<=', '>=', '//', '+=', '-=', '*=', '**'].includes(two)) { t.push({ k: 'op', v: two }); i += 2; continue; }
     if ('+-*/%<>=(),:[].{}&'.includes(c)) { t.push({ k: 'op', v: c }); i++; continue; }
@@ -87,7 +87,7 @@ function tokenize(src, line) {
 }
 
 // ---- expression parser (precedence climbing) ----
-const PREC = { or: 1, and: 2, not: 3, '==': 4, '!=': 4, '<': 4, '>': 4, '<=': 4, '>=': 4, in: 4, '+': 5, '-': 5, '*': 6, '/': 6, '//': 6, '%': 6, '**': 8, '&': 4.5 };
+const PREC = { or: 1, and: 2, not: 3, '==': 4, '!=': 4, '<': 4, '>': 4, '<=': 4, '>=': 4, in: 4, is: 4, '+': 5, '-': 5, '*': 6, '/': 6, '//': 6, '%': 6, '**': 8, '&': 4.5 };
 function parseExpr(toks, line) {
   let p = 0;
   const peek = () => toks[p]; const next = () => toks[p++];
@@ -119,9 +119,9 @@ function parseExpr(toks, line) {
     let l = unary();
     for (;;) {
       const t = peek(); if (!t || !(t.k === 'op' || t.k === 'kw')) break;
-      let op = t.v; if (op === 'not' && toks[p + 1]?.v === 'in') op = 'not in';
-      const pr = PREC[op === 'not in' ? 'in' : op]; if (!pr || pr < min) break;
-      next(); if (op === 'not in') next();
+      let op = t.v; if (op === 'not' && toks[p + 1]?.v === 'in') op = 'not in'; if (op === 'is' && toks[p + 1]?.v === 'not') op = 'is not';
+      const pr = PREC[op === 'not in' ? 'in' : op === 'is not' ? 'is' : op]; if (!pr || pr < min) break;
+      next(); if (op === 'not in' || op === 'is not') next();
       const r = expr(op === '**' ? pr : pr + 1); l = { t: 'bin', op, l, r };
     }
     return l;
@@ -180,6 +180,7 @@ export function parsePy(lines) {
     if ((m = r.s.match(/^from\s+([A-Za-z_]\w*)\s+import\s+([A-Za-z_]\w*(?:\s*,\s*[A-Za-z_]\w*)*)$/))) return { t: 'from', line: L, mod: m[1], names: m[2].split(',').map((x) => x.trim()) };
     if ((m = r.s.match(/^import\s+([A-Za-z_]\w*)$/))) return { t: 'import', line: L, name: m[1] };
     if (r.s === 'break') return { t: 'break', line: L };
+    if (r.s === 'continue') return { t: 'continue', line: L };
     if ((m = r.s.match(/^([A-Za-z_]\w*(?:\.[A-Za-z_]\w*|\[[^=]+\])*)\s*(\+=|-=|\*=)\s*(.+)$/))) return { t: 'aug', line: L, target: parseExpr(tokenize(m[1], L), L), op: m[2][0], e: parseExpr(tokenize(m[3], L), L) };
     if ((m = r.s.match(/^([A-Za-z_]\w*(?:\s*,\s*[A-Za-z_]\w*)+)\s*=(?!=)\s*(.+)$/))) return { t: 'set', line: L, target: { t: 'unpack', names: m[1].split(',').map((x) => x.trim()) }, e: parseExpr(tokenize(m[2], L), L) };
     if ((m = r.s.match(/^([A-Za-z_]\w*(?:\.[A-Za-z_]\w*|\[[^=]+\])*)\s*=(?!=)\s*(.+)$/))) return { t: 'set', line: L, target: parseExpr(tokenize(m[1], L), L), e: parseExpr(tokenize(m[2], L), L) };
@@ -251,6 +252,7 @@ export function makePyRunner(lines, { builtins = {}, vars = {}, limit = 3000, in
       case '&': if (a instanceof PySet && b instanceof PySet) { const [big, small] = b.size > a.size ? [b, a] : [a, b]; const r = new PySet(); for (const x of small.items()) if (big.has(x)) r.add(x); return r; } if (Number.isInteger(a) && Number.isInteger(b)) return a & b; return bad();
       case 'in': if (b instanceof PyDict || b instanceof PySet) return b.has(a); return Array.isArray(b) ? b.some((x) => eq(x, a)) : String(b).includes(a);
       case 'not in': if (b instanceof PyDict || b instanceof PySet) return !b.has(a); return !(Array.isArray(b) ? b.some((x) => eq(x, a)) : String(b).includes(a));
+      case 'is': return a === b || (a == null && b == null); case 'is not': return !(a === b || (a == null && b == null));
       default: throw new PyError('SyntaxError', 'invalid syntax', L);
     }
   }
@@ -265,6 +267,7 @@ export function makePyRunner(lines, { builtins = {}, vars = {}, limit = 3000, in
       if (name === 'append') return (x) => { o.push(x); return null; };
       if (name === 'sort') return (...a) => { const kw = kwOf(a); o.sort(truthy(kw.reverse) ? (x, y) => pyCmp(y, x) : pyCmp); return null; };
       if (name === 'copy') return () => [...o];
+      if (name === 'reverse') return () => { o.reverse(); return null; };
       if (name === 'pop') return (i = o.length - 1) => { if (!o.length) throw new PyError('IndexError', 'pop from empty list', L); return o.splice(i < 0 ? i + o.length : i, 1)[0]; };
       if (name === 'insert') return (i, x) => { o.splice(i, 0, x); return null; };
     }
@@ -350,6 +353,7 @@ export function makePyRunner(lines, { builtins = {}, vars = {}, limit = 3000, in
       case 'assert': { const c = truthy(yield* ev(s.c, L)); tick(L); if (!c) { const msg = s.msg ? pyRepr(yield* ev(s.msg, L)) : ''; throw new PyError('AssertionError', msg, L, 'Kondisi uji bernilai False.'); } yield { line: L, note: 'assert lulus' }; return null; }
       case 'global': tick(L); yield { line: L, note: `${s.names.join(', ')} memakai variabel global` }; return null;
       case 'break': tick(L); yield { line: L, note: 'break' }; return { brk: true };
+      case 'continue': tick(L); yield { line: L, note: 'continue' }; return { cont: true };
       case 'ret': { const v = s.e ? yield* ev(s.e, L) : null; tick(L); yield { line: L, note: `return ${pyRepr(v, true)}` }; return { ret: v }; }
       case 'class': { const base = s.base ? look(s.base, L) : null; if (s.base && (!base || base.py !== 'class')) throw new PyError('TypeError', 'base must be a class', L); const cls = { py: 'class', name: s.name, base, methods: {}, attrs: {} };
         for (const x of s.body) { if (x.t === 'def') cls.methods[x.name] = { ...x, qual: `${s.name}.${x.name}`, cls }; else if (x.t === 'set' && x.target.t === 'var') cls.attrs[x.target.name] = yield* ev(x.e, x.line); }
@@ -357,8 +361,8 @@ export function makePyRunner(lines, { builtins = {}, vars = {}, limit = 3000, in
       case 'from': { const mod = MODS[s.mod]; if (!mod) throw new PyError('ModuleNotFoundError', `No module named '${s.mod}'`, L, 'Modul itu tidak tersedia di layar ini.'); for (const nmx of s.names) { if (!mod[nmx]) throw new PyError('ImportError', `cannot import name '${nmx}' from '${s.mod}'`, L); scope()[nmx] = { py: 'fn', name: nmx, f: mod[nmx] }; } tick(L); yield { line: L, note: `${s.names.join(', ')} dari ${s.mod} siap dipakai` }; return null; }
       case 'def': st.vars[s.name] = { py: 'fn', name: s.name, def: s }; tick(L); yield { line: L, note: `fungsi ${s.name} dibuat` }; return null;
       case 'if': { const c = truthy(yield* ev(s.c, L)); tick(L); yield { line: L, note: `syarat → ${c ? 'True' : 'False'}`, cond: c }; if (c) return yield* block(s.body); if (s.else) return yield* block(s.else); return null; }
-      case 'while': { for (let rounds = 0; ; rounds++) { const c = truthy(yield* ev(s.c, L)); tick(L); if (c && loopLimit && rounds >= loopLimit) throw new PyError('Batas', `Perulangan tidak berhenti: sudah ${loopLimit} putaran dan syaratnya masih True.`, L, 'batas'); yield { line: L, note: `syarat → ${c ? 'True' : 'False'}`, cond: c }; if (!c) return null; const sig = yield* block(s.body); if (sig?.brk) return null; if (sig) return sig; } }
-      case 'for': { const it = yield* ev(s.it, L); const list = typeof it === 'string' ? [...it] : it instanceof PyDict ? [...it.keys()] : it instanceof PySet ? it.items() : it; if (!Array.isArray(list)) throw new PyError('TypeError', `'${pyType(it)}' object is not iterable`, L); for (const x of list) { if (s.v.includes(',')) yield* assign({ t: 'unpack', names: s.v.split(',').map((q) => q.trim()) }, x, L); else scope()[s.v] = x; tick(L); yield { line: L, note: `${s.v} = ${pyRepr(x, true)}` }; const sig = yield* block(s.body); if (sig?.brk) return null; if (sig) return sig; } return null; }
+      case 'while': { for (let rounds = 0; ; rounds++) { const c = truthy(yield* ev(s.c, L)); tick(L); if (c && loopLimit && rounds >= loopLimit) throw new PyError('Batas', `Perulangan tidak berhenti: sudah ${loopLimit} putaran dan syaratnya masih True.`, L, 'batas'); yield { line: L, note: `syarat → ${c ? 'True' : 'False'}`, cond: c }; if (!c) return null; const sig = yield* block(s.body); if (sig?.brk) return null; if (sig && !sig.cont) return sig; } }
+      case 'for': { const it = yield* ev(s.it, L); const list = typeof it === 'string' ? [...it] : it instanceof PyDict ? [...it.keys()] : it instanceof PySet ? it.items() : it; if (!Array.isArray(list)) throw new PyError('TypeError', `'${pyType(it)}' object is not iterable`, L); for (const x of list) { if (s.v.includes(',')) yield* assign({ t: 'unpack', names: s.v.split(',').map((q) => q.trim()) }, x, L); else scope()[s.v] = x; tick(L); yield { line: L, note: `${s.v} = ${pyRepr(x, true)}` }; const sig = yield* block(s.body); if (sig?.brk) return null; if (sig && !sig.cont) return sig; } return null; }
       default: return null;
     }
   }
