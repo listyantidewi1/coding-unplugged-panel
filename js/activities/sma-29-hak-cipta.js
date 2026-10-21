@@ -7,14 +7,14 @@ import { choice } from '../core/kit.js';
 import { say, pickTeams, scoreBar, finishBoard } from './sma-kit.js';
 
 export const FACTS = [['a', 'Hak cipta baru ada setelah karya didaftarkan.', 'S', 'Hak cipta timbul otomatis; pencatatan hanya membantu sebagai bukti.'], ['b', 'Foto yang diunggah di internet tetap dilindungi hak cipta.', 'B', 'Diunggah tidak berarti dilepas haknya.'], ['c', 'Ide cerita tidak dilindungi hak cipta, tetapi tulisan ceritanya dilindungi.', 'B', 'Ide, konsep, dan data tidak dilindungi; wujud karyanya dilindungi.'], ['d', 'Program komputer termasuk ciptaan yang dilindungi.', 'B', 'Program komputer adalah ciptaan.'], ['e', 'Asalkan nama penciptanya disebut, semua cara memakai karya orang lain menjadi boleh.', 'S', 'Atribusi wajib, tetapi tidak menggantikan izin.'], ['f', 'Hak cipta atas sebuah lagu berlaku selama pencipta hidup ditambah 70 tahun setelah ia meninggal.', 'B', 'Masa berlaku hak cipta lagu: seumur hidup pencipta + 70 tahun.']];
-export const SYMBOLS = [['BY', '👤', 'gambar orang', 'R'], ['SA', '🔄', 'panah melingkar', 'S'], ['NC', '💲⃠', 'mata uang dicoret', 'P'], ['ND', '🟰', 'tanda sama dengan', 'Q']];
+export const SYMBOLS = [['BY', '👤', 'gambar orang', 'R'], ['SA', '🔄', 'panah melingkar', 'S'], ['NC', '🚫$', 'mata uang dicoret', 'P'], ['ND', '🟰', 'tanda sama dengan', 'Q']];
 export const MEANING = { P: 'Tidak boleh dipakai untuk tujuan komersial.', Q: 'Karya tidak boleh diubah.', R: 'Nama pencipta wajib dicantumkan.', S: 'Hasil ubahan wajib memakai lisensi yang sama.' };
 export function license(on) {
   const has = (k) => on.includes(k);
   if (!on.length) return { name: 'CC0', valid: true, sell: true, modify: true, note: 'Dilepas ke domain publik: tanpa syarat, tetapi menyebut pencipta tetap baik.' };
   if (!has('BY')) return { name: 'tidak berlaku', valid: false, note: 'Semua lisensi CC (kecuali CC0) mewajibkan atribusi: BY harus menyala.' };
   if (has('SA') && has('ND')) return { name: 'tidak berlaku', valid: false, note: 'SA mengatur hasil ubahan, padahal ND melarang mengubah: keduanya tidak bisa bersama.' };
-  const name = ['CC BY', has('NC') && 'NC', has('SA') && 'SA', has('ND') && 'ND'].filter(Boolean).join('-').replace('CC BY-', 'CC BY-');
+  const name = ['CC BY', has('NC') && 'NC', has('SA') && 'SA', has('ND') && 'ND'].filter(Boolean).join('-');
   return { name, valid: true, sell: !has('NC'), modify: !has('ND'), note: [has('NC') ? 'tidak boleh dijual' : 'boleh dijual', has('ND') ? 'tidak boleh diubah' : has('SA') ? 'boleh diubah, hasil ubahan berlisensi sama' : 'boleh diubah', 'wajib atribusi'].join(' · ') };
 }
 export const LICENSES = [['CC BY', ['BY']], ['CC BY-SA', ['BY', 'SA']], ['CC BY-NC', ['BY', 'NC']], ['CC BY-ND', ['BY', 'ND']], ['CC BY-NC-ND', ['BY', 'NC', 'ND']], ['CC0 (domain publik)', []]];
@@ -90,7 +90,7 @@ function caseRound(wrap, ctx, { cases, done }) {
   let k = 0;
   const msg = el('p', { class: 'reveal info' }, 'Pilih: boleh, boleh dengan syarat, atau tidak boleh.');
   const host = el('div', { class: 'hc-kasus-wadah' });
-  const draw = (last) => host.replaceChildren(
+  const draw = (last) => host.replaceChildren(...[
     k < cases.length ? el('div', { class: 'hc-kasus' }, el('b', null, `Kasus ${cases[k][0]}`), el('p', null, cases[k][1])) : null,
     k < cases.length ? el('div', { class: 'hc-keranjang' }, VERDICT.map(([v, l]) => onTap(el('button', { class: `hc-kotak v-${v}`, type: 'button' }, l), () => {
       const c = cases[k];
@@ -98,21 +98,22 @@ function caseRound(wrap, ctx, { cases, done }) {
       ctx.sound.good(); k++; draw(c);
       if (k === cases.length) setTimeout(done, 2600);
     }))) : null,
-    last ? el('div', { class: 'hc-bahas' }, el('b', null, `Kasus ${last[0]}: ${VERDICT.find((x) => x[0] === last[2])[1]} · ${LAW[last[3]]}`), el('span', null, last[4]), last[5] ? el('span', { class: 'lain' }, `${last[2] === 'BS' ? '' : 'Cara lain: '}${last[5]}`) : null) : null);
+    last ? el('div', { class: 'hc-bahas' }, el('b', null, `Kasus ${last[0]}: ${VERDICT.find((x) => x[0] === last[2])[1]} · ${LAW[last[3]]}`), el('span', null, last[4]), last[5] ? el('span', { class: 'lain' }, `${last[2] === 'BS' ? '' : 'Cara lain: '}${last[5]}`) : null) : null].filter(Boolean));
   draw();
   wrap.append(el('p', { class: 'prompt' }, `Kasus bazar ${cases[0][0]}–${cases[cases.length - 1][0]}`), host, msg);
 }
 
 function attribBuilder(ctx, { onDone }) {
   const picked = [];
+  const order = ctx.rand.shuffle(PIECES.slice());
   const msg = el('p', { class: 'reveal info' }, 'Ketuk potongan untuk menyusun atribusi: Judul, Pencipta, Sumber, Lisensi, dan keterangan perubahan.');
   const host = el('div', { class: 'hc-atribusi' });
-  const draw = () => host.replaceChildren(el('div', { class: 'hc-potongan' }, ctx.rand.shuffle ? PIECES.filter((p) => !picked.includes(p[0])).map(([k, t]) => onTap(el('button', { class: 'hc-pot', type: 'button' }, t), () => {
+  const draw = () => host.replaceChildren(el('div', { class: 'hc-potongan' }, order.filter((p) => !picked.includes(p[0])).map(([k, t]) => onTap(el('button', { class: 'hc-pot', type: 'button' }, t), () => {
     const p = PIECES.find((x) => x[0] === k);
     if (!p[2]) { ctx.mistake(); say(msg, 'bad', k === 'x2' ? 'Mesin pencari bukan pencipta.' : k === 'x1' ? '"Internet" bukan sumber yang jelas; pakai tautan halaman aslinya.' : 'Kelas 11-2 bukan pemegang hak cipta foto itu.'); return; }
     picked.push(k); ctx.sound.tap(); draw();
     if (PIECES.filter((x) => x[2]).every((x) => picked.includes(x[0]))) { say(msg, '', 'Atribusi lengkap: J-P-S-L ditambah keterangan perubahan.'); onDone?.(); }
-  })) : null), el('div', { class: 'hc-hasil' }, el('b', null, 'Atribusi:'), el('span', null, picked.map((k) => PIECES.find((p) => p[0] === k)[1]).join(', ') || '…'),
+  }))), el('div', { class: 'hc-hasil' }, el('b', null, 'Atribusi:'), el('span', null, picked.map((k) => PIECES.find((p) => p[0] === k)[1]).join(', ') || '…'),
     el('div', { class: 'hc-jpsl' }, ['J', 'P', 'S', 'L', 'U'].map((k) => el('span', { class: picked.includes(k) ? 'ya' : '' }, k === 'U' ? 'Ubah' : k)))), msg);
   draw();
   return host;
@@ -186,8 +187,10 @@ function createCases(root, ctx) {
 }
 function createLicense(root, ctx) {
   const wrap = el('div', { class: 'act hak-cipta' });
-  root.append(wrap, el('p', { class: 'prompt' }, 'Perakit lisensi Creative Commons'), licenseBuilder(ctx));
-  wrap.remove(); root.querySelector('.hc-perakit')?.classList.add('mandiri');
+  const b = licenseBuilder(ctx);
+  b.classList.add('mandiri');
+  wrap.append(el('p', { class: 'prompt' }, 'Perakit lisensi Creative Commons'), b);
+  root.append(wrap);
 }
 function createAttrib(root, ctx) {
   const wrap = el('div', { class: 'act hak-cipta' });
