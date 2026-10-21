@@ -39,6 +39,24 @@ import sdlMesinKantin from './sdl-15-mesin-kantin.js';
 import sdlMesinCerdas from './sdl-16-mesin-cerdas.js';
 import sdlLatihMesin from './sdl-17-latih-mesin.js';
 import sdlDataPribadi from './sdl-18-data-pribadi.js';
+import smpKartuPelajar from './smp-01-kartu-pelajar.js';
+import smpKodeHuruf from './smp-02-kode-huruf.js';
+import smpVideotron from './smp-03-videotron.js';
+import smpLaguMampat from './smp-04-lagu-mampat.js';
+import smpAngkaCek from './smp-05-angka-cek.js';
+import smpTebakHuruf from './smp-06-tebak-huruf.js';
+import smpKoperasi from './smp-07-koperasi.js';
+import smpLoker from './smp-08-loker.js';
+import smpKlasemen from './smp-09-klasemen.js';
+import smpSalaman from './smp-10-salaman.js';
+import smpGotongRoyong from './smp-11-gotong-royong.js';
+import smpOjek from './smp-12-ojek.js';
+import smpMejaBundar from './smp-13-meja-bundar.js';
+import smpAmplopBerlapis from './smp-14-amplop-berlapis.js';
+import smpKembalian from './smp-15-kembalian.js';
+import smpGerbangTol from './smp-16-gerbang-tol.js';
+import smpKomputerKertas from './smp-17-komputer-kertas.js';
+import smpSandiGeser from './smp-18-sandi-geser.js';
 
 export const JENJANG = [
   { id: 'paud', label: 'PAUD', detail: '4–6 tahun' },
@@ -55,6 +73,8 @@ export const activities = [
   paudGerakUlang, paudJikaLampu, paudAyamTersesat, paudYaTidak, paudTombol,
   sdaMotifBatik, sdaRumahAdat, sdaRumahNenek, sdaResep, sdaSenamPagi, sdaJikaHujan, sdaRuteSalah, sdaTimbangan, sdaGambarRahasia, sdaTabelHewan, sdaCariHalaman, sdaBarisUpacara, sdaTombolLift,
   sdlLampuGapura, sdlPikselWarna, sdlSandiSenter, sdlHematKuota, sdlAnyamanRusak, sdlKartuData, sdlCariRumah, sdlRakBuku, sdlRelKereta, sdlCariKata, sdlGulaKurang, sdlKancil, sdlKurirKampung, sdlMerpatiPos, sdlMesinKantin, sdlMesinCerdas, sdlLatihMesin, sdlDataPribadi,
+  smpKartuPelajar, smpKodeHuruf, smpVideotron, smpLaguMampat, smpAngkaCek, smpTebakHuruf, smpKoperasi, smpLoker, smpKlasemen, smpSalaman, smpGotongRoyong, smpOjek,
+  smpMejaBundar, smpAmplopBerlapis, smpKembalian, smpGerbangTol, smpKomputerKertas, smpSandiGeser,
 ]
   .sort((a, b) => order(a) - order(b) || a.id.localeCompare(b.id));
 
