@@ -1,6 +1,6 @@
 // Offline support: cache the app shell so a panel keeps working when the
 // school network drops. Bump VERSION whenever files change.
-const VERSION = 'cu-v8';
+const VERSION = 'cu-v9';
 const FILES = [
   './',
   'index.html',
@@ -16,6 +16,9 @@ const FILES = [
   'js/core/kisi.js',
   'js/activities/registry.js',
   'js/activities/meta.js',
+  'fonts/noto-sans-javanese.woff2',
+  'fonts/noto-sans-sundanese.woff2',
+  'fonts/noto-sans-balinese.woff2',
   'js/activities/paud-01-pola.js',
   'js/activities/paud-02-kelompok.js',
   'js/activities/urutan.js',
@@ -78,6 +81,7 @@ const FILES = [
   'js/activities/smp-23-jejak-digital.js',
   'js/activities/smp-24-deepfake.js',
   'js/activities/smp-25-chatbot.js',
+  'js/activities/sma-01-aksara-unicode.js',
 ];
 
 self.addEventListener('install', (e) => {
