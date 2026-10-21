@@ -1,6 +1,6 @@
 // Offline support: cache the app shell so a panel keeps working when the
 // school network drops. Bump VERSION whenever files change.
-const VERSION = 'cu-v7';
+const VERSION = 'cu-v8';
 const FILES = [
   './',
   'index.html',
@@ -15,6 +15,7 @@ const FILES = [
   'js/core/peta.js',
   'js/core/kisi.js',
   'js/activities/registry.js',
+  'js/activities/meta.js',
   'js/activities/paud-01-pola.js',
   'js/activities/paud-02-kelompok.js',
   'js/activities/urutan.js',
