@@ -269,7 +269,8 @@ function splitArgs(s) {
 // run(lines, opts) → { gen, state }. Each next() runs up to one line and yields
 // { line, note }. state: { vars (global), frames, out, rows, steps }.
 export function makeRunner(lines, { vars = {}, input = {}, builtins = {}, limit = 2000, custom = [] } = {}) {
-  const prog = parseProgram(lines, { custom });
+  let prog; let parseError = null;
+  try { prog = parseProgram(lines, { custom }); } catch (e) { if (!(e instanceof PseudoError)) throw e; parseError = new PseudoError(`Kesalahan sintaks: ${e.message} Program tidak bisa dijalankan sama sekali.`, e.line, 'sintaks'); prog = []; }
   const usesRows = prog && JSON.stringify(prog, (k, v) => (typeof v === 'function' ? undefined : v)).includes('"t":"nl"');
   const st = { vars: { ...clone(vars) }, frames: [], funcs: {}, out: [], row: [], steps: 0, done: false, error: null, calls: [], current: null };
   const B = { ...BUILTINS, ...builtins };
@@ -390,6 +391,7 @@ export function makeRunner(lines, { vars = {}, input = {}, builtins = {}, limit 
     }
   }
   function* main() {
+    if (parseError) { st.error = parseError; return; }
     try { yield* block(prog); if (st.row.length) { st.out.push(st.row.join(' ')); st.row = []; } st.done = true; }
     catch (e) { if (!(e instanceof PseudoError)) throw e; if (e.line === null) e.line = st.current; st.error = e; }
   }
