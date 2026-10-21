@@ -1507,3 +1507,32 @@ button.bit-sel { cursor: pointer; }
   .koperasi .catatan-baris { font-size: clamp(0.6rem, 5cqh, 1.2rem); }
   .koperasi .keys.keypad { grid-template-columns: repeat(11, min(4.5cqw, 8cqh)); }
 }
+
+/* Loker */
+.loker { gap: 1cqmin; }
+.lorong { display: flex; gap: 0.5cqmin; justify-content: center; flex-wrap: wrap; max-width: 96cqw; }
+.loker-pintu { font: inherit; display: flex; flex-direction: column; align-items: center; justify-content: space-between; width: min(8cqw, 12cqh); aspect-ratio: 0.62; padding: 0.3em 0.1em; border-radius: 0.6cqmin; border: max(2px, 0.4cqmin) solid #92400e; background: linear-gradient(#fde68a, #f59e0b); cursor: pointer; color: #1f2937; font-size: clamp(0.5rem, 2.2cqmin, 1.05rem); }
+.loker-pintu small { font-weight: 900; background: #fff; border-radius: 0.3em; padding: 0 0.3em; }
+.loker-pintu b { font-size: 0.8em; writing-mode: vertical-rl; transform: rotate(180deg); letter-spacing: 0.05em; }
+.loker-pintu.kosong { background: linear-gradient(#f1f5f9, #cbd5e1); border-color: #64748b; }
+.loker-pintu.tutup { background: repeating-linear-gradient(#b45309 0 6%, #92400e 6% 8%); }
+.loker-pintu.buka { outline: max(3px, 0.5cqmin) solid #1d4ed8; }
+.loker-pintu.hi, .loker-pintu.kilat { outline: max(4px, 0.7cqmin) solid #dc2626; transform: translateY(-4%); }
+.antre { display: flex; gap: 0.4em; justify-content: center; flex-wrap: wrap; font-weight: 800; font-size: clamp(0.55rem, 2.6cqmin, 1.2rem); margin-bottom: 0.6cqmin; }
+.antre span { padding: 0.1em 0.5em; border-radius: 0.4em; background: #f1f5f9; }
+.antre .aktif { background: #1d4ed8; color: #fff; } .antre .lewat { opacity: 0.35; }
+.hash-baris { display: flex; flex-direction: column; align-items: center; gap: 1cqmin; }
+.huruf-nilai { display: flex; gap: 0.3em; }
+.huruf-nilai span { display: flex; flex-direction: column; align-items: center; min-width: 1.6em; padding: 0.1em 0.3em; border-radius: 0.4em; background: #eef2ff; font-size: clamp(0.9rem, 5cqmin, 2.4rem); }
+.huruf-nilai small { font-size: 0.5em; color: #4338ca; font-weight: 800; }
+.hash-isi { display: flex; align-items: center; gap: 0.4em; font-weight: 800; font-size: clamp(0.7rem, 3.4cqmin, 1.6rem); }
+.hash-isi .ck-isi { width: 2.6em; }
+.ketik-nama { min-width: 8em; padding: 0.2em 0.6em; border-radius: 0.5em; background: #f1f5f9; font-size: clamp(0.7rem, 3cqmin, 1.4rem); }
+.loker .keys { grid-template-columns: repeat(9, min(6cqw, 7cqh)); }
+@container (max-height: 520px) {
+  .loker > .prompt, .loker > .reveal { font-size: clamp(0.55rem, 4.2cqh, 1.2rem); }
+  .loker .loker-pintu { width: min(7.5cqw, 15cqh); font-size: clamp(0.45rem, 3.4cqh, 0.9rem); }
+  .loker .huruf-nilai span { font-size: clamp(0.8rem, 8cqh, 2rem); }
+  .loker .hash-isi { font-size: clamp(0.65rem, 5.5cqh, 1.3rem); }
+  .loker .keys.keypad { grid-template-columns: repeat(11, min(5cqw, 9cqh)); }
+}
