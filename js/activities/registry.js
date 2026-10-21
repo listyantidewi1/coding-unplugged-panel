@@ -12,6 +12,16 @@ import paudYaTidak from './paud-09-ya-tidak.js';
 import paudTombol from './paud-10-tombol.js';
 import sdaGambarRahasia from './sda-09-gambar-rahasia.js';
 import { sdaTimbangan, sdlLampuGapura } from './bit-sum.js';
+import { sdaRumahNenek, sdaRuteSalah } from './kampung.js';
+import sdaMotifBatik from './sda-01-motif-batik.js';
+import sdaRumahAdat from './sda-02-rumah-adat.js';
+import sdaResep from './sda-04-resep.js';
+import sdaSenamPagi from './sda-05-senam-pagi.js';
+import sdaJikaHujan from './sda-06-jika-hujan.js';
+import sdaTabelHewan from './sda-10-tabel-hewan.js';
+import sdaCariHalaman from './sda-11-cari-halaman.js';
+import sdaBarisUpacara from './sda-12-baris-upacara.js';
+import sdaTombolLift from './sda-13-tombol-lift.js';
 
 export const JENJANG = [
   { id: 'paud', label: 'PAUD', detail: '4–6 tahun' },
@@ -26,7 +36,7 @@ const order = (a) => JENJANG.findIndex((j) => j.id === a.jenjang);
 export const activities = [
   paudPola, paudKelompok, paudLangkah, paudAntarAyam, paudKacangHijau,
   paudGerakUlang, paudJikaLampu, paudAyamTersesat, paudYaTidak, paudTombol,
-  sdaTimbangan, sdaGambarRahasia,
+  sdaMotifBatik, sdaRumahAdat, sdaRumahNenek, sdaResep, sdaSenamPagi, sdaJikaHujan, sdaRuteSalah, sdaTimbangan, sdaGambarRahasia, sdaTabelHewan, sdaCariHalaman, sdaBarisUpacara, sdaTombolLift,
   sdlLampuGapura,
 ]
   .sort((a, b) => order(a) - order(b) || a.id.localeCompare(b.id));

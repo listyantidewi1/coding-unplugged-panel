@@ -5,6 +5,7 @@
 //   sda-08-timbangan    — anak timbangan pedagang pasar (8 4 2 1 kg)
 
 import { el, onTap } from '../core/util.js';
+import { choice } from '../core/kit.js';
 
 const popcount = (x) => x.toString(2).replace(/0/g, '').length;
 
@@ -33,45 +34,98 @@ function makeRow(values, skin, onChange) {
     bits: el('div', { class: 'bits', style: { '--k': values.length } }, bitEls),
     sum: () => values.reduce((s, v, i) => s + (on[i] ? v : 0), 0),
     lock() { items.forEach((x) => x.classList.add('locked')); },
+    // Shows the items for number n as switched on (for reading a code).
+    show(n) {
+      values.forEach((v, i) => {
+        on[i] = (n & v) !== 0;
+        items[i].classList.toggle('on', on[i]);
+        bitEls[i].textContent = on[i] ? '1' : '0';
+      });
+    },
   };
 }
 
-function bitSum({ values, skin, opening, prompt, freePrompt, ...meta }) {
+// Opening items are numbers to build, or { baca: n } to read n's code back.
+function bitSum({ values, skin, opening, prompt, readPrompt, freePrompt, extraModes = [], ...meta }) {
   const max = values.reduce((a, b) => a + b, 0);
 
-  function scene(row, target) {
-    return skin.scene ? skin.scene(row, target) : row.row;
+  function scene(row, target, label) {
+    return skin.scene ? skin.scene(row, target, label) : row.row;
   }
+
+  // Build a number: switch items on until the sum is the target.
+  function buildRound(wrap, ctx, vals, target, next) {
+    let done = false;
+    const row = makeRow(vals, skin, () => {
+      ctx.sound.tap();
+      update();
+      if (!done && row.sum() === target) {
+        done = true;
+        row.lock();
+        row.bits.classList.add('correct');
+        next();
+      }
+    });
+    const view = scene(row, target);
+    const update = () => view.update?.(row.sum());
+    wrap.replaceChildren(
+      el('p', { class: 'prompt' }, prompt),
+      el('div', { class: 'target' }, skin.unit ? `${target} ${skin.unit}` : target),
+      view.node || view, row.bits);
+    update();
+  }
+
+  // Read a code: the items for n are already on; pick the number.
+  function readRound(wrap, ctx, vals, n, next) {
+    const top = vals.reduce((a, b) => a + b, 0);
+    const row = makeRow(vals, skin, () => {});
+    row.show(n);
+    row.lock();
+    const view = scene(row, n, '?');
+    view.update?.(n);
+    const near = [n, n + 1, n - 1, n + 2, n - 2, n + 4].filter((x) => x >= 1 && x <= top);
+    const opts = ctx.rand.shuffle([...new Set(near)].slice(0, 4));
+    wrap.replaceChildren();
+    choice(wrap, {
+      prompt: readPrompt,
+      subject: el('div', { class: 'read-code' }, view.node || view, row.bits),
+      ctx, columns: opts.length, onRight: next,
+      options: opts.map((x) => ({ label: skin.unit ? `${x} ${skin.unit}` : String(x), correct: x === n })),
+    });
+  }
+
+  // Endless practice with the given values, for extra modes.
+  const practice = (vals, kind, min = 1) => (root, ctx) => {
+    const wrap = el('div', { class: 'act bitsum' });
+    root.append(wrap);
+    const top = vals.reduce((a, b) => a + b, 0);
+    const go = () => {
+      const n = min + Math.floor(Math.random() * (top - min + 1));
+      const next = () => { ctx.sound.good(); setTimeout(go, 1400); };
+      if (kind === 'baca') readRound(wrap, ctx, vals, n, next);
+      else buildRound(wrap, ctx, vals, n, next);
+    };
+    go();
+  };
 
   return {
     ...meta,
     maxPlayers: 4,
-    extraModes: [{ id: 'kreasi', icon: '🔎', label: 'Jelajah Bebas', desc: 'Coba sendiri, lihat angkanya', create: createFree }],
+    extraModes: [
+      ...extraModes.map((m) => ({ ...m, create: practice(m.values || values, m.kind, m.min) })),
+      { id: 'kreasi', icon: '🔎', label: 'Jelajah Bebas', desc: 'Coba sendiri, lihat angkanya', create: createFree },
+    ],
     create(root, ctx) {
       const wrap = el('div', { class: 'act bitsum' });
       root.append(wrap);
-      const list = targets(ctx.rand, ctx.total, max, opening);
+      const fixed = opening.filter((x) => typeof x === 'number');
+      const list = [...opening, ...targets(ctx.rand, ctx.total, max, fixed).filter((x) => !fixed.includes(x))];
 
       function render() {
-        const target = list[ctx.round];
-        let done = false;
-        const row = makeRow(values, skin, () => {
-          ctx.sound.tap();
-          update();
-          if (!done && row.sum() === target) {
-            done = true;
-            row.lock();
-            row.bits.classList.add('correct');
-            if (ctx.solved()) setTimeout(render, 1400);
-          }
-        });
-        const view = scene(row, target);
-        const update = () => view.update?.(row.sum());
-        wrap.replaceChildren(
-          el('p', { class: 'prompt' }, prompt),
-          el('div', { class: 'target' }, skin.unit ? `${target} ${skin.unit}` : target),
-          view.node || view, row.bits);
-        update();
+        const item = list[ctx.round];
+        const next = () => { if (ctx.solved()) setTimeout(render, 1400); };
+        if (typeof item === 'object') readRound(wrap, ctx, values, item.baca, next);
+        else buildRound(wrap, ctx, values, item, next);
       }
       render();
     },
@@ -106,10 +160,10 @@ const weightSkin = {
   unit: 'kg',
   item: (v) => el('button', { class: 'weight', type: 'button', 'aria-pressed': 'false', 'aria-label': `anak timbangan ${v} kilogram` },
     el('span', null, `${v} kg`)),
-  scene(row, target) {
+  scene(row, target, label = target) {
     const onPan = el('span', { class: 'sack' });
     const beam = el('div', { class: 'beam' },
-      el('div', { class: 'pan left' }, el('span', { class: 'sack' }, target == null ? '' : `🛍️ ${target} kg`)),
+      el('div', { class: 'pan left' }, el('span', { class: 'sack' }, target == null ? '' : `🛍️ ${label} kg`)),
       el('div', { class: 'pan right' }, onPan));
     const node = el('div', { class: 'scale-scene' }, el('div', { class: 'scale' }, beam, el('div', { class: 'post' })), row.row);
     return {
@@ -133,10 +187,16 @@ export const sdaTimbangan = bitSum({
   source: { name: 'CS Unplugged: Binary Numbers', url: 'https://www.csunplugged.org/en/topics/binary-numbers/' },
   values: [8, 4, 2, 1],
   skin: weightSkin,
-  opening: [],
-  rounds: 5,
+  // The worksheet: weigh 3, 6, 9, 12, 15 kg, then read Pak Darto's notes.
+  opening: [3, 6, 9, 12, 15, { baca: 10 }, { baca: 7 }, { baca: 8 }],
+  rounds: 8,
   prompt: 'Pembeli minta ditimbang. Pilih anak timbangan sampai seimbang:',
+  readPrompt: 'Baca catatan Pak Darto. Berapa berat berasnya?',
   freePrompt: 'Letakkan anak timbangan. Berapa kilogram jumlahnya?',
+  extraModes: [
+    { id: 'kebalikan', icon: '🔁', label: 'Baca Catatan', desc: 'Catatan 1 dan 0 tampil, tebak berat berasnya', kind: 'baca' },
+    { id: 'tantangan', icon: '🏋️', label: 'Tantangan 16 kg', desc: 'Tambah anak timbangan 16 kg untuk berat 16 sampai 31 kg', values: [16, 8, 4, 2, 1], min: 16 },
+  ],
   goal: 'Pedagang hanya punya anak timbangan 1, 2, 4, dan 8 kg. Anak menimbang 1–15 kg dan mencatat timbangan yang dipakai (1) atau tidak (0).',
 });
 
@@ -153,6 +213,7 @@ export const sdlLampuGapura = bitSum({
   opening: [17, 8],
   rounds: 5,
   prompt: 'Nyalakan lampu gapura sampai jumlah nilainya tepat:',
+  readPrompt: 'Lampu mana yang menyala? Angka berapa yang tampil?',
   freePrompt: 'Nyalakan dan matikan lampu. Angka berapa yang tampil?',
   goal: 'Lima lampu gapura bernilai 16, 8, 4, 2, 1. Anak menyalakan lampu untuk menampilkan tanggal 17 dan bulan 8, lalu menulis kodenya dengan 0 dan 1.',
 });

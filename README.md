@@ -43,6 +43,12 @@ lalu buka http://localhost:8080.
 
 Ukuran di dalam aktivitas memakai satuan container (`cqmin`, `cqw`, `cqh`) agar tetap terbaca di 1–4 panel.
 
+Komponen bersama yang bisa dipakai ulang:
+
+- `js/core/kit.js`: soal pilihan (`choice`), seret-atau-ketuk (`dnd`), papan urutan (`orderBoard`).
+- `js/core/peta.js`: peta kisi yang dijalankan dengan program panah (dipakai peta kampung `sda-03` dan `sda-07`).
+- `js/activities/bit-sum.js`: mesin bilangan biner (`sda-08` anak timbangan, `sdl-01` lampu gapura).
+
 ## Atribusi
 
 Konsep sebagian aktivitas terinspirasi dari CS Unplugged (csunplugged.org), University of Canterbury.
