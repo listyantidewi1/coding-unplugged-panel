@@ -3197,7 +3197,7 @@ code.beda { background: #fee2e2 !important; color: #991b1b !important; }
 .rp-kartu b { flex: none; display: inline-grid; place-items: center; min-width: 2em; padding: 0.05em 0.3em; border-radius: 0.3em; background: #7c3aed; color: #fff; }
 .rp-kartu.x b { background: #dc2626; }
 .rp-slot-slot { display: flex; flex-direction: column; gap: 0.4em; flex: 1 1 24em; max-width: 36em; }
-.rp-slot-slot.kecil { flex-direction: row; flex-wrap: wrap; max-width: none; width: 100%; }
+.rp-slot-slot.kecil { flex: none; flex-direction: row; flex-wrap: wrap; max-width: none; width: 100%; }
 .rp-slot-slot.kecil .rp-slot { flex: 1 1 10em; }
 .rp-slot { display: flex; flex-direction: column; gap: 0.1em; padding: 0.3em 0.6em; border: 2px dashed #94a3b8; border-radius: 0.5em; background: #f8fafc; color: #111827; font-size: clamp(0.55rem, 2.1cqmin, 1.2rem); text-align: left; cursor: pointer; }
 .rp-slot.isi { border-style: solid; border-color: #7c3aed; background: #f5f3ff; }

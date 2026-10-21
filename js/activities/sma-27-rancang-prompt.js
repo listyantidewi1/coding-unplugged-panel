@@ -187,7 +187,7 @@ function createTeams(root, ctx) {
       const taken = Object.values(slots[t]);
       wrap.replaceChildren(scoreBar(slots.map((s) => Object.values(s).filter(Boolean).length), t, '/6 slot'), el('p', { class: 'prompt' }, `Tim ${t + 1}: isi satu slot`),
         el('div', { class: 'rp-slot-slot kecil' }, COMPONENTS.map(([c, n]) => el('div', { class: `rp-slot ${slots[t][c] ? 'isi' : ''}` }, el('b', null, `${c} · ${n}`), el('span', null, slots[t][c] || '—')))),
-        el('div', { class: 'rp-kartu-kartu' }, CARDS.filter(([id, comp]) => !taken.includes(id) && (!comp || !slots[t][comp])).map(([id, comp, txt]) => onTap(el('button', { class: 'rp-kartu', type: 'button' }, el('b', null, id), el('span', null, txt)), () => {
+        el('div', { class: 'rp-kartu-kartu' }, CARDS.filter(([id, comp]) => !taken.includes(id) && (!comp || !slots[t][comp])).map(([id, comp, txt]) => onTap(el('button', { class: `rp-kartu ${comp ? '' : 'x'}`, type: 'button' }, el('b', null, id), el('span', null, txt)), () => {
           if (!comp) { ctx.sound.bad(); say(msg, 'bad', `⚠️ Kartu X memuat data pribadi. Giliran Tim ${t + 1} hangus.`); k++; setTimeout(turn, 2200); return; }
           slots[t][comp] = id; ctx.sound.tap(); k++; turn();
         }))), msg);
