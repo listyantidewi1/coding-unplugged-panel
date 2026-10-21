@@ -87,6 +87,7 @@ import KodeHttp from './sma-20-kode-http.js';
 import SandiBerkunci from './sma-21-sandi-berkunci.js';
 import ArisanJujur from './sma-22-arisan-jujur.js';
 import KunciPublik from './sma-23-kunci-publik.js';
+import BankSampah from './sma-24-bank-sampah.js';
 
 export const JENJANG = [
   { id: 'paud', label: 'PAUD', detail: '4–6 tahun' },
@@ -108,6 +109,7 @@ export const activities = [
   smpJejakDigital, smpDeepfake, smpChatbot,
   smaAksaraUnicode, smaKodeHemat, smaAntreanTumpukan, smaPohonCari, smaGudangBeras, smaPendaftaran, smaPangkatCepat, smaPentasSeni, smaKabelDusun, smaBagasi, smaMudahDicek,
   smaKurirKeliling, smaJadwalUjian, smaMenaraBts, smaPipaAir, smaKelasObjek, smaPlatNomor, smaSatuKoki, LabJaringan, KodeHttp, SandiBerkunci, ArisanJujur, KunciPublik,
+  BankSampah,
 ]
   .sort((a, b) => order(a) - order(b) || a.id.localeCompare(b.id));
 

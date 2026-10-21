@@ -2986,3 +2986,70 @@ code.beda { background: #fee2e2 !important; color: #991b1b !important; }
 .kp-stepper { display: inline-flex; align-items: center; gap: 0.4em; }
 .kp-stepper b { min-width: 2em; text-align: center; font-size: 1.3em; }
 @container (max-aspect-ratio: 1/1) { .kp-tukar, .kp-rsa, .kp-ttd { grid-template-columns: 1fr; } .kp-jalur { flex-wrap: wrap; } }
+
+/* sma-24 Aplikasi Bank Sampah */
+.bs-sortir { display: flex; flex-direction: column; gap: 1.2cqmin; width: 100%; }
+.bs-kotak-kotak { display: grid; grid-template-columns: repeat(var(--n, 2), minmax(0, 1fr)); gap: 1cqmin; }
+.bs-sortir.persona .bs-kotak-kotak { --n: 3; }
+.bs-sortir.empati .bs-kotak-kotak, .bs-sortir.matriks .bs-kotak-kotak { --n: 2; }
+.bs-kotak { display: flex; flex-direction: column; gap: 0.4em; min-height: 4.5em; padding: 0.5em 0.7em; border: 3px dashed #94a3b8; border-radius: 0.8em; background: #f8fafc; color: #111827; font-size: clamp(0.6rem, 2.7cqmin, 1.5rem); }
+.bs-sortir.empati .bs-kotak:nth-child(1) { background: #eff6ff; } .bs-sortir.empati .bs-kotak:nth-child(2) { background: #f5f3ff; }
+.bs-sortir.empati .bs-kotak:nth-child(3) { background: #f0fdf4; } .bs-sortir.empati .bs-kotak:nth-child(4) { background: #fff1f2; }
+.bs-sortir.matriks .bs-kotak:nth-child(1) { background: #dcfce7; } .bs-sortir.matriks .bs-kotak:nth-child(4) { background: #fef2f2; }
+.bs-isi { display: flex; flex-wrap: wrap; gap: 0.3em; }
+.bs-isi .bs-kartu { font-size: 0.8em; cursor: default; }
+.bs-baki { display: flex; flex-wrap: wrap; gap: 0.6cqmin; justify-content: center; }
+.bs-kartu { display: flex; gap: 0.5em; align-items: baseline; max-width: 26em; padding: 0.35em 0.7em; border: 2px solid #0f766e; border-radius: 0.5em; background: #fff; color: #111827; font-size: clamp(0.6rem, 2.4cqmin, 1.3rem); cursor: grab; touch-action: none; user-select: none; }
+.bs-kartu b { flex: none; display: inline-grid; place-items: center; min-width: 1.6em; height: 1.6em; border-radius: 50%; background: #0f766e; color: #fff; }
+.bs-kartu.selected { outline: 4px solid #f59e0b; }
+.bs-kartu.locked { border-color: #16a34a; background: #f0fdf4; }
+.bs-persona-persona { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1cqmin; width: 100%; }
+.bs-persona { padding: 0.5em 0.8em; border: 2px solid #cbd5e1; border-radius: 0.8em; background: #fff; color: #111827; font-size: clamp(0.55rem, 2.3cqmin, 1.3rem); text-align: left; }
+.bs-persona ul { margin: 0.3em 0 0; padding-left: 1.1em; }
+.bs-p-kepala { display: flex; gap: 0.5em; align-items: center; }
+.bs-p-kepala div { display: flex; flex-direction: column; }
+.bs-p-ikon { font-size: 2em; }
+.bs-peta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.5em; width: min(100%, 50em); text-align: left; }
+.bs-peta > div { display: flex; flex-direction: column; gap: 0.2em; padding: 0.4em 0.6em; border: 2px solid #cbd5e1; border-radius: 0.6em; background: #fff; color: #111827; font-size: clamp(0.55rem, 2cqmin, 1.1rem); }
+.bs-rumusan { display: flex; flex-direction: column; gap: 0.8cqmin; width: min(100%, 60em); }
+.bs-r-baris { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 0.4em 1em; padding: 0.4em 0.8em; border: 2px solid #cbd5e1; border-radius: 0.6em; background: #fff; color: #111827; font-size: clamp(0.6rem, 2.8cqmin, 1.6rem); }
+.bs-r-baris.beres { border-color: #16a34a; background: #f0fdf4; }
+.bs-r-baris .seg-btn { font-size: 1em; }
+.bs-tabel { border-collapse: collapse; background: #fff; color: #111827; font-size: clamp(0.6rem, 2.4cqmin, 1.3rem); }
+.bs-tabel th, .bs-tabel td { border: 1px solid #cbd5e1; padding: 0.2em 0.6em; text-align: center; }
+.bs-tabel th:first-child, .bs-tabel.cek td:first-child { text-align: left; }
+.bs-tabel td.benar { background: #dcfce7; font-weight: 800; }
+.bs-tabel td.salah { background: #fee2e2; font-weight: 800; }
+.bs-dua { display: flex; flex-direction: column; align-items: center; gap: 0.5em; }
+.bs-harga { margin: 0; font-weight: 700; font-size: clamp(0.6rem, 2.3cqmin, 1.2rem); }
+.bs-batas { display: flex; gap: 1em; align-items: center; justify-content: center; flex-wrap: wrap; font-size: clamp(0.7rem, 2.8cqmin, 1.5rem); }
+.bs-batas .seg-btn { font-size: 1em; }
+.bs-kamera-hasil { display: flex; flex-direction: column; align-items: center; gap: 0.8cqmin; width: 100%; }
+.bs-foto-foto { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 0.5cqmin; width: min(100%, 64em); }
+.bs-foto { display: flex; flex-direction: column; align-items: center; padding: 0.2em; border: 2px solid #cbd5e1; border-radius: 0.5em; background: #fff; color: #111827; font-size: clamp(0.55rem, 2.1cqmin, 1.2rem); }
+.bs-foto.benar { border-color: #86efac; } .bs-foto.salah { border-color: #dc2626; background: #fee2e2; } .bs-foto.tanya { border-color: #f59e0b; background: #fef3c7; }
+.bs-f-ikon { font-size: 2em; }
+.bs-angka, .bs-per-jenis { display: flex; flex-wrap: wrap; gap: 0.4em 1.4em; justify-content: center; font-weight: 800; font-size: clamp(0.6rem, 2.4cqmin, 1.3rem); }
+.bs-angka .buruk { color: #b91c1c; } .bs-angka .baik { color: #15803d; }
+.bs-rakit { display: flex; gap: 2cqmin; align-items: flex-start; justify-content: center; width: 100%; flex-wrap: wrap; }
+.bs-palet { display: flex; flex-direction: column; gap: 0.4em; width: min(100%, 22em); }
+.bs-komp { text-align: left; padding: 0.35em 0.7em; border: 2px solid #94a3b8; border-radius: 0.5em; background: #fff; color: #111827; font: inherit; font-size: clamp(0.6rem, 2.5cqmin, 1.4rem); cursor: pointer; }
+.bs-komp.pakai { opacity: 0.4; }
+.bs-hp { display: flex; flex-direction: column; width: clamp(12em, 30cqmin, 22em); min-height: 24em; border: 0.6em solid #1e293b; border-radius: 1.6em; background: #fff; color: #111827; overflow: hidden; font-size: clamp(0.6rem, 2.5cqmin, 1.4rem); }
+.bs-hp-atas { padding: 0.4em 0.6em; background: #0f766e; color: #fff; font-weight: 800; text-align: center; }
+.bs-hp-layar { display: flex; flex-direction: column; gap: 0.4em; padding: 0.6em; }
+.bs-hp-layar p { margin: 0; font-weight: 700; }
+.bs-hp-layar p.kecil { font-size: 0.6em; font-weight: 400; }
+.bs-hp-komp { padding: 0.35em 0.5em; border: 2px dashed #94a3b8; border-radius: 0.4em; cursor: pointer; }
+.bs-hp-komp.tombol { border-style: solid; border-color: #0f766e; background: #ccfbf1; font-weight: 800; }
+.bs-hp-btn { padding: 0.4em 0.6em; border: 2px solid #0f766e; border-radius: 0.5em; background: #ccfbf1; color: #134e4a; font: inherit; font-weight: 800; text-align: center; cursor: pointer; }
+.bs-hp-btn.ikon { align-self: flex-start; min-width: 2.2em; }
+.bs-kosong { color: #64748b; text-align: center; padding: 2em 0; }
+.bs-cek { display: flex; flex-direction: column; gap: 0.3em; width: min(100%, 22em); font-size: clamp(0.6rem, 2.5cqmin, 1.4rem); text-align: left; }
+.bs-cek > div { display: flex; gap: 0.5em; padding: 0.25em 0.5em; border-radius: 0.4em; background: #f1f5f9; color: #111827; }
+.bs-cek > .ya { background: #dcfce7; } .bs-cek > .tidak { background: #fee2e2; } .bs-cek > .na { color: #64748b; }
+.bs-uji { display: flex; gap: 2cqmin; align-items: flex-start; justify-content: center; flex-wrap: wrap; }
+.bs-skenario { display: flex; flex-direction: column; gap: 0.5em; width: min(100%, 24em); padding: 0.6em 0.9em; border: 2px solid #f59e0b; border-radius: 0.8em; background: #fffbeb; color: #111827; font-size: clamp(0.65rem, 2.8cqmin, 1.6rem); text-align: left; }
+.bs-skenario .seg-btn { font-size: 1em; }
+.bs-hitung { font-weight: 900; font-size: 1.3em; color: #b45309; }
+@container (max-aspect-ratio: 1/1) { .bs-persona-persona, .bs-sortir.persona .bs-kotak-kotak { grid-template-columns: 1fr; } .bs-foto-foto { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
