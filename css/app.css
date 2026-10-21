@@ -4166,3 +4166,35 @@ code.beda { background: #fee2e2 !important; color: #991b1b !important; }
 .ular-tangga .ut-larik span.naik { background: #dcfce7; color: #14532d; }
 .ular-tangga .ut-larik span.turun { background: #fee2e2; color: #7f1d1d; }
 .ular-tangga .ut-isi .sk-baris span { font-variant-numeric: tabular-nums; }
+.sk-kode.berlabel { list-style: none; padding-left: 0.6em; }
+.sk-kode.berlabel .sk-label { display: inline-block; min-width: 2.8em; color: #94a3b8; font-family: ui-monospace, monospace; user-select: none; }
+
+/* smp-42 Aplikasi Pesan Kantin */
+.aplikasi-kantin .kn-dua { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0.8em; width: 100%; align-items: start; }
+@container (max-width: 640px) { .aplikasi-kantin .kn-dua { grid-template-columns: 1fr; } }
+.aplikasi-kantin .kn-kiri, .aplikasi-kantin .kn-kanan { display: flex; flex-direction: column; gap: 0.5em; min-width: 0; }
+.aplikasi-kantin .kn-atur { display: flex; flex-wrap: wrap; gap: 0.4em 0.7em; align-items: center; justify-content: center; }
+.aplikasi-kantin .kn-kecil { font-size: clamp(0.6rem, 2cqmin, 1.05rem); }
+.aplikasi-kantin .kn-tabel, .aplikasi-kantin .kn-uji { border-collapse: collapse; margin: 0 auto; font-size: clamp(0.65rem, 2cqmin, 1rem); }
+.aplikasi-kantin .kn-tabel th, .aplikasi-kantin .kn-tabel td, .aplikasi-kantin .kn-uji th, .aplikasi-kantin .kn-uji td { padding: 0.15em 0.5em; border: 1px solid var(--line); text-align: left; }
+.aplikasi-kantin .kn-tabel tr.ada td { background: color-mix(in srgb, var(--primary) 12%, transparent); font-weight: 700; }
+.aplikasi-kantin .kn-uji-wadah { overflow-x: auto; max-width: 100%; }
+.aplikasi-kantin .kn-uji tr.lulus td:last-child { color: var(--good); font-weight: 800; }
+.aplikasi-kantin .kn-uji tr.gagal td { background: color-mix(in srgb, var(--bad) 10%, transparent); }
+.aplikasi-kantin .kn-uji tr.gagal td:last-child { color: var(--bad); font-weight: 800; }
+.aplikasi-kantin .kn-layar { display: flex; flex-direction: column; gap: 0.4em; padding: 0.5em 0.7em; border-radius: 0.7em; background: #0f172a; color: #e2e8f0; }
+.aplikasi-kantin .kn-layar small { color: #94a3b8; }
+.aplikasi-kantin .kn-layar pre, .aplikasi-kantin .kn-pesan, .aplikasi-kantin .kn-struk { margin: 0; white-space: pre-wrap; font-size: clamp(0.65rem, 2.1cqmin, 1.05rem); }
+.aplikasi-kantin .kn-pesan { color: #fde68a; }
+.aplikasi-kantin .kn-struk { padding: 0.4em; border-radius: 0.4em; background: #f8fafc; color: #0f172a; }
+.aplikasi-kantin .kn-layar .sk-stepper { color: var(--ink); }
+.aplikasi-kantin .kn-isian { display: flex; flex-direction: column; gap: 0.25em; }
+.aplikasi-kantin .kn-isi-baris { display: flex; flex-wrap: wrap; gap: 0.3em 0.6em; align-items: center; }
+.aplikasi-kantin .kn-isi-baris > small { min-width: 3.4em; font-weight: 800; font-family: ui-monospace, monospace; }
+.aplikasi-kantin .kn-isi-baris .seg-btn { font-family: ui-monospace, monospace; font-size: clamp(0.6rem, 1.9cqmin, 1rem); }
+.aplikasi-kantin .kn-ket { color: var(--muted); }
+.aplikasi-kantin .kn-perbaiki { display: flex; flex-wrap: wrap; gap: 0.4em; }
+.aplikasi-kantin .kn-daftar { margin: 0; padding-left: 1.6em; font-size: clamp(0.65rem, 2cqmin, 1rem); }
+.aplikasi-kantin .kn-kasus { display: flex; flex-direction: column; gap: 0.3em; padding: 0.4em; border: 1px dashed var(--line); border-radius: 0.6em; }
+.aplikasi-kantin .kn-pilih-kasus { display: flex; flex-wrap: wrap; gap: 0.3em; justify-content: center; }
+.aplikasi-kantin .kn-isi .sk-baris span { font-family: ui-monospace, monospace; }

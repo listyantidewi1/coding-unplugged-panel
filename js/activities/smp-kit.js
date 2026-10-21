@@ -55,9 +55,9 @@ export function pickSet(wrap, ctx, { prompt, items, right, done, info = 'Ketuk s
 }
 
 // Code listing with line numbers; hl = set of highlighted line indexes (0-based).
-export function codeView(lines, { hl = [], cls = '', onLine = null, warn = [], counts = null } = {}) {
-  return el('ol', { class: `sk-kode ${cls}` }, lines.map((t, i) => {
-    const li = el('li', { class: `${hl.includes(i) ? 'hl' : ''} ${warn.includes(i) ? 'warn' : ''}` }, el('code', null, t || ' '), counts && counts[i] ? el('span', { class: 'sk-hitung' }, `×${counts[i]}`) : null);
+export function codeView(lines, { hl = [], cls = '', onLine = null, warn = [], counts = null, labels = null } = {}) {
+  return el('ol', { class: `sk-kode ${labels ? 'berlabel' : ''} ${cls}` }, lines.map((t, i) => {
+    const li = el('li', { class: `${hl.includes(i) ? 'hl' : ''} ${warn.includes(i) ? 'warn' : ''}` }, labels ? el('span', { class: 'sk-label' }, labels[i] ?? '') : null, el('code', null, t || ' '), counts && counts[i] ? el('span', { class: 'sk-hitung' }, `×${counts[i]}`) : null);
     if (onLine) onTap(li, () => onLine(i));
     return li;
   }));

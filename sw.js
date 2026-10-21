@@ -136,6 +136,7 @@ const FILES = [
   'js/activities/smp-39-menara-hanoi.js',
   'js/activities/smp-40-lampu-otomatis.js',
   'js/activities/smp-41-ular-tangga.js',
+  'js/activities/smp-42-aplikasi-kantin.js',
 ];
 
 self.addEventListener('install', (e) => {
