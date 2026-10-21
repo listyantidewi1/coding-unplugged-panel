@@ -57,7 +57,7 @@ export default {
       const r = ctx.round;
       let solved = false;
       const next = () => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, 2400); } };
-      const ask = (prompt, opts, columns = 1, subject = null) => choice(wrap, { prompt, subject, ctx, onRight: next, columns, options: opts.map(([label, correct]) => ({ label: String(label), correct })) });
+      const ask = (prompt, opts, columns = 1, subject = null) => choice(wrap, { prompt, subject, ctx, shuffle: true, onRight: next, columns, options: opts.map(([label, correct]) => ({ label: String(label), correct })) });
       const st = stages(SHEETS);
       if (r === 0) mergeRound(wrap, ctx, { a: [2, 5, 9, 14], b: [3, 7, 8, 16], done: next });
       else if (r === 1) mergeRound(wrap, ctx, { a: [1, 2, 3, 4], b: [5, 6, 7, 8], done: next });

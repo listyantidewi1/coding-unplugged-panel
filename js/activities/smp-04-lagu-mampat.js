@@ -87,7 +87,7 @@ export default {
       const r = ctx.round;
       let solved = false;
       const next = () => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, 2400); } };
-      const ask = (prompt, opts, columns = 2, subject = null) => choice(wrap, { prompt, subject, ctx, onRight: next, columns, options: opts.map(([label, correct]) => ({ label: String(label), correct })) });
+      const ask = (prompt, opts, columns = 2, subject = null) => choice(wrap, { prompt, subject, ctx, shuffle: true, onRight: next, columns, options: opts.map(([label, correct]) => ({ label: String(label), correct })) });
       if (r === 0) unpackRound(wrap, ctx, { text: SOAL1, prompt: 'Bongkar pesan teman: ketuk kata tempat setiap penunjuk mulai menyalin.', done: next });
       else if (r === 1) compressRound(wrap, ctx, { lines: BAIT1, title: 'Kentongan Pagi, bait 1', done: next });
       else if (r === 2) ask('Bait 1 sebelum dimampatkan 118 huruf, sesudahnya 51. Berapa yang dihemat?', [['67 huruf, sekitar 57%', true], ['51 huruf, sekitar 43%'], ['67 huruf, sekitar 67%'], ['118 huruf, 100%']]);

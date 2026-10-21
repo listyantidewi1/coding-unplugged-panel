@@ -202,7 +202,7 @@ export default {
       const r = ctx.round;
       let solved = false;
       const next = () => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, 2400); } };
-      const ask = (prompt, opts, columns = 4) => choice(wrap, { prompt, ctx, onRight: next, columns, options: opts.map(([label, correct]) => ({ label: String(label), correct })) });
+      const ask = (prompt, opts, columns = 4) => choice(wrap, { prompt, ctx, shuffle: true, onRight: next, columns, options: opts.map(([label, correct]) => ({ label: String(label), correct })) });
       if (r === 0) readRound(wrap, ctx, { bits: DIMAS, separated: true, prompt: 'Baca kartu Dimas. Bitnya sudah dipisah per kolom.', done: next });
       else if (r === 1) readRound(wrap, ctx, { bits: WULAN, prompt: 'Baca kartu Wulan. Pasang pemisahnya sendiri.', done: next });
       else if (r === 2) readRound(wrap, ctx, { bits: YOHANES, prompt: 'Baca kartu Yohanes.', done: next });

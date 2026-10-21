@@ -315,7 +315,7 @@ export default {
       const r = ctx.round;
       let solved = false;
       const next = () => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, 2400); } };
-      const ask = (prompt, opts, columns = 1, subject = null) => choice(wrap, { prompt, subject, ctx, onRight: next, columns, options: opts.map(([l, correct]) => ({ label: String(l), correct })) });
+      const ask = (prompt, opts, columns = 1, subject = null) => choice(wrap, { prompt, subject, ctx, shuffle: true, onRight: next, columns, options: opts.map(([l, correct]) => ({ label: String(l), correct })) });
       if (r === 0) { wrap.append(el('p', { class: 'prompt' }, 'Jalankan Dijkstra dari Pangkalan (P).')); dijkstraRound(wrap, ctx, { edges: EDGES, done: next }); }
       else if (r === 1) { const to = ctx.rand.pick(['L', 'T', 'K', 'O']); routeRound(wrap, ctx, { edges: EDGES, to, labels: true, prompt: `Telusuri balik "lewat mana": rute tercepat P ke ${to} (${NAMA[to]}).`, done: next }); }
       else if (r === 2) ask('Ada jalan langsung P–A (4 menit) dan P–B (7 menit). Mengapa keduanya tidak dipakai?', [['Lewat Sekolah lebih cepat: P–S–A 3 menit, P–S–B 5 menit', true], ['Jalan langsung selalu lebih lambat'], ['Dijkstra tidak boleh memakai jalan panjang'], ['Karena P–A dan P–B ditutup']], 1, mapView(EDGES, { path: ['P', 'S', 'A'] }));

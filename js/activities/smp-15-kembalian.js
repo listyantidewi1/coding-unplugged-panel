@@ -201,7 +201,7 @@ export default {
       const r = ctx.round;
       let solved = false;
       const next = () => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, 2400); } };
-      const ask = (prompt, opts, columns = 1, subject = null) => choice(wrap, { prompt, subject, ctx, onRight: next, columns, options: opts.map(([l, correct]) => ({ label: String(l), correct })) });
+      const ask = (prompt, opts, columns = 1, subject = null) => choice(wrap, { prompt, subject, ctx, shuffle: true, onRight: next, columns, options: opts.map(([l, correct]) => ({ label: String(l), correct })) });
       if (r === 0) traceRound(wrap, ctx, { harga: 13500, bayar: 50000, done: next });
       else if (r === 1) outputRound(wrap, ctx, { harga: 7000, bayar: 100000, want: greedy(93000), done: next });
       else if (r === 2) outputRound(wrap, ctx, { harga: 18500, bayar: 20000, want: greedy(1500), done: next });

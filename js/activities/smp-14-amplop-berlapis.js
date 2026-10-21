@@ -244,7 +244,7 @@ export default {
       const r = ctx.round;
       let solved = false;
       const next = () => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, 2400); } };
-      const ask = (prompt, opts, columns = 1, subject = null) => choice(wrap, { prompt, subject, ctx, onRight: next, columns, options: opts.map(([l, correct]) => ({ label: String(l), correct })) });
+      const ask = (prompt, opts, columns = 1, subject = null) => choice(wrap, { prompt, subject, ctx, shuffle: true, onRight: next, columns, options: opts.map(([l, correct]) => ({ label: String(l), correct })) });
       if (r === 0) {
         const name = ctx.rand.pick(Object.keys(DNS));
         ask(`Komputer tidak mengerti nama. Tanya DNS: alamat IP ${name} adalah …`, Object.values(DEVICES).map((d) => [d.ip, d.ip === DNS[name]]), 3,

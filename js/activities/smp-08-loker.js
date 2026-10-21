@@ -73,7 +73,7 @@ export default {
       const r = ctx.round;
       let solved = false;
       const next = () => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, 2400); } };
-      const ask = (prompt, opts, columns = 1, subject = null) => choice(wrap, { prompt, subject, ctx, onRight: next, columns, options: opts.map(([label, correct]) => ({ label: String(label), correct })) });
+      const ask = (prompt, opts, columns = 1, subject = null) => choice(wrap, { prompt, subject, ctx, shuffle: true, onRight: next, columns, options: opts.map(([label, correct]) => ({ label: String(label), correct })) });
       const full = filled(NAMES);
       if (r === 0) hashRound(wrap, ctx, { name: 'BUDI', done: next });
       else if (r === 1) hashRound(wrap, ctx, { name: ctx.rand.pick(NAMES.slice(2)), done: next });

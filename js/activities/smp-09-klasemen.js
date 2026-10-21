@@ -76,7 +76,7 @@ export default {
       const r = ctx.round;
       let solved = false;
       const next = () => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, 2400); } };
-      const ask = (prompt, opts, columns = 1, subject = null) => choice(wrap, { prompt, subject, ctx, onRight: next, columns, options: opts.map(([label, correct]) => ({ label: String(label), correct })) });
+      const ask = (prompt, opts, columns = 1, subject = null) => choice(wrap, { prompt, subject, ctx, shuffle: true, onRight: next, columns, options: opts.map(([label, correct]) => ({ label: String(label), correct })) });
       if (r === 0) rowRound(wrap, ctx, { team: '7B', matches: MATCHES, done: next });
       else if (r === 1) rowRound(wrap, ctx, { team: '8B', matches: MATCHES, done: next });
       else if (r === 2) rankRound(wrap, ctx, { table, done: next });

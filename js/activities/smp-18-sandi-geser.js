@@ -135,7 +135,7 @@ export default {
       const r = ctx.round;
       let solved = false;
       const next = () => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, 2400); } };
-      const ask = (prompt, opts, columns = 1, subject = null, onRight = next) => choice(wrap, { prompt, subject, ctx, onRight, columns, options: opts.map(([l, correct]) => ({ label: String(l), correct })) });
+      const ask = (prompt, opts, columns = 1, subject = null, onRight = next) => choice(wrap, { prompt, subject, ctx, shuffle: true, onRight, columns, options: opts.map(([l, correct]) => ({ label: String(l), correct })) });
       if (r === 0) typeRound(wrap, ctx, { prompt: 'Sandikan dengan kunci 3 (huruf asli di luar, sandi di dalam).', given: 'SAYA SUKA MEMBACA', want: shift('SAYA SUKA MEMBACA', 3), key: 3, done: next });
       else if (r === 1) typeRound(wrap, ctx, { prompt: 'Sinta mengirim pesan dengan kunci 5. Apa isinya?', given: 'YJRZN FPZ IN PFSYNS', want: 'TEMUI AKU DI KANTIN', key: 5, done: next, note: 'Cari huruf sandi di cakram dalam, lalu baca huruf asli di luarnya.' });
       else if (r === 2) ask('Hitung huruf pesan ini. Huruf mana yang paling sering muncul?', [['K (17 kali)', true], ['X (8 kali)'], ['O (5 kali)'], ['A (0 kali)']], 2, el('p', { class: 'sg-pesan' }, CRACK),

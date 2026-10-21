@@ -173,7 +173,7 @@ export default {
       const r = ctx.round;
       let solved = false;
       const next = () => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, 2400); } };
-      const ask = (prompt, opts, columns = 1, subject = null, onRight = next) => choice(wrap, { prompt, subject, ctx, onRight, columns, options: opts.map(([l, correct]) => ({ label: String(l), correct })) });
+      const ask = (prompt, opts, columns = 1, subject = null, onRight = next) => choice(wrap, { prompt, subject, ctx, shuffle: true, onRight, columns, options: opts.map(([l, correct]) => ({ label: String(l), correct })) });
       if (r === 0) componentRound(wrap, ctx, { done: next });
       else if (r === 1) traceRound(wrap, ctx, { prog: PROG1, done: next });
       else if (r === 2) ask('Program penggandaan: apa keluarannya?', [['2, 4, 8', true], ['1, 2, 4, 8'], ['2, 4, 6, 8'], ['2, 4, 8, 16']], 2, memoryView(load(DOUBLE)), () => ask('Berapa langkah sampai BERHENTI?', [[21, true], [18], [24], [7]], 4));

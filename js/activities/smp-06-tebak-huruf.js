@@ -46,7 +46,7 @@ export default {
       const r = ctx.round;
       let solved = false;
       const next = () => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, 2400); } };
-      const ask = (prompt, opts, columns = 2, subject = null) => choice(wrap, { prompt, subject, ctx, onRight: next, columns, options: opts.map(([label, correct]) => ({ label: String(label), correct })) });
+      const ask = (prompt, opts, columns = 2, subject = null) => choice(wrap, { prompt, subject, ctx, shuffle: true, onRight: next, columns, options: opts.map(([label, correct]) => ({ label: String(label), correct })) });
       if (r === 0) provinceGame(wrap, ctx, { secret: ctx.rand.pick(PROV), done: next });
       else if (r === 1) ask('Pertanyaan pertama mana yang lebih baik bila jawabannya sedang tidak beruntung?', [['"Nomornya 19 atau kurang?": ya 19, tidak 19', true], ['"Di Pulau Jawa?": ya 6, tidak 32'], ['"Di Pulau Jawa?": ya 19, tidak 19'], ['Keduanya sama saja']], 1);
       else if (r === 2) fillNumbers(wrap, ctx, { prompt: 'Strategi membagi dua: isi sisa provinsi pada keadaan paling tidak beruntung.', heads: [0, 1, 2, 3, 4, 5, 6].map((k) => `ke-${k}`), want: halving(38), given: [0], label: 'Sisa', done: next });
