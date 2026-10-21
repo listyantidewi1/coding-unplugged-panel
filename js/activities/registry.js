@@ -150,6 +150,8 @@ import sdlRobotLabirin from './sdl-23-robot-labirin.js';
 import sdlTangkapMangga from './sdl-24-tangkap-mangga.js';
 import sdlMotifTenun from './sdl-25-motif-tenun.js';
 import sdlDaftarBelanja from './sdl-26-daftar-belanja.js';
+import sdlSyaratWahana from './sdl-27-syarat-wahana.js';
+import sdlSegiBanyak from './sdl-28-segi-banyak.js';
 
 export const JENJANG = [
   { id: 'paud', label: 'PAUD', detail: '4–6 tahun' },
@@ -220,7 +222,7 @@ export const activities = [
   sma53DuaKasir, sma55GitKertas, sma56Mikrokontroler, sma57ProyekAplikasi,
   paudKalauBel, paudKalungManik,
   sdaTanamPadi, sdaGambarPerintah, sdaGerakBernama,
-  sdlUbinTeras, sdlPilahSampah, sdlCelengan, sdlSampaiPenuh, sdlRobotLabirin, sdlTangkapMangga, sdlMotifTenun, sdlDaftarBelanja,
+  sdlUbinTeras, sdlPilahSampah, sdlCelengan, sdlSampaiPenuh, sdlRobotLabirin, sdlTangkapMangga, sdlMotifTenun, sdlDaftarBelanja, sdlSyaratWahana, sdlSegiBanyak,
 ]
   .sort((a, b) => order(a) - order(b) || a.id.localeCompare(b.id));
 

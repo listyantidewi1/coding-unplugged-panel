@@ -5676,3 +5676,101 @@ button.pls-chip, .pls-pilih { cursor: pointer; }
 .dbl-tebakan.kunci { pointer-events: none; opacity: 0.75; }
 .dbl-tebak { min-width: 2.5em; text-align: center; font-size: clamp(1rem, 4.5cqmin, 2.2rem); }
 .act.daftar-belanja { overflow-y: auto; justify-content: safe center; }
+
+/* sdl-27 Boleh Naik Wahana? */
+.act.syarat-wahana { overflow-y: auto; justify-content: safe center; }
+.swh-tempat { display: flex; flex-direction: column; align-items: center; gap: 1.2cqmin; }
+.swh-gerbang-teks { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 1.2cqmin; font-size: clamp(0.65rem, 2.4cqmin, 1.15rem); }
+.swh-papan { margin: 0; padding: 0.8cqmin 1.6cqmin; border-radius: 1.5cqmin; background: #1e1b4b; color: #fef3c7; font-weight: 800; text-align: center; max-width: 92cqw; font-size: clamp(0.65rem, 2.4cqmin, 1.15rem); }
+.swh-hujan { margin: 0; font-weight: 800; color: #1d4ed8; }
+.swh-syarat { display: flex; justify-content: center; font: 800 clamp(0.6rem, 2.3cqmin, 1.1rem)/1.2 system-ui, sans-serif; }
+.swh-blok, .swh-wadah, .swh-lubang { display: inline-flex; align-items: center; gap: 0.6cqmin; padding: 0.5cqmin 1cqmin; border-radius: 1.2cqmin; border: max(2px, 0.35cqmin) solid; font: inherit; color: #1c1917; transition: background 0.2s, box-shadow 0.2s; }
+.swh-blok.banding { background: #e0f2fe; border-color: #0369a1; }
+.swh-blok.fakta { background: #fef9c3; border-color: #a16207; }
+.swh-blok small { color: #57534e; font-weight: 700; }
+.swh-wadah { background: #f5f3ff; border-color: #6d28d9; }
+.swh-wadah.or { background: #fdf2f8; border-color: #be185d; }
+.swh-wadah.bukan { background: #f1f5f9; border-color: #334155; }
+.swh-wadah > i { font-style: normal; font-weight: 900; color: #4c1d95; }
+.swh-wadah.or > i { color: #9d174d; } .swh-wadah.bukan > i { color: #0f172a; }
+.swh-lubang { border-style: dashed; border-color: #94a3b8; background: #fff; color: #64748b; min-width: 4cqmin; justify-content: center; }
+.swh-syarat .benar { background: #bbf7d0; box-shadow: 0 0 0 max(2px, 0.3cqmin) #16a34a; }
+.swh-syarat .salah { background: #fecaca; box-shadow: 0 0 0 max(2px, 0.3cqmin) #dc2626; }
+.swh-syarat .dipilih { box-shadow: 0 0 0 max(3px, 0.5cqmin) #f59e0b; }
+.swh-susun .swh-blok, .swh-susun .swh-wadah, .swh-susun .swh-lubang { cursor: pointer; }
+.swh-susun.kunci, .swh-palet.kunci { pointer-events: none; }
+.swh-chip { font: inherit; padding: 0 0.5em; border-radius: 0.8cqmin; border: max(1px, 0.25cqmin) solid #0369a1; background: #fff; color: #0c4a6e; cursor: pointer; }
+.swh-orang { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 0.8cqmin; width: min(96cqw, 150cqmin); }
+.swh-kartu { position: relative; display: flex; flex-direction: column; align-items: center; gap: 0.2cqmin; padding: 0.8cqmin; border-radius: 1.5cqmin; border: max(2px, 0.35cqmin) solid #cbd5e1; background: #fff; color: #1c1917; font-weight: 700; font-size: clamp(0.55rem, 2cqmin, 0.95rem); text-align: center; }
+.swh-kartu.kecil { font-size: clamp(0.45rem, 1.55cqmin, 0.8rem); padding: 0.5cqmin 0.3cqmin; }
+.swh-kartu b { font-size: 1.15em; }
+.swh-wajah { font-size: 2em; line-height: 1; }
+.swh-kartu.boleh { border-color: #16a34a; background: #f0fdf4; }
+.swh-kartu.tolak { border-color: #dc2626; background: #fef2f2; opacity: 0.8; }
+.swh-kartu.boleh::after, .swh-kartu.tolak::after { position: absolute; top: -1.2cqmin; right: -0.6cqmin; display: grid; place-items: center; width: 3.6cqmin; height: 3.6cqmin; border-radius: 50%; color: #fff; font-weight: 900; animation: swh-tanda 0.3s; }
+.swh-kartu.boleh::after { content: '✓'; background: #16a34a; }
+.swh-kartu.tolak::after { content: '✗'; background: #dc2626; }
+@keyframes swh-tanda { from { transform: scale(0); } }
+.swh-tabel { border-collapse: collapse; font-weight: 800; font-size: clamp(0.6rem, 2.2cqmin, 1.05rem); background: #fff; color: #1c1917; }
+.swh-tabel th, .swh-tabel td { border: max(1px, 0.2cqmin) solid #cbd5e1; padding: 0.4cqmin 1.4cqmin; text-align: center; min-width: 5cqmin; }
+.swh-tabel th { background: #f1f5f9; }
+.swh-tabel td.b { color: #15803d; } .swh-tabel td.s { color: #b91c1c; }
+.swh-tabel tr.beda td { background: #fee2e2; }
+.swh-kerja { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start; gap: 2cqmin; }
+.swh-samping { display: flex; flex-direction: column; align-items: center; gap: 1.2cqmin; min-width: 0; }
+.swh-penyusun { display: flex; flex-direction: column; align-items: center; gap: 1cqmin; max-width: 52cqw; }
+.swh-kerja .swh-samping .swh-gerbang { flex-direction: row; }
+.swh-susun { min-height: 8cqmin; padding: 1cqmin; border-radius: 1.5cqmin; border: max(2px, 0.35cqmin) dashed #cbd5e1; }
+.swh-teks { margin: 0; font-weight: 700; color: var(--muted); font-size: clamp(0.55rem, 2cqmin, 0.95rem); text-align: center; }
+.swh-palet { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 0.8cqmin; padding: 0.8cqmin 1.2cqmin; border-radius: 2cqmin; background: #eef2f7; font: 800 clamp(0.6rem, 2.2cqmin, 1.05rem) system-ui, sans-serif; }
+.swh-palet button { cursor: pointer; }
+.swh-gerbang { display: flex; gap: 1.5cqmin; align-items: flex-start; }
+.swh-pintu { display: flex; flex-direction: column; align-items: center; gap: 1cqmin; min-width: 18cqmin; }
+.swh-depan { min-height: 18cqmin; }
+.swh-depan .swh-kartu { animation: swh-jalan 0.35s; }
+@keyframes swh-jalan { from { transform: translateX(-6cqmin); opacity: 0; } }
+.swh-lampu { width: 7cqmin; height: 7cqmin; border-radius: 50%; background: #475569; border: max(3px, 0.5cqmin) solid #1e293b; }
+.swh-lampu.hijau { background: #22c55e; box-shadow: 0 0 3cqmin #22c55e; }
+.swh-lampu.merah { background: #ef4444; box-shadow: 0 0 3cqmin #ef4444; }
+.swh-tabel-tempat { max-height: 36cqh; overflow: auto; }
+.swh-info { font-weight: 700; text-align: center; max-width: 92cqw; }
+.swh-pengecoh { display: flex; flex-wrap: wrap; gap: 1.2cqmin; justify-content: center; }
+.swh-pengecoh.kunci { pointer-events: none; opacity: 0.8; }
+.swh-kartu.edit { gap: 0.6cqmin; }
+.swh-tempat > .swh-tabel { font-size: clamp(0.8rem, 3.4cqmin, 1.6rem); }
+.swh-tabel td.baru { background: #fef08a; animation: swh-tanda 0.3s; }
+
+/* sdl-28 Bintang dan Segi Banyak */
+.act.segi-banyak { overflow-y: auto; justify-content: safe center; }
+.sgb-soal, .sgb-kerja { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 2cqmin; }
+.sgb-kiri { display: flex; flex-direction: column; align-items: center; gap: 1.2cqmin; min-width: 0; }
+.sgb-kode { padding: 1cqmin 1.6cqmin; border-radius: 1.5cqmin; background: #ecfdf5; color: #064e3b; font: 800 clamp(0.65rem, 2.6cqmin, 1.25rem)/1.3 ui-monospace, monospace; max-width: 60cqw; text-align: center; }
+.sgb-kode.benar { background: #dcfce7; box-shadow: inset 0 0 0 max(2px, 0.3cqmin) #16a34a; }
+.sgb-papan { display: flex; flex-direction: column; align-items: center; gap: 0.6cqmin; }
+.sgb-kanvas { width: min(40cqmin, 44cqw); aspect-ratio: 1; max-width: 100%; border-radius: 2cqmin; background: #fffdf5; background-image: linear-gradient(#e7e5e4 1px, transparent 1px), linear-gradient(90deg, #e7e5e4 1px, transparent 1px); background-size: 10% 10%; border: max(2px, 0.35cqmin) solid #d6d3d1; }
+.sgb-garis line { stroke: #1d4ed8; stroke-linecap: round; }
+.sgb-mulai { fill: #334155; }
+.sgb-penyu path { fill: #16a34a; stroke: #14532d; stroke-width: 0.1; }
+.sgb-bawah { display: flex; flex-wrap: wrap; justify-content: center; gap: 1cqmin; align-items: center; font-size: clamp(0.55rem, 2cqmin, 0.95rem); }
+.sgb-hitung { color: #1e3a8a; }
+.sgb-belok { color: #57534e; font-weight: 700; }
+.sgb-lencana { font-weight: 800; }
+.sgb-lencana.tutup { color: #15803d; } .sgb-lencana.buka { color: #b91c1c; }
+.sgb-program { display: flex; flex-direction: column; align-items: stretch; gap: 0.4cqmin; min-width: 40cqmin; min-height: 10cqmin; max-height: 40cqh; overflow: auto; padding: 1cqmin; border: max(2px, 0.4cqmin) dashed var(--line); border-radius: 2cqmin; font: 800 clamp(0.6rem, 2.3cqmin, 1.1rem)/1.3 ui-monospace, monospace; }
+.sgb-baris { display: flex; align-items: center; gap: 0.8cqmin; padding: 0.2cqmin 0.8cqmin; padding-left: calc(var(--d, 0) * 3cqmin + 0.8cqmin); border-radius: 1cqmin; }
+.sgb-baris.wadah { cursor: pointer; }
+.sgb-baris.buka { box-shadow: 0 0 0 max(3px, 0.5cqmin) #fbbf24; }
+.sgb-baris.kosong, .sgb-kosong { color: var(--muted); }
+.sgb-pilih { font: inherit; padding: 0.1em 0.6em; border-radius: 1cqmin; border: max(2px, 0.3cqmin) solid #047857; background: #fff; color: #064e3b; cursor: pointer; }
+.sgb-pilih.besar { font: 800 clamp(0.6rem, 2.3cqmin, 1.1rem) system-ui, sans-serif; padding: 1cqmin 1.6cqmin; border-radius: 1.5cqmin; }
+.sgb-pilih.aktif { background: #fbbf24; }
+.sgb-hapus { font: inherit; border: 0; background: none; color: var(--bad); cursor: pointer; margin-left: auto; }
+.sgb-palet { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 0.8cqmin; padding: 0.8cqmin 1.2cqmin; border-radius: 2cqmin; background: #eef2f7; }
+.sgb-kartu { font: 900 clamp(0.6rem, 2.3cqmin, 1.1rem) system-ui, sans-serif; padding: 0.6cqmin 1.2cqmin; border-radius: 1.2cqmin; border: max(2px, 0.4cqmin) solid #047857; background: #ecfdf5; color: #064e3b; cursor: pointer; }
+.sgb-kartu.ulangi { border-color: #6d28d9; background: #f5f3ff; color: #2e1065; }
+.sgb-penggeser { display: grid; grid-template-columns: auto minmax(20cqmin, 36cqmin) 4em; align-items: center; gap: 1cqmin; font-weight: 800; }
+.sgb-geser { width: 100%; accent-color: #16a34a; height: 3cqmin; }
+.sgb-info { font-weight: 700; text-align: center; max-width: 92cqw; }
+.sgb-pilihan { display: flex; flex-direction: column; gap: 1cqmin; }
+.sgb-pilihan.kunci { pointer-events: none; }
+.sgb-sketsa { width: min(36cqmin, 40cqw); aspect-ratio: 1; border-radius: 2cqmin; border: max(2px, 0.35cqmin) dashed #a78bfa; background: #fff; touch-action: none; }
