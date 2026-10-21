@@ -2551,3 +2551,16 @@ button.kk-kotak { cursor: pointer; }
 .mc-sd.bawah { border-bottom: 4px solid #111827; }
 .mc-sd.salah { background: #fee2e2; color: #b91c1c; }
 .mc-kalk { font-size: clamp(0.8rem, 3.4cqmin, 1.9rem); }
+
+/* sma-12 Kurir Keliling */
+.kk-papan { width: 100%; display: flex; align-items: center; justify-content: center; gap: 1.5cqmin; }
+.kk-peta { flex: 1 1 0; min-width: 0; display: flex; justify-content: center; }
+.kk-peta svg { width: 100%; max-width: 52em; max-height: 54cqh; touch-action: none; }
+.kk-peta.kecil { flex: none; width: min(100%, 44em); }
+.kk-peta.kecil svg { height: 38cqh; width: auto; }
+.kk-peta text { paint-order: stroke; stroke: #fff; stroke-width: 4px; stroke-linejoin: round; }
+.kk-kota, .kk-ruas { cursor: pointer; }
+.kk-tabel { border-collapse: collapse; font-size: clamp(0.6rem, 2.6cqmin, 1.4rem); font-variant-numeric: tabular-nums; background: #fff; color: #111827; }
+.kk-tabel th, .kk-tabel td { border: 1px solid #cbd5e1; padding: 0.15em 0.45em; text-align: center; }
+.kk-tabel th { background: #f1f5f9; font-weight: 800; }
+.kk-host { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 0.5cqmin; }
