@@ -144,6 +144,7 @@ const FILES = [
   'js/activities/sma-39-rekursi-memo.js',
   'js/activities/sma-40-rima-pantun.js',
   'js/activities/sma-41-kasus-uji.js',
+  'js/activities/sma-42-pesan-galat.js',
 ];
 
 self.addEventListener('install', (e) => {
