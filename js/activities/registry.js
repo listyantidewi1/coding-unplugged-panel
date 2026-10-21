@@ -3,6 +3,13 @@
 // worksheet, so scanning a worksheet opens its activity: <site>/#/<id>
 
 import paudPola from './paud-01-pola.js';
+import paudKelompok from './paud-02-kelompok.js';
+import { paudLangkah, paudKacangHijau } from './urutan.js';
+import { paudAntarAyam, paudAyamTersesat } from './ayam.js';
+import paudGerakUlang from './paud-06-gerak-ulang.js';
+import paudJikaLampu from './paud-07-jika-lampu.js';
+import paudYaTidak from './paud-09-ya-tidak.js';
+import paudTombol from './paud-10-tombol.js';
 import sdaGambarRahasia from './sda-09-gambar-rahasia.js';
 import { sdaTimbangan, sdlLampuGapura } from './bit-sum.js';
 
@@ -16,7 +23,12 @@ export const JENJANG = [
 
 const order = (a) => JENJANG.findIndex((j) => j.id === a.jenjang);
 
-export const activities = [paudPola, sdaTimbangan, sdaGambarRahasia, sdlLampuGapura]
+export const activities = [
+  paudPola, paudKelompok, paudLangkah, paudAntarAyam, paudKacangHijau,
+  paudGerakUlang, paudJikaLampu, paudAyamTersesat, paudYaTidak, paudTombol,
+  sdaTimbangan, sdaGambarRahasia,
+  sdlLampuGapura,
+]
   .sort((a, b) => order(a) - order(b) || a.id.localeCompare(b.id));
 
 // Old ids that should keep working if a worksheet id is renamed after printing.
