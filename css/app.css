@@ -3809,3 +3809,31 @@ code.beda { background: #fee2e2 !important; color: #991b1b !important; }
 .subject .tt-grafik { width: min(36em, 70cqw); }
 .target-tabungan .sk-jejak-kode { font-size: clamp(0.75rem, 2.6cqmin, 1.45rem); }
 .target-tabungan .sk-jejak .tt-grafik { max-width: 25em; }
+
+/* smp-30 Ongkos Kirim Paket (ong-) */
+.ong-papan { border-collapse: collapse; background: #fffbeb; color: #111827; font-size: clamp(0.75rem, 2.6cqmin, 1.4rem); text-align: left; }
+.ong-papan td { padding: 0.25em 0.6em; border: 2px solid #f59e0b; }
+.ong-dua { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 1.5cqmin; align-items: start; width: 100%; text-align: left; }
+.subject .ong-dua { width: min(84em, 92cqw); }
+.ong-kiri, .ong-kanan { display: flex; flex-direction: column; gap: 0.6em; min-width: 0; font-size: clamp(0.75rem, 2.6cqmin, 1.4rem); }
+.ong-atur { display: flex; flex-wrap: wrap; gap: 0.4em 0.6em; align-items: center; font-size: clamp(0.75rem, 2.5cqmin, 1.35rem); }
+.ong-atur .seg-btn { font-family: ui-monospace, monospace; font-size: 0.9em; }
+.ong-kode li.hl { background: #bbf7d0; color: #052e16; }
+.ong-kode li.abu { opacity: 0.4; }
+.ong-kode li.abu.hl { opacity: 1; }
+.ong-ket { margin: 0; color: #475569; font-size: clamp(0.7rem, 2.4cqmin, 1.3rem); }
+.ong-hasil { margin: 0; padding: 0.3em 0.7em; border-radius: 0.5em; background: #0f172a; color: #86efac; font-family: ui-monospace, monospace; font-size: 1.3em; }
+.ong-riwayat { margin: 0; padding-left: 1.6em; font-family: ui-monospace, monospace; font-size: 0.85em; }
+.ong-paket { display: flex; flex-direction: column; gap: 0.6cqmin; width: 100%; max-width: 80em; font-size: clamp(0.75rem, 2.6cqmin, 1.4rem); }
+.ong-paket .sk-baris { padding-block: 0.2em; }
+.ong-paket .seg-btn { font-size: 0.85em; }
+.ong-uji { border-collapse: collapse; background: #fff; color: #111827; font-size: clamp(0.65rem, 2.2cqmin, 1.2rem); text-align: left; }
+.ong-uji th, .ong-uji td { padding: 0.15em 0.5em; border: 1.5px solid #cbd5e1; }
+.ong-uji th { background: #e2e8f0; }
+.ong-uji td.ok { color: #15803d; } .ong-uji td.bug { color: #b91c1c; font-weight: 800; background: #fef2f2; }
+.ong-uji .btn { padding: 0.05em 0.5em; min-height: 0; font-size: 0.9em; }
+.ong-tambah { display: flex; flex-direction: column; gap: 0.6em; align-items: center; width: 100%; }
+.ong-garis { display: grid; grid-template-columns: repeat(11, minmax(0, 1fr)); gap: 0.3em; width: 100%; max-width: 90em; }
+.ong-sel { display: flex; flex-direction: column; align-items: center; gap: 0.2em; padding: 0.8em 0.2em; border-radius: 0.5em; color: #111827; font-size: clamp(0.8rem, 2.9cqmin, 1.6rem); }
+.ong-sel.t0 { background: #e2e8f0; } .ong-sel.t1 { background: #bbf7d0; } .ong-sel.t2 { background: #bfdbfe; } .ong-sel.t3 { background: #fed7aa; }
+.ong-sel small { font-family: ui-monospace, monospace; }
