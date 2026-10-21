@@ -2564,3 +2564,26 @@ button.kk-kotak { cursor: pointer; }
 .kk-tabel th, .kk-tabel td { border: 1px solid #cbd5e1; padding: 0.15em 0.45em; text-align: center; }
 .kk-tabel th { background: #f1f5f9; font-weight: 800; }
 .kk-host { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 0.5cqmin; }
+
+/* sma-13 Jadwal Ujian */
+.ju-graf { width: 100%; display: flex; justify-content: center; }
+.ju-graf svg { width: 100%; max-width: 50em; max-height: 50cqh; touch-action: none; }
+.ju-graf.kecil { width: min(100%, 40em); }
+.ju-graf.kecil svg { height: 34cqh; width: auto; }
+.ju-simpul { cursor: pointer; }
+.ju-murid { display: grid; grid-template-columns: repeat(auto-fill, minmax(13em, 1fr)); gap: 0.2em 1em; width: 100%; font-size: clamp(0.6rem, 2.4cqmin, 1.3rem); color: #111827; }
+.ju-murid span { display: flex; gap: 0.5em; }
+.ju-sesi { flex-wrap: wrap; justify-content: center; }
+.ju-warna { border-left: 1.1em solid var(--w); }
+.ju-warna.on { background: var(--w); color: #111827; border-color: #111827; border-left-color: var(--w); font-weight: 800; }
+.ju-urut { display: flex; flex-wrap: wrap; gap: 0.6cqmin; justify-content: center; }
+.ju-kartu { display: flex; flex-direction: column; align-items: center; min-width: 4.2em; padding: 0.2em 0.5em; border: 2px solid #cbd5e1; border-radius: 0.5em; background: #fff; color: #111827; font-weight: 800; font-size: clamp(0.7rem, 3cqmin, 1.6rem); }
+.ju-kartu small { font-size: 0.6em; font-weight: 600; }
+.ju-kartu.kini { border-color: #2563eb; outline: 3px solid #2563eb; }
+.ju-dua { width: 100%; display: flex; gap: 1.5cqmin; align-items: center; }
+.ju-host { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 0.5cqmin; }
+.ju-data { display: flex; flex-direction: column; gap: 0.25em; font-size: clamp(0.55rem, 2cqmin, 1.1rem); }
+.ju-baris { display: flex; gap: 0.25em; align-items: center; }
+.ju-baris b { width: 3.6em; }
+.ju-cek { border: 1px solid #cbd5e1; border-radius: 0.3em; background: #fff; color: #94a3b8; padding: 0.1em 0.3em; font: inherit; cursor: pointer; }
+.ju-cek.on { background: #1d4ed8; border-color: #1d4ed8; color: #fff; font-weight: 700; }
