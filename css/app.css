@@ -5344,3 +5344,51 @@ code.beda { background: #fee2e2 !important; color: #991b1b !important; }
 .gn-pilih.bernama { border-color: #b45309; background: #fffbeb; }
 .gn-hitung { font-weight: 800; color: var(--muted); text-align: center; font-size: clamp(0.6rem, 2.8cqmin, 1.2rem); }
 .gn-info { margin: 0; text-align: center; font-weight: 800; font-size: clamp(0.7rem, 3.2cqmin, 1.4rem); }
+
+/* sdl-19 Pola Ubin Teras */
+.ubt-soal { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 2cqmin; }
+.ubt-kode { margin: 0; font: 800 clamp(0.6rem, 2.5cqmin, 1.15rem)/1.35 ui-monospace, monospace; padding: 1cqmin 2cqmin; border-radius: 2cqmin; background: #fdf2e9; color: #431407; text-align: left; white-space: pre; }
+.opt .ubt-kode { font-size: clamp(0.5rem, 2cqmin, 0.95rem); background: transparent; padding: 0; }
+.ubt-teras { display: grid; grid-template-columns: 0.6fr repeat(calc(var(--n) - 1), minmax(0, 1fr)); gap: 0.4cqmin; width: min(60cqw, calc(var(--n) * 7.5cqmin)); }
+.ubt-kepala { display: grid; place-items: center; font-weight: 800; color: var(--muted); font-size: clamp(0.5rem, 2.2cqmin, 1rem); }
+.ubt-ubin { position: relative; aspect-ratio: 1; display: grid; place-items: center; border-radius: 0.6cqmin; background: #fffbf5; border: max(1px, 0.2cqmin) solid #d6c7b5; }
+.ubt-ubin.selasar { background: #cbd5e1; border-color: #94a3b8; }
+.ubt-ubin.target { background: repeating-linear-gradient(45deg, #fed7aa 0 0.6cqmin, #fffbf5 0.6cqmin 1.2cqmin); }
+.ubt-ubin.cat { background: #b45309; border-color: #92400e; }
+.ubt-ubin.salah { background: #dc2626; border-color: #7f1d1d; }
+.ubt-ubin.ketuk { cursor: pointer; }
+.ubt-ubin.kedip { animation: ubt-kedip 0.5s 3; }
+@keyframes ubt-kedip { 50% { box-shadow: 0 0 0 max(3px, 0.6cqmin) var(--bad); } }
+.ubt-robot { font-size: clamp(0.8rem, 3.6cqmin, 1.8rem); line-height: 1; z-index: 1; }
+.ubt-mini { display: grid; grid-template-columns: repeat(var(--n), 1fr); gap: 1px; width: clamp(2.6rem, 11cqmin, 6rem); }
+.ubt-mini i { aspect-ratio: 1; background: #fffbf5; outline: 1px solid #d6c7b5; }
+.ubt-mini i.on { background: #b45309; }
+.ubt-target { display: flex; flex-direction: column; align-items: center; gap: 1cqmin; font-weight: 800; }
+.ubt-atas { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start; gap: 2cqmin; }
+.ubt-kanan { display: flex; flex-direction: column; align-items: center; gap: 1cqmin; min-width: 0; max-width: 60cqw; }
+.ubt-papan { display: flex; flex-direction: column; align-items: center; gap: 1cqmin; }
+.ubt-program { display: flex; flex-direction: column; align-items: flex-start; gap: 0.6cqmin; min-height: 9cqmin; min-width: 40cqmin; padding: 1cqmin; border: max(2px, 0.4cqmin) dashed var(--line); border-radius: 2cqmin; }
+.ubt-program > .ubt-kartu { flex-direction: row; gap: 0.6cqmin; }
+.ubt-kartu { font: inherit; display: flex; flex-direction: column; align-items: center; padding: 0.3cqmin 1cqmin; border-radius: 1.5cqmin; border: max(2px, 0.4cqmin) solid #334155; background: #fff; color: var(--ink); cursor: pointer; }
+.ubt-kartu span { font-size: clamp(0.9rem, 4cqmin, 2rem); line-height: 1.1; }
+.ubt-kartu small { font-weight: 800; font-size: clamp(0.5rem, 2cqmin, 0.9rem); }
+.ubt-kartu.ulangi { border-color: #6d28d9; background: #f5f3ff; }
+.ubt-ulangi { display: flex; flex-direction: column; align-items: flex-start; gap: 0.4cqmin; padding: 0.5cqmin 1cqmin; border-radius: 2cqmin; border: max(2px, 0.4cqmin) solid #6d28d9; background: #f5f3ff; color: var(--ink); font-size: clamp(0.65rem, 2.6cqmin, 1.2rem); cursor: pointer; }
+.ubt-ulangi.d0 { border-color: #0f766e; background: #ecfdf5; }
+.ubt-ulangi-kepala { display: flex; align-items: center; gap: 0.6cqmin; }
+.ubt-isi { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6cqmin; padding-left: 2cqmin; }
+.ubt-isi > .ubt-kartu { flex-direction: row; gap: 0.4cqmin; }
+.ubt-ulangi.buka { box-shadow: 0 0 0 max(3px, 0.6cqmin) #fbbf24; }
+.ubt-hapus { font: inherit; border: 0; background: none; color: var(--bad); font-weight: 900; cursor: pointer; }
+.ubt-kosong { color: var(--muted); font-weight: 700; font-size: clamp(0.6rem, 2.4cqmin, 1.1rem); }
+.ubt-palet { display: flex; gap: 1cqmin; padding: 0.8cqmin 1.5cqmin; border-radius: 2cqmin; background: #eef2f7; }
+.ubt-hitung { font-weight: 800; color: var(--muted); }
+.ubt-counter { display: flex; flex-wrap: wrap; justify-content: center; gap: 1cqmin; font-weight: 800; font-size: clamp(0.6rem, 2.4cqmin, 1.1rem); }
+.ubt-counter span { padding: 0.4cqmin 1.2cqmin; border-radius: 1.5cqmin; background: #f1f5f9; color: #0f172a; }
+.ubt-info { font-weight: 700; text-align: center; max-width: 90cqw; }
+.ubt-kartu.nyala, .ubt-ulangi.nyala { background: #fef08a; border-color: #ca8a04; }
+.ubin-teras .ubt-program .ubt-kartu span { font-size: clamp(0.8rem, 3cqmin, 1.5rem); }
+.ubin-teras .ubt-program .step-btn { width: min(5cqmin, 2.2rem); font-size: clamp(0.7rem, 2.6cqmin, 1.2rem); }
+.ubin-teras .ubt-program { gap: 0.4cqmin; }
+.ubin-teras .ubt-isi { padding-left: 1.5cqmin; }
+.ubin-teras .ubt-atas .ubt-teras { width: min(46cqw, calc(var(--n) * 6.6cqmin)); }
