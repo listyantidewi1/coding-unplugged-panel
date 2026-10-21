@@ -2505,3 +2505,26 @@ button.kk-kotak { cursor: pointer; }
 .kd-tabel span { display: flex; justify-content: space-between; gap: 0.5em; }
 .kd-ubah { display: flex; flex-wrap: wrap; gap: 0.4em; align-items: center; justify-content: center; font-size: clamp(0.55rem, 2.4cqmin, 1.2rem); }
 .kd-pilih { font: inherit; padding: 0.15em 0.3em; border-radius: 0.3em; }
+
+/* sma-10 Bagasi Mudik Rani */
+.bagasi { gap: 0.8cqmin; }
+.bg-papan { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 0.6cqmin; }
+.bg-rak { display: flex; flex-wrap: wrap; gap: 0.5em; justify-content: center; }
+.bg-oleh { font: inherit; display: flex; flex-direction: column; align-items: center; gap: 0.1em; min-width: 7.5em; padding: 0.4em 0.6em; border-radius: 0.7em; border: 3px solid #cbd5e1; background: #fff; color: #111827; cursor: pointer; font-size: clamp(0.55rem, 2.6cqmin, 1.35rem); position: relative; }
+.bg-oleh.dibawa { border-color: #16a34a; background: #dcfce7; }
+.bg-oleh.lewat { opacity: 0.4; }
+.bg-oleh small { color: #475569; }
+.bg-oleh em { position: absolute; top: -0.7em; right: -0.4em; background: #1d4ed8; color: #fff; border-radius: 1em; padding: 0 0.5em; font-style: normal; font-size: 0.8em; }
+.bg-ikon { font-size: 1.8em; }
+.bg-timbang { position: relative; width: min(30em, 80%); height: 2em; border-radius: 1em; background: #e2e8f0; overflow: hidden; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: clamp(0.6rem, 3cqmin, 1.5rem); }
+.bg-isi { position: absolute; left: 0; top: 0; bottom: 0; background: #86efac; }
+.bg-timbang.lebih .bg-isi { background: #fca5a5; width: 100% !important; }
+.bg-timbang span { position: relative; }
+.bg-dp-gulir { width: 100%; overflow-x: auto; }
+.bg-dp { display: grid; grid-template-columns: max-content repeat(11, minmax(2em, 1fr)); gap: 2px; font-size: clamp(0.5rem, 2.8cqmin, 1.5rem); font-variant-numeric: tabular-nums; min-width: 30em; }
+.bg-dp-kepala { font-weight: 800; color: #64748b; text-align: center; }
+.bg-dp-baris { text-align: left; font-weight: 700; padding-right: 0.5em; white-space: nowrap; }
+.bg-dp-sel { text-align: center; background: #f1f5f9; border-radius: 3px; min-height: 1.4em; }
+.bg-dp-sel.kini { background: #fde68a; outline: 2px solid #ca8a04; }
+.bg-dp-sel.atas { background: #bfdbfe; }
+.bg-dp-sel.kiri { background: #bbf7d0; }
