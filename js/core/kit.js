@@ -25,10 +25,10 @@ export function choice(root, { prompt, subject, options, ctx, onRight, columns }
     });
     return b;
   });
-  root.append(
+  root.append(...[
     el('p', { class: 'prompt' }, prompt),
     subject ? el('div', { class: 'subject' }, subject) : null,
-    el('div', { class: 'opts', style: columns ? { '--cols': columns } : null }, buttons));
+    el('div', { class: 'opts', style: columns ? { '--cols': columns } : null }, buttons)].filter(Boolean));
 }
 
 // Drag-or-tap placement inside one pane. Items carry `data-drag`, targets
