@@ -25,7 +25,7 @@ def inline(text):
 
 
 def kategori(cell):
-    name = re.sub(r'[◐★`]', '', cell).strip().lower()
+    name = re.sub(r'[◐★`*]', '', cell).split('·')[0].strip().lower()
     return KAT.get(name)
 
 

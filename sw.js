@@ -82,6 +82,8 @@ const FILES = [
   'js/activities/smp-24-deepfake.js',
   'js/activities/smp-25-chatbot.js',
   'js/activities/sma-01-aksara-unicode.js',
+  'js/activities/sma-kit.js',
+  'js/activities/sma-02-kode-hemat.js',
 ];
 
 self.addEventListener('install', (e) => {

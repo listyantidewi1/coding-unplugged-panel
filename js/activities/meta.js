@@ -193,4 +193,4 @@ export const KATEGORI = {
  "sma-56-mikrokontroler": "coding",
  "sma-57-proyek-aplikasi": "coding"
 };
-export const PENGAYAAN = [];
+export const PENGAYAAN = ["sda-08-timbangan", "sda-09-gambar-rahasia", "sda-13-tombol-lift", "sdl-01-lampu-gapura", "sdl-02-piksel-warna", "sdl-03-sandi-senter", "sdl-04-hemat-kuota", "sdl-05-anyaman-rusak", "sdl-09-rel-kereta", "sdl-13-kurir-kampung", "sdl-14-merpati-pos", "sdl-15-mesin-kantin", "sma-14-menara-bts", "sma-15-pipa-air", "sma-17-plat-nomor", "sma-21-sandi-berkunci", "sma-22-arisan-jujur", "smp-04-lagu-mampat", "smp-05-angka-cek", "smp-06-tebak-huruf", "smp-13-meja-bundar", "smp-16-gerbang-tol", "smp-18-sandi-geser", "smp-19-aplikasi-jadwal"];

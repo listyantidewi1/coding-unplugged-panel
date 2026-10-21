@@ -2341,3 +2341,25 @@ button.kk-kotak { cursor: pointer; }
 .au-jam svg { width: 100%; height: auto; display: block; }
 @container (max-height: 520px) { .au-rentang { display: none; } }
 @container (max-aspect-ratio: 6/5) { .au-samping { flex-direction: column; align-items: center; } .au-jam { width: min(80cqw, 40cqh); } }
+
+/* sma-02 Kode Paling Hemat */
+.kode-hemat { gap: 1cqmin; }
+.kh-papan { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 0.5cqmin; }
+.kh-pohon { width: 100%; display: flex; justify-content: center; }
+.kh-pohon svg { width: 100%; max-height: 52cqh; touch-action: none; }
+.kh-ketuk { cursor: pointer; }
+.kh-pantun { font-size: clamp(0.6rem, 3cqmin, 1.4rem); line-height: 1.5; font-style: italic; text-align: left; }
+.kh-pantun mark { background: #fde68a; border-radius: 0.2em; font-weight: 900; font-style: normal; }
+.kh-kode { display: flex; flex-wrap: wrap; gap: 0.3em; justify-content: center; font-size: clamp(0.5rem, 2.2cqmin, 1.05rem); }
+.kh-sel { display: flex; flex-direction: column; align-items: center; padding: 0.15em 0.45em; border-radius: 0.4em; background: #f1f5f9; border: 1px solid #cbd5e1; color: #111827; }
+.kh-sel.on { background: #fde68a; }
+.kh-sel small { color: #64748b; }
+.kh-bit { font-family: ui-monospace, monospace; font-weight: 800; font-size: clamp(0.7rem, 3.6cqmin, 1.7rem); letter-spacing: 0.08em; word-break: break-all; text-align: center; }
+.kh-habis { color: #94a3b8; text-decoration: line-through; }
+.kh-jeda { color: #b91c1c; }
+.keys.keypad.kh-huruf { display: grid; grid-template-columns: repeat(7, min(7cqw, 8cqh)); }
+.kh-masukan { width: min(100%, 60em); font: inherit; font-size: clamp(0.6rem, 2.6cqmin, 1.2rem); padding: 0.4em; border-radius: 0.5em; border: 1px solid #94a3b8; }
+.kh-hasil { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 0.6cqmin; }
+.kh-ringkas { display: flex; flex-wrap: wrap; gap: 0.3em 1em; justify-content: center; font-size: clamp(0.55rem, 2.4cqmin, 1.15rem); }
+.kh-tombol { min-width: 3em; font-size: 1.3em; }
+.sk-tim { justify-content: center; }
