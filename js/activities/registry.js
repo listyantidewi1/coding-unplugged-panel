@@ -97,6 +97,7 @@ import Hidroponik from './sma-30-hidroponik.js';
 import Mahadata from './sma-31-mahadata.js';
 import PekerjaanKa from './sma-32-pekerjaan-ka.js';
 import DuaLangkah from './sma-33-dua-langkah.js';
+import BasisData from './sma-34-basis-data.js';
 
 export const JENJANG = [
   { id: 'paud', label: 'PAUD', detail: '4–6 tahun' },
@@ -128,6 +129,7 @@ export const activities = [
   Mahadata,
   PekerjaanKa,
   DuaLangkah,
+  BasisData,
 ]
   .sort((a, b) => order(a) - order(b) || a.id.localeCompare(b.id));
 

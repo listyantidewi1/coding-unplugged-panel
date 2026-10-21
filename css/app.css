@@ -3576,3 +3576,65 @@ code.beda { background: #fee2e2 !important; color: #991b1b !important; }
 .dl-hasil .lemah { color: #b91c1c; } .dl-hasil .sedang { color: #b45309; } .dl-hasil .kuat { color: #15803d; }
 .dl-sim { font-size: clamp(0.75rem, 3.1cqmin, 1.6rem); }
 .dl-set { padding-block: 0.15em; }
+
+/* sma-34 Basis Data Toko Kerajinan Kelas (sq-) */
+.sq-tabel-wadah { display: flex; flex-direction: column; gap: 0.2em; min-width: 0; max-width: 100%; overflow-x: auto; font-size: clamp(0.62rem, 2.3cqmin, 1.25rem); }
+.sq-tabel-wadah.kecil { font-size: clamp(0.55rem, 1.9cqmin, 1.05rem); }
+.sq-tabel-wadah.besar { font-size: clamp(0.65rem, 2.5cqmin, 1.4rem); }
+.sq-tabel-wadah.akhir .sq-tabel { box-shadow: 0 0 0 3px #16a34a; }
+.sq-tabel-wadah.berubah .sq-tabel { box-shadow: 0 0 0 3px #f59e0b; }
+.sq-cap { font-family: ui-monospace, monospace; color: #1d4ed8; text-align: left; }
+.sq-tabel { border-collapse: collapse; background: #fff; color: #111827; text-align: left; }
+.sq-tabel th { background: #e0e7ff; color: #1e1b4b; font-family: ui-monospace, monospace; }
+.sq-tabel th, .sq-tabel td { padding: 0.15em 0.5em; border: 1.5px solid #cbd5e1; white-space: nowrap; }
+.sq-tabel td.n { text-align: right; font-variant-numeric: tabular-nums; }
+.sq-tabel td.kosong { color: #94a3b8; font-style: italic; text-align: center; }
+.sq-tabel tr.hl td { background: #fef08a; }
+.sq-tabel tr.temu td { background: #fee2e2; }
+.sq-tabel tr.pilih td { background: #dbeafe; }
+.sq-info { margin: 0; padding: 0.3em 0.7em; border-radius: 0.6em; background: #dcfce7; color: #14532d; font-size: clamp(0.7rem, 2.5cqmin, 1.35rem); text-align: left; }
+.sq-galat { margin: 0; padding: 0.4em 0.8em; border: 2px solid #dc2626; border-radius: 0.6em; background: #fef2f2; color: #991b1b; font-size: clamp(0.7rem, 2.5cqmin, 1.35rem); text-align: left; }
+.sq-alur-wadah { display: flex; flex-direction: column; align-items: center; gap: 1cqmin; width: 100%; }
+.sq-alur { display: flex; flex-direction: column; gap: 0.8cqmin; min-width: 0; width: 100%; }
+.sq-langkah { display: flex; flex-direction: column; gap: 0.3em; padding: 0.4em 0.6em; border: 2px solid #cbd5e1; border-radius: 0.7em; background: #f8fafc; color: #111827; min-width: 0; }
+.sq-kartu-baris { display: flex; gap: 0.6em; align-items: center; flex-wrap: wrap; font-size: clamp(0.7rem, 2.6cqmin, 1.4rem); text-align: left; }
+.sq-kartu-baris > span:not(.sq-kartu) { flex: 1 1 10em; min-width: 0; }
+.sq-kartu { display: inline-block; padding: 0.15em 0.6em; border: 2px solid currentColor; border-radius: 0.5em; background: #fff; font-family: ui-monospace, monospace; font-weight: 900; font-size: 0.95em; }
+.sq-kartu.k-TABEL { color: #334155; background: #f1f5f9; }
+.sq-kartu.k-GABUNG { color: #7c3aed; background: #f5f3ff; }
+.sq-kartu.k-SARING { color: #b91c1c; background: #fef2f2; }
+.sq-kartu.k-KELOMPOKKAN { color: #b45309; background: #fffbeb; }
+.sq-kartu.k-PILIH { color: #1d4ed8; background: #eff6ff; }
+.sq-kartu.k-URUTKAN { color: #047857; background: #ecfdf5; }
+.sq-kartu.tombol { cursor: pointer; min-height: 2.4em; }
+.sq-kartu.aktif { box-shadow: 0 0 0 3px #facc15; }
+.sq-resep { display: flex; flex-wrap: wrap; gap: 0.5em; justify-content: center; font-size: clamp(0.7rem, 2.6cqmin, 1.4rem); }
+.sq-baris-baris { display: flex; flex-direction: column; gap: 0.6cqmin; width: 100%; max-width: 72em; font-size: clamp(0.75rem, 2.8cqmin, 1.5rem); }
+.sq-baris { display: flex; gap: 0.8em; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: 0.3em 0.7em; border: 2px solid #cbd5e1; border-radius: 0.7em; background: #fff; color: #111827; text-align: left; }
+.sq-baris > span { flex: 1 1 14em; min-width: 0; }
+.sq-baris.beres { border-color: #16a34a; background: #f0fdf4; }
+.sq-baris-baris.pecah .sq-baris > span { font-family: ui-monospace, monospace; }
+.sq-tiga { display: flex; flex-wrap: wrap; gap: 1cqmin; justify-content: center; align-items: flex-start; min-width: 0; max-width: 100%; }
+.sq-kode { margin: 0; padding: 0.5em 0.8em; border-radius: 0.6em; background: #1e293b; color: #e2e8f0; font-family: ui-monospace, monospace; font-size: clamp(0.65rem, 2.3cqmin, 1.25rem); text-align: left; white-space: pre-wrap; }
+.sq-dua-kecil { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1.2cqmin; align-items: start; width: min(76em, 92cqw); }
+.sq-hasil { display: flex; flex-direction: column; gap: 0.6em; min-width: 0; }
+.sq-penyusun { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 1.5cqmin; align-items: start; width: 100%; }
+.sq-samping { display: flex; flex-direction: column; gap: 0.8cqmin; min-width: 0; font-size: clamp(0.7rem, 2.5cqmin, 1.35rem); text-align: left; }
+.sq-tambah { display: flex; flex-direction: column; gap: 0.6em; padding: 0.5em; border: 2px dashed #94a3b8; border-radius: 0.7em; font-size: clamp(0.7rem, 2.5cqmin, 1.35rem); }
+.sq-tambah .seg-btn { font-size: 0.9em; }
+.sq-masukan { width: 100%; box-sizing: border-box; padding: 0.5em 0.7em; border: 3px solid #1e293b; border-radius: 0.7em; background: #0f172a; color: #f8fafc; font-family: ui-monospace, monospace; font-size: clamp(0.8rem, 2.8cqmin, 1.5rem); resize: vertical; }
+.sq-palet { display: flex; flex-wrap: wrap; gap: 0.35em; }
+.sq-kata { padding: 0.25em 0.6em; border: 2px solid #94a3b8; border-radius: 0.5em; background: #fff; color: #111827; font-family: ui-monospace, monospace; font-size: clamp(0.65rem, 2.3cqmin, 1.25rem); cursor: pointer; min-height: 2.2em; }
+.sq-kata.kw { border-color: #7c3aed; color: #5b21b6; font-weight: 800; }
+.sq-kata.contoh { border-color: #0f766e; color: #115e59; font-weight: 800; }
+.sq-pilih-kueri { display: grid; grid-template-columns: repeat(auto-fit, minmax(16em, 1fr)); gap: 1cqmin; width: 100%; font-size: clamp(0.7rem, 2.5cqmin, 1.35rem); }
+.sq-kueri-btn { display: flex; flex-direction: column; gap: 0.2em; padding: 0.6em 0.8em; border: 2px solid #1d4ed8; border-radius: 0.8em; background: #fff; color: #111827; text-align: left; cursor: pointer; }
+.sq-kueri-btn small { color: #475569; }
+.sq-langkah .sq-tabel-wadah { max-height: 15em; overflow: auto; }
+.sq-pilih-kueri { font-size: clamp(0.9rem, 3.2cqmin, 1.8rem); }
+.sq-kueri-btn small { font-size: 0.7em; }
+.sq-tebak { display: flex; flex-direction: column; align-items: center; gap: 1.2cqmin; width: 100%; }
+.sq-tebak .opts { width: min(70em, 92cqw); }
+.sq-tebak .opt { min-height: 0; padding-block: 0.5em; }
+.sq-tebak .opt-label { white-space: normal; font-size: clamp(0.85rem, 3cqmin, 1.6rem); line-height: 1.3; }
+.sq-tebak .sq-alur { max-width: 70em; }
