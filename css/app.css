@@ -4796,3 +4796,50 @@ code.beda { background: #fee2e2 !important; color: #991b1b !important; }
 .petualangan .sk-jejak.tx-kecil .sk-kode { font-size: clamp(0.5rem, 1.6cqmin, 0.9rem); }
 .petualangan .sk-jejak.tx-kecil .sk-jejak-samping { font-size: clamp(0.6rem, 2cqmin, 1.1rem); }
 .petualangan .tx-editor .btn, .petualangan .tx-main .btn { font-size: clamp(0.6rem, 2cqmin, 1.1rem); padding: 0.3em 0.9em; }
+/* sma-50 CSV dan JSON */
+.csv-json .cj-kecil { font-size: clamp(0.5rem, 1.6cqmin, 0.9rem); }
+.csv-json .sk-jejak.cj-kecil .sk-kode { font-size: clamp(0.5rem, 1.6cqmin, 0.9rem); }
+.csv-json .sk-jejak.cj-kecil .sk-jejak-samping { font-size: clamp(0.6rem, 1.9cqmin, 1.05rem); }
+.csv-json .sk-kode.py code { white-space: pre-wrap; overflow-wrap: anywhere; }
+.csv-json .cj-isi .seg-btn { font-size: clamp(0.56rem, 1.75cqmin, 1rem); }
+.csv-json .cj-mono .seg-btn, .csv-json p.cj-mono, .csv-json span.cj-mono { font-family: ui-monospace, monospace; }
+.csv-json .cj-dua { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1em; align-items: center; width: 100%; }
+.csv-json .cj-dua.lebar { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); align-items: start; }
+.csv-json .cj-dua > * { min-width: 0; }
+.csv-json .cj-berkas { display: flex; flex-direction: column; gap: 0.15em; width: min(100%, 40em); margin: 0 auto; font-family: ui-monospace, monospace; font-size: clamp(0.55rem, 1.7cqmin, 0.95rem); }
+.csv-json .cj-berkas.kecil { font-size: clamp(0.48rem, 1.4cqmin, 0.8rem); }
+.csv-json .cj-baris { display: flex; align-items: center; gap: 0.5em; padding: 0.1em 0.4em; border-radius: 0.4em; }
+.csv-json .cj-baris.kepala { color: var(--muted); }
+.csv-json .cj-baris.rusak { background: color-mix(in srgb, #dc2626 14%, var(--surface)); }
+.csv-json .cj-baris.kosong { opacity: 0.6; }
+.csv-json .cj-no { width: 1.8em; flex: none; color: var(--muted); text-align: right; }
+.csv-json .cj-kol { display: flex; flex-wrap: wrap; gap: 0.25em; flex: 1; min-width: 0; }
+.csv-json .cj-kol b { padding: 0 0.35em; border: 1px solid var(--line); border-radius: 0.3em; background: var(--bg); font-weight: 600; }
+.csv-json .cj-kol b.nol { color: #dc2626; border-color: #dc2626; }
+.csv-json .cj-baris.rusak .cj-kol b { border-color: #dc2626; }
+.csv-json .cj-alasan { flex: none; color: #15803d; }
+.csv-json .cj-baris.rusak .cj-alasan { color: #dc2626; font-weight: 700; }
+.csv-json .cj-layar { margin: 0; max-height: 40cqh; overflow: auto; padding: 0.6em 0.8em; border-radius: 0.6em; background: #10231a; color: #b7f7c8; font-family: ui-monospace, monospace; font-size: clamp(0.55rem, 1.7cqmin, 0.95rem); white-space: pre-wrap; overflow-wrap: anywhere; text-align: left; }
+.csv-json .cj-layar.json { color: #fde68a; }
+.csv-json .cj-tabel { border-collapse: collapse; font-size: clamp(0.5rem, 1.6cqmin, 0.9rem); margin: 0 auto; }
+.csv-json .cj-tabel th, .csv-json .cj-tabel td { padding: 0.1em 0.5em; border: 1px solid var(--line); text-align: right; }
+.csv-json .cj-tabel td:first-child { text-align: left; }
+.csv-json .cj-ket { margin: 0.3em 0 0; color: var(--muted); text-align: center; font-size: clamp(0.55rem, 1.6cqmin, 0.9rem); }
+.csv-json .cj-atur { display: flex; flex-wrap: wrap; gap: 0.5em; justify-content: center; }
+.csv-json .cj-atur .btn { font-size: clamp(0.6rem, 1.9cqmin, 1.05rem); padding: 0.3em 0.9em; }
+.csv-json .cj-sunting { display: flex; flex-direction: column; gap: 0.3em; min-width: 0; }
+.csv-json .cj-area { width: 100%; min-height: 14em; padding: 0.6em; border: 2px solid var(--line); border-radius: 0.6em; background: var(--bg); color: var(--ink); font-family: ui-monospace, monospace; font-size: clamp(0.6rem, 1.9cqmin, 1.05rem); resize: vertical; box-sizing: border-box; }
+.csv-json .cj-panel { display: flex; flex-direction: column; gap: 0.5em; min-width: 0; }
+.csv-json .cj-ringkas { display: flex; flex-direction: column; gap: 0.3em; font-size: clamp(0.55rem, 1.7cqmin, 0.95rem); }
+.csv-json .cj-ringkas p { margin: 0; overflow-wrap: anywhere; }
+.csv-json .cj-ringkas p.bad { color: #dc2626; font-weight: 700; }
+.csv-json .cj-susun { display: flex; flex-direction: column; gap: 0.35em; }
+.csv-json .cj-baris-atur { display: grid; grid-template-columns: 4em minmax(0, 1fr); gap: 0.4em; align-items: center; }
+.csv-json .cj-baris-atur > small { color: var(--muted); text-align: right; }
+.csv-json .cj-seg { flex-wrap: wrap; }
+.csv-json .cj-seg .seg-btn { font-family: ui-monospace, monospace; font-size: clamp(0.55rem, 1.6cqmin, 0.9rem); }
+.csv-json .cj-benar { color: #15803d; }
+.csv-json .cj-salah { color: #dc2626; }
+@container (max-width: 640px) { .csv-json .cj-dua, .csv-json .cj-dua.lebar { grid-template-columns: minmax(0, 1fr); } }
+.csv-json .sk-baris b.cj-salah { color: #dc2626; }
+.csv-json .sk-baris b.cj-benar { color: #15803d; }

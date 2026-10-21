@@ -130,6 +130,7 @@ import BfsAngkot from './sma-46-bfs-angkot.js';
 import OopPerpustakaan from './sma-47-oop-perpustakaan.js';
 import KnnKode from './sma-48-knn-kode.js';
 import PetualanganTeks from './sma-49-petualangan-teks.js';
+import CsvJson from './sma-50-csv-json.js';
 
 export const JENJANG = [
   { id: 'paud', label: 'PAUD', detail: '4–6 tahun' },
@@ -194,6 +195,7 @@ export const activities = [
   OopPerpustakaan,
   KnnKode,
   PetualanganTeks,
+  CsvJson,
 ]
   .sort((a, b) => order(a) - order(b) || a.id.localeCompare(b.id));
 
