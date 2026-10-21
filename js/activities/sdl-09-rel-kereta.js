@@ -307,7 +307,7 @@ function createDesign(root, ctx) {
         draw();
       },
     });
-    for (let r = 0; r <= net.length; r++) y.show(r, Array.from({ length: lanes }, (_, i) => (r === net.length ? '+' : r === 0 ? `Rel ${i + 1}` : '·')));
+    for (let r = 0; r <= net.length; r++) y.show(r, Array.from({ length: lanes }, (_, i) => (r === net.length ? '+' : r === 0 ? '▼' : '·')));
     const bar = el('div', { class: 'row' },
       [3, 4].map((n) => button(`${n} jalur`, () => { lanes = n; posts = []; draw(); }, n === lanes ? 'small on' : 'small')),
       button('↩️ Hapus pos terakhir', () => { posts.pop(); draw(); }, 'small'),
