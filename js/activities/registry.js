@@ -100,6 +100,7 @@ import DuaLangkah from './sma-33-dua-langkah.js';
 import BasisData from './sma-34-basis-data.js';
 import DiagramAlir from './smp-26-diagram-alir.js';
 import NilaiRapor from './smp-27-nilai-rapor.js';
+import IuranKas from './smp-28-iuran-kas.js';
 
 export const JENJANG = [
   { id: 'paud', label: 'PAUD', detail: '4–6 tahun' },
@@ -134,6 +135,7 @@ export const activities = [
   BasisData,
   DiagramAlir,
   NilaiRapor,
+  IuranKas,
 ]
   .sort((a, b) => order(a) - order(b) || a.id.localeCompare(b.id));
 

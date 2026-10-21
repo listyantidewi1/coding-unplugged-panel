@@ -22,9 +22,10 @@ export function fmt(v, { quote = false } = {}) {
   if (Array.isArray(v)) return `[${v.map((x) => fmt(x, { quote: true })).join(', ')}]`;
   if (typeof v === 'string') return quote ? `"${v}"` : v;
   if (typeof v === 'number') {
-    if (Number.isInteger(v)) return v.toLocaleString('id-ID');
+    // Programs print plain numbers (8000, not 8.000) with a decimal comma.
+    if (Number.isInteger(v)) return String(v);
     const r = Math.round(v * 100) / 100;
-    const s = r.toLocaleString('id-ID', { maximumFractionDigits: 2 });
+    const s = String(r).replace('.', ',');
     return Math.abs(r - v) > 1e-9 ? `${s}…` : s;
   }
   return String(v);

@@ -3764,3 +3764,23 @@ code.beda { background: #fee2e2 !important; color: #991b1b !important; }
 .sk-jejak .sk-var { font-size: 1em; }
 .sk-jejak.ringkas .sk-jejak-kode, .sk-jejak.ringkas .sk-jejak-samping { font-size: clamp(0.75rem, 2.6cqmin, 1.45rem); }
 .sk-baris .seg-btn { font-size: 1em; }
+.sk-kode li { position: relative; }
+.sk-hitung { position: absolute; right: 0.4em; top: 0.05em; padding: 0 0.4em; border-radius: 0.5em; background: #334155; color: #fde68a; font-family: ui-monospace, monospace; font-size: 0.8em; }
+.sk-kode li.hl .sk-hitung { background: #111827; }
+
+/* smp-28 Iuran Kas Kelompok (ik-) */
+.ik-tabel { border-collapse: collapse; background: #fff; color: #111827; font-family: ui-monospace, monospace; font-size: clamp(0.75rem, 2.7cqmin, 1.45rem); }
+.ik-tabel th, .ik-tabel td { padding: 0.15em 0.5em; border: 1.5px solid #cbd5e1; text-align: center; }
+.ik-tabel th { background: #e2e8f0; font-size: 0.85em; }
+.ik-tabel td { cursor: default; }
+.ik-tabel td.nol { color: #b91c1c; font-weight: 800; }
+.ik-tabel td.baca { background: #fde047; box-shadow: inset 0 0 0 3px #ca8a04; }
+.ik-ekstra { display: flex; flex-wrap: wrap; gap: 0.8em; align-items: flex-start; }
+.ik-jejak { border-collapse: collapse; background: #fff; color: #111827; font-family: ui-monospace, monospace; font-size: 0.8em; }
+.ik-jejak th, .ik-jejak td { padding: 0.05em 0.4em; border: 1px solid #cbd5e1; text-align: right; }
+.ik-keluaran { margin: 0; padding: 0.4em 0.8em; border-radius: 0.6em; background: #0f172a; color: #86efac; font-family: ui-monospace, monospace; font-size: clamp(0.75rem, 2.7cqmin, 1.45rem); text-align: left; white-space: pre; }
+.ik-keluaran .beda { color: #fca5a5; font-weight: 800; }
+.ik-pilih { display: flex; flex-direction: column; gap: 0.8cqmin; align-items: center; width: 100%; max-width: 80em; }
+.ik-pilih .sk-baris { width: 100%; box-sizing: border-box; }
+.ik-banding { display: flex; gap: 2em; justify-content: center; font-size: clamp(0.75rem, 2.6cqmin, 1.4rem); text-align: left; }
+.iuran-kas .sk-jejak-kode { font-size: clamp(0.75rem, 2.6cqmin, 1.45rem); }

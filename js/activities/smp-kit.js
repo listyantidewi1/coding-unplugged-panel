@@ -55,9 +55,9 @@ export function pickSet(wrap, ctx, { prompt, items, right, done, info = 'Ketuk s
 }
 
 // Code listing with line numbers; hl = set of highlighted line indexes (0-based).
-export function codeView(lines, { hl = [], cls = '', onLine = null, warn = [] } = {}) {
+export function codeView(lines, { hl = [], cls = '', onLine = null, warn = [], counts = null } = {}) {
   return el('ol', { class: `sk-kode ${cls}` }, lines.map((t, i) => {
-    const li = el('li', { class: `${hl.includes(i) ? 'hl' : ''} ${warn.includes(i) ? 'warn' : ''}` }, el('code', null, t || ' '));
+    const li = el('li', { class: `${hl.includes(i) ? 'hl' : ''} ${warn.includes(i) ? 'warn' : ''}` }, el('code', null, t || ' '), counts && counts[i] ? el('span', { class: 'sk-hitung' }, `×${counts[i]}`) : null);
     if (onLine) onTap(li, () => onLine(i));
     return li;
   }));
@@ -70,8 +70,8 @@ export const varView = (vars, changed = []) => el('div', { class: 'sk-var' }, va
 // boxes coloured by data type, output, and a clear message when the step
 // limit is reached. opts are passed to makeRunner (vars, input, builtins, limit).
 import { makeRunner, fmt, typeOf, flat } from './pseudo.js';
-export function tracer(lines, { opts = {}, title = '', onEnd = null, speed = 450, showTypes = true, hideVars = [], extra = null, cls = '' } = {}) {
-  let r; let last = null; let timer = null; let prev = {};
+export function tracer(lines, { opts = {}, title = '', onEnd = null, onStep = null, speed = 450, showTypes = true, hideVars = [], extra = null, cls = '', counts: showCounts = false } = {}) {
+  let r; let last = null; let timer = null; let prev = {}; let counts = {};
   const host = el('div', { class: `sk-jejak ${cls}` });
   const draw = () => {
     const st = r.state; const vars = flat(st);
@@ -80,7 +80,7 @@ export function tracer(lines, { opts = {}, title = '', onEnd = null, speed = 450
     const msg = st.error ? el('p', { class: `sk-galat ${st.error.kind}` }, `${st.error.kind === 'batas' ? '⏱' : '⚠'} ${st.error.message}`)
       : st.done ? el('p', { class: 'sk-beres' }, `✓ Program selesai (${st.steps} langkah).`) : null;
     host.replaceChildren(
-      el('div', { class: 'sk-jejak-kode' }, title ? el('b', null, title) : null, codeView(lines, { hl: last && !st.done ? [last.line] : [], warn: st.error ? [st.error.line] : [] })),
+      el('div', { class: 'sk-jejak-kode' }, title ? el('b', null, title) : null, codeView(lines, { hl: last && !st.done ? [last.line] : [], warn: st.error ? [st.error.line] : [], counts: showCounts ? counts : null })),
       el('div', { class: 'sk-jejak-samping' },
         el('div', { class: 'sk-tombol' }, button('▶ Langkah', () => go(1), 'primary'), button(timer ? '⏸ Berhenti' : '⏩ Otomatis', toggle), button('⏭ Sampai selesai', () => { stop(); go(100000); }), button('↺ Ulang', reset)),
         el('p', { class: 'sk-catatan' }, last ? `Baris ${last.line + 1}: ${last.note}` : 'Ketuk Langkah untuk menjalankan baris pertama.'),
@@ -92,13 +92,13 @@ export function tracer(lines, { opts = {}, title = '', onEnd = null, speed = 450
     prev = JSON.parse(JSON.stringify(vars));
   };
   function go(k) {
-    for (let i = 0; i < k; i++) { const g = r.gen.next(); if (g.done) break; last = g.value; if (i < k - 1 && (r.state.done || r.state.error)) break; }
+    for (let i = 0; i < k; i++) { const g = r.gen.next(); if (g.done) break; last = g.value; counts[last.line] = (counts[last.line] || 0) + 1; onStep?.(last, r.state); if (i < k - 1 && (r.state.done || r.state.error)) break; }
     draw();
     if (r.state.done || r.state.error) { stop(); onEnd?.(r.state); }
   }
   function stop() { if (timer) { clearInterval(timer); timer = null; } }
   function toggle() { if (timer) { stop(); draw(); } else { timer = setInterval(() => go(1), speed); draw(); } }
-  function reset(newOpts) { stop(); if (newOpts && !newOpts.type) opts = { ...opts, ...newOpts }; r = makeRunner(lines, opts); last = null; prev = { ...r.state.vars }; draw(); }
+  function reset(newOpts) { stop(); if (newOpts && !newOpts.type) opts = { ...opts, ...newOpts }; r = makeRunner(lines, opts); last = null; counts = {}; onStep?.(null, r.state); prev = { ...r.state.vars }; draw(); }
   reset();
   host.stop = stop; host.reset = reset; host.setLines = (ls) => { lines = ls; reset(); };
   return host;

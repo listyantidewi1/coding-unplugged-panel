@@ -121,6 +121,7 @@ const FILES = [
   'js/activities/smp-26-diagram-alir.js',
   'js/activities/pseudo.js',
   'js/activities/smp-27-nilai-rapor.js',
+  'js/activities/smp-28-iuran-kas.js',
 ];
 
 self.addEventListener('install', (e) => {
