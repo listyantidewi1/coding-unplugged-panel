@@ -55,6 +55,7 @@ import smpMejaBundar from './smp-13-meja-bundar.js';
 import smpAmplopBerlapis from './smp-14-amplop-berlapis.js';
 import smpKembalian from './smp-15-kembalian.js';
 import smpGerbangTol from './smp-16-gerbang-tol.js';
+import smpKomputerKertas from './smp-17-komputer-kertas.js';
 
 export const JENJANG = [
   { id: 'paud', label: 'PAUD', detail: '4–6 tahun' },
@@ -72,7 +73,7 @@ export const activities = [
   sdaMotifBatik, sdaRumahAdat, sdaRumahNenek, sdaResep, sdaSenamPagi, sdaJikaHujan, sdaRuteSalah, sdaTimbangan, sdaGambarRahasia, sdaTabelHewan, sdaCariHalaman, sdaBarisUpacara, sdaTombolLift,
   sdlLampuGapura, sdlPikselWarna, sdlSandiSenter, sdlHematKuota, sdlAnyamanRusak, sdlKartuData, sdlCariRumah, sdlRakBuku, sdlRelKereta, sdlCariKata, sdlGulaKurang, sdlKancil, sdlKurirKampung, sdlMerpatiPos, sdlMesinKantin, sdlMesinCerdas, sdlLatihMesin, sdlDataPribadi,
   smpKartuPelajar, smpKodeHuruf, smpVideotron, smpLaguMampat, smpAngkaCek, smpTebakHuruf, smpKoperasi, smpLoker, smpKlasemen, smpSalaman, smpGotongRoyong, smpOjek,
-  smpMejaBundar, smpAmplopBerlapis, smpKembalian, smpGerbangTol,
+  smpMejaBundar, smpAmplopBerlapis, smpKembalian, smpGerbangTol, smpKomputerKertas,
 ]
   .sort((a, b) => order(a) - order(b) || a.id.localeCompare(b.id));
 

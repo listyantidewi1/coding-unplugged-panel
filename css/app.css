@@ -1896,3 +1896,51 @@ button.ab-luar { cursor: pointer; }
   .gerbang .gt-diagram { width: min(40cqw, 56cqh); }
   .gerbang .gt-urutan { font-size: clamp(0.45rem, 3.4cqh, 0.9rem); }
 }
+
+/* Komputer dari kertas */
+.kertas { gap: 1cqmin; }
+.kk-samping { display: flex; gap: 2cqw; align-items: flex-start; justify-content: center; width: 100%; }
+.kk-kanan { display: flex; flex-direction: column; gap: 1cqmin; align-items: center; min-width: 0; }
+.kk-memori { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.35em; width: min(48cqw, 76cqh, 40rem); font-size: clamp(0.45rem, 2.2cqmin, 1.1rem); }
+.kk-kotak { font: inherit; display: flex; flex-direction: column; align-items: flex-start; gap: 0.1em; padding: 0.3em 0.4em; min-height: 3.2em; border-radius: 0.4em; border: 2px solid #cbd5e1; background: #fff; color: #1e293b; text-align: left; }
+button.kk-kotak { cursor: pointer; }
+.kk-kotak small { font-weight: 900; color: #64748b; }
+.kk-kotak span { font-family: ui-monospace, monospace; font-weight: 800; word-break: break-word; }
+.kk-kotak.instr { background: #eff6ff; border-color: #93c5fd; }
+.kk-kotak.angka { background: #fef9c3; border-color: #facc15; }
+.kk-kotak.kosong span { color: #cbd5e1; }
+.kk-kotak.pc { outline: max(3px, 0.5cqmin) solid #16a34a; outline-offset: 1px; }
+.kk-kotak.pilih { outline: max(3px, 0.5cqmin) solid #f59e0b; outline-offset: 1px; }
+.kk-kotak.berubah { animation: kk-kedip 0.5s 3; }
+.kk-kotak.timpa { background: #fee2e2; border-color: #dc2626; }
+@keyframes kk-kedip { 50% { background: #fde047; } }
+.kk-cpu { display: flex; gap: 0.8em; align-items: stretch; font-size: clamp(0.6rem, 2.6cqmin, 1.3rem); }
+.kk-cpu > div { display: flex; flex-direction: column; align-items: center; padding: 0.3em 0.8em; border-radius: 0.6em; background: #1e293b; color: #fff; min-width: 3.5em; }
+.kk-cpu b { font-size: 1.6em; font-family: ui-monospace, monospace; }
+.kk-cpu .kk-layar { background: #0f172a; color: #4ade80; max-width: 22em; }
+.kk-cpu .kk-layar b { font-size: 1.1em; word-break: break-all; }
+.kk-tabel { font-size: clamp(0.5rem, 2cqmin, 1rem); }
+.kk-tabel td, .kk-tabel th { padding: 0.15em 0.5em; text-align: center; font-family: ui-monospace, monospace; }
+.kk-editor { display: flex; gap: 2cqw; align-items: flex-start; justify-content: center; width: 100%; }
+.kk-alat { display: flex; flex-direction: column; gap: 0.6em; align-items: center; max-width: 44cqw; }
+.kk-sel { margin: 0; font-weight: 900; font-family: ui-monospace, monospace; font-size: clamp(0.6rem, 2.6cqmin, 1.3rem); }
+.kk-ops { display: flex; flex-wrap: wrap; gap: 0.3em; justify-content: center; font-size: clamp(0.5rem, 2cqmin, 1rem); }
+.kk-ops .seg-btn { padding: 0.4em 0.6em; font-family: ui-monospace, monospace; }
+.kk-uji { display: flex; gap: 0.5em; flex-wrap: wrap; justify-content: center; font-size: clamp(0.5rem, 2cqmin, 1rem); }
+.kk-uji span { padding: 0.2em 0.5em; border-radius: 0.4em; font-family: ui-monospace, monospace; }
+.kk-uji .lulus { background: #dcfce7; }
+.kk-uji .gagal { background: #fee2e2; }
+.kk-catatan { margin: 0; font-weight: 800; font-family: ui-monospace, monospace; font-size: clamp(0.55rem, 2.3cqmin, 1.15rem); text-align: center; }
+.kk-fungsi { display: flex; flex-direction: column; gap: 0.2em; margin-bottom: 0.6em; font-size: clamp(0.5rem, 2.5cqmin, 1.25rem); }
+.kertas .ab-lapisan { font-size: clamp(0.55rem, 2.6cqmin, 1.3rem); }
+@container (max-aspect-ratio: 6/5) {
+  .kk-samping, .kk-editor { flex-direction: column; align-items: center; }
+  .kk-memori { width: min(92cqw, 40cqh); }
+  .kk-alat { max-width: 96cqw; }
+}
+@container (max-height: 520px) {
+  .kertas > .prompt, .kertas .reveal { font-size: clamp(0.55rem, 4cqh, 1.1rem); }
+  .kertas .kk-memori { width: min(42cqw, 66cqh); font-size: clamp(0.4rem, 2.4cqh, 0.8rem); }
+  .kertas .kk-tabel { font-size: clamp(0.4rem, 2.6cqh, 0.8rem); }
+  .kertas .keys.keypad { grid-template-columns: repeat(7, min(4.5cqw, 8cqh)); }
+}
