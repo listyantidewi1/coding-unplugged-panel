@@ -4090,3 +4090,40 @@ code.beda { background: #fee2e2 !important; color: #991b1b !important; }
 .menara-hanoi .hn-dalam { margin: 0; color: #b45309; font-weight: 800; font-size: clamp(0.6rem, 1.9cqmin, 1rem); }
 .menara-hanoi .hn-isi .sk-baris span { font-family: ui-monospace, monospace; }
 .menara-hanoi .sk-tumpukan { display: none; }
+
+/* smp-40 Lampu Kelas Otomatis */
+.lampu-otomatis .lo-ket { margin: 0; text-align: center; color: var(--muted); font-size: clamp(0.75rem, 2.3cqmin, 1.15rem); }
+.lampu-otomatis .lo-atur { display: flex; flex-wrap: wrap; gap: 0.5em 0.8em; align-items: center; justify-content: center; }
+.lampu-otomatis .lo-dua { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 0.8em; width: 100%; align-items: start; }
+@container (max-width: 640px) { .lampu-otomatis .lo-dua { grid-template-columns: 1fr; } }
+.lampu-otomatis .lo-kiri, .lampu-otomatis .lo-kanan { display: flex; flex-direction: column; gap: 0.5em; min-width: 0; }
+.lampu-otomatis .lo-kelas { position: relative; display: flex; flex-direction: column; border-radius: 0.8em; overflow: hidden; background: color-mix(in srgb, #fef3c7 calc(var(--terang) * 100%), #1e293b); border: 2px solid var(--line); min-height: clamp(9rem, 32cqmin, 18rem); transition: background 0.3s; }
+.lampu-otomatis .lo-langit-langit { position: relative; display: flex; justify-content: space-around; align-items: center; padding: 0.4em 1em; background: rgba(0, 0, 0, 0.18); }
+.lampu-otomatis .lo-lampu { position: relative; display: block; width: clamp(1.2rem, 5cqmin, 2.6rem); height: clamp(0.5rem, 1.8cqmin, 1rem); border-radius: 0 0 1em 1em; background: #94a3b8; }
+.lampu-otomatis .lo-lampu.on { background: #fde047; box-shadow: 0 0.4em 1.6em 0.6em rgba(253, 224, 71, 0.75); }
+.lampu-otomatis .lo-sorot { position: absolute; left: 100%; top: 50%; width: 1.4em; height: 0.25em; background: linear-gradient(90deg, #fde047, transparent); }
+.lampu-otomatis .lo-sensor { position: absolute; top: 0; display: block; width: 1.1em; height: 0.6em; border-radius: 0 0 1em 1em; background: #f8fafc; border: 2px solid #475569; }
+.lampu-otomatis .lo-sensor.cahaya { width: 0.6em; height: 0.6em; top: 0.3em; border-radius: 50%; background: #f59e0b; }
+.lampu-otomatis .lo-sensor.gerak { left: 50%; }
+.lampu-otomatis .lo-sensor.cahaya { left: 4%; }
+.lampu-otomatis .lo-sensor.cahaya.dekat { left: 33%; }
+.lampu-otomatis .lo-dinding { flex: 1; display: grid; grid-template-columns: auto 1fr auto; gap: 0.6em; align-items: end; padding: 0.6em; }
+.lampu-otomatis .lo-jendela { display: grid; place-items: start end; width: clamp(4rem, 16cqmin, 8rem); aspect-ratio: 4 / 3; max-width: 100%; padding: 0.2em; border: 0.3em solid #78350f; border-radius: 0.3em; font-size: clamp(0.8rem, 2.6cqmin, 1.4rem); align-self: center; }
+.lampu-otomatis .lo-orang { text-align: center; font-size: clamp(1.2rem, 5cqmin, 2.8rem); }
+.lampu-otomatis .lo-pintu { display: flex; flex-direction: column; align-items: center; padding: 0.3em; border-radius: 0.4em; background: #e2e8f0; color: #334155; font-size: clamp(0.55rem, 1.7cqmin, 0.9rem); }
+.lampu-otomatis .lo-pintu b { font-size: 1.6em; }
+.lampu-otomatis .lo-pintu.tekan { background: #fde047; }
+.lampu-otomatis .lo-stat { display: flex; flex-wrap: wrap; gap: 0.5em; justify-content: center; }
+.lampu-otomatis .lo-stat span { display: flex; flex-direction: column; align-items: center; min-width: 4.5em; padding: 0.2em 0.6em; border: 2px solid var(--line); border-radius: 0.6em; background: var(--surface); }
+.lampu-otomatis .lo-stat span.nyala { border-color: #ca8a04; background: #fef9c3; color: #713f12; }
+.lampu-otomatis .lo-stat small { color: var(--muted); }
+.lampu-otomatis .lo-diagram { display: flex; align-items: center; justify-content: center; gap: 0.5em; }
+.lampu-otomatis .lo-keadaan { display: grid; place-items: center; width: clamp(3.6rem, 12cqmin, 6rem); aspect-ratio: 1; max-width: 100%; border: 3px solid var(--line); border-radius: 50%; font-weight: 900; background: var(--surface); }
+.lampu-otomatis .lo-keadaan.aktif { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 18%, var(--surface)); }
+.lampu-otomatis .lo-panah { display: flex; flex-direction: column; gap: 0.3em; max-width: 16em; font-size: clamp(0.75rem, 2.3cqmin, 1.2rem); text-align: center; }
+.lampu-otomatis .lo-panah .kedip { color: var(--primary); font-weight: 900; animation: lo-kedip 0.5s 3; }
+@keyframes lo-kedip { 50% { opacity: 0.2; } }
+.lampu-otomatis .lo-log { display: flex; flex-direction: column; gap: 0.1em; font-size: clamp(0.65rem, 2cqmin, 1rem); color: var(--muted); }
+.lampu-otomatis .lo-log div:first-child { color: var(--ink); font-weight: 800; }
+.lampu-otomatis .lo-geser { display: flex; flex-direction: column; min-width: 10em; }
+.lampu-otomatis .lo-tabel .sk-baris span { font-variant-numeric: tabular-nums; }
