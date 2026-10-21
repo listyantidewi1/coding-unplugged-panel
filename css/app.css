@@ -5545,3 +5545,44 @@ button.pls-chip, .pls-pilih { cursor: pointer; }
 .lbr-hapus { font: inherit; border: 0; background: none; color: var(--bad); cursor: pointer; }
 .lbr-info { font-weight: 700; text-align: center; max-width: 92cqw; }
 .robot-labirin .lbr-atas .lbr-labirin { width: min(44cqw, calc(var(--n) * 7cqmin)); }
+
+/* sdl-24 Permainan Tangkap Mangga */
+.tgm-soal { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start; gap: 2cqmin; }
+.tgm-kanan, .tgm-kolom { display: flex; flex-direction: column; align-items: center; gap: 1cqmin; min-width: 0; }
+.tgm-kartu-kartu { display: flex; flex-direction: column; gap: 0.6cqmin; max-width: 46cqw; }
+.tgm-kartu-kartu.edit { max-width: 94cqw; }
+.tgm-kartu-kartu.kunci button { pointer-events: none; }
+.tgm-kartu { display: grid; grid-template-columns: auto 1fr; column-gap: 1cqmin; align-items: center; padding: 0.5cqmin 1.2cqmin; border-radius: 1.5cqmin; border: max(2px, 0.3cqmin) solid #fbbf24; background: #fffbeb; color: #422006; font-weight: 700; font-size: clamp(0.55rem, 2cqmin, 0.95rem); text-align: left; }
+.tgm-kartu > div { grid-column: 2; }
+.tgm-kartu.nyala { animation: tgm-nyala 0.8s; }
+@keyframes tgm-nyala { 0%, 60% { background: #fde047; box-shadow: 0 0 0 max(3px, 0.5cqmin) #ca8a04; } }
+.tgm-no { grid-row: span 2; display: grid; place-items: center; width: 1.8em; height: 1.8em; border-radius: 50%; background: #f59e0b; color: #fff; }
+.tgm-ketika { color: #1d4ed8; font-weight: 900; }
+.tgm-maka { color: #15803d; font-weight: 900; }
+.tgm-aksi { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5cqmin; }
+.tgm-pilih { font: inherit; padding: 0.1em 0.5em; border-radius: 1cqmin; border: max(2px, 0.3cqmin) solid #1d4ed8; background: #fff; color: #1e3a8a; cursor: pointer; }
+.tgm-pilih.aksi { border-color: #15803d; color: #14532d; }
+.tgm-kecil { font: inherit; padding: 0 0.6em; border-radius: 1cqmin; border: max(1px, 0.2cqmin) solid var(--line); background: #fff; color: var(--ink); cursor: pointer; }
+.tgm-kecil.hapus { color: var(--bad); margin-left: auto; }
+.tgm-layar { position: relative; display: flex; flex-direction: column; align-items: center; gap: 0.5cqmin; }
+.tgm-lajur-lajur { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.4cqmin; width: min(40cqw, 50cqmin); height: 24cqmin; padding: 0.5cqmin; border-radius: 1.5cqmin; background: linear-gradient(#bbf7d0, #86efac); }
+.tgm-lajur { position: relative; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; border-radius: 1cqmin; background: rgba(255, 255, 255, 0.45); overflow: hidden; }
+.tgm-lajur small { position: absolute; top: 0.3cqmin; font-weight: 800; color: #14532d; }
+.tgm-keranjang { font-size: clamp(1rem, 5.5cqmin, 2.8rem); line-height: 1; }
+.tgm-mangga { position: absolute; top: 0; font-size: clamp(0.9rem, 4.5cqmin, 2.2rem); animation: tgm-jatuh linear forwards; }
+@keyframes tgm-jatuh { to { top: calc(100% - 1.2em); } }
+.tgm-luar { min-height: 1.2em; font-weight: 800; color: var(--bad); }
+.tgm-pesan { position: absolute; top: 35%; padding: 0.6cqmin 2cqmin; border-radius: 1.5cqmin; background: #111827; color: #fff; font-weight: 900; }
+.tgm-var { display: flex; flex-wrap: wrap; gap: 0.8cqmin; }
+.tgm-kotak { display: flex; flex-direction: column; align-items: center; min-width: 9cqmin; padding: 0.4cqmin 1cqmin; border-radius: 1.2cqmin; border: max(2px, 0.4cqmin) solid #7c2d12; background: #fff7ed; color: #431407; }
+.tgm-kotak span { font-style: italic; font-weight: 800; font-size: clamp(0.5rem, 1.9cqmin, 0.9rem); }
+.tgm-kotak b { font-size: clamp(0.9rem, 4cqmin, 2rem); }
+.tgm-tabel-tempat { max-height: 36cqh; overflow: auto; }
+.tgm-tabel { border-collapse: collapse; font-weight: 700; font-size: clamp(0.5rem, 1.9cqmin, 0.9rem); }
+.tgm-tabel th, .tgm-tabel td { border: 1px solid var(--line); padding: 0.15cqmin 0.8cqmin; text-align: left; }
+.tgm-tabel tr.nyala { background: #fef08a; }
+.tgm-main { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start; gap: 2cqmin; }
+.tgm-tombol { font: 900 clamp(1.4rem, 8cqmin, 4rem)/1 system-ui, sans-serif; width: 14cqmin; height: 18cqmin; border-radius: 2cqmin; border: max(3px, 0.5cqmin) solid #1d4ed8; background: #dbeafe; color: #1e3a8a; cursor: pointer; touch-action: manipulation; }
+.tgm-tombol:active { background: #93c5fd; }
+.tgm-sisa { font-weight: 800; color: var(--muted); }
+.tgm-info { font-weight: 700; text-align: center; max-width: 92cqw; }

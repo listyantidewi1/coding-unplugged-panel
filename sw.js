@@ -169,6 +169,7 @@ const FILES = [
   'js/activities/sdl-21-celengan.js',
   'js/activities/sdl-22-sampai-penuh.js',
   'js/activities/sdl-23-robot-labirin.js',
+  'js/activities/sdl-24-tangkap-mangga.js',
 ];
 
 self.addEventListener('install', (e) => {
