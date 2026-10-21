@@ -168,7 +168,7 @@ export default {
       const r = ctx.round;
       let solved = false;
       const next = () => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, 2400); } };
-      const ask = (prompt, opts, columns = 1, subject = null, onRight = next) => choice(wrap, { prompt, subject, ctx, onRight, columns, options: opts.map(([l, correct]) => ({ label: String(l), correct })) });
+      const ask = (prompt, opts, columns = 1, subject = null, onRight = next) => choice(wrap, { prompt, subject, ctx, shuffle: true, onRight, columns, options: opts.map(([l, correct]) => ({ label: String(l), correct })) });
       if (r === 0) spotRound(wrap, ctx, { done: next });
       else if (r === 1) ask('Tim hanya sempat memperbaiki tiga masalah minggu ini. Mana yang didahulukan?', [['"Hapus Semua" tanpa konfirmasi, tidak ada tombol kembali, dan hari yang hanya ditandai warna (tingkat 3)', true], ['Judul, istilah teknis, dan ikon rumah'], ['Judul, warna tombol, dan ukuran huruf'], ['Yang paling mudah diperbaiki saja']]);
       else if (r === 2) fixRound(wrap, ctx, { done: next });

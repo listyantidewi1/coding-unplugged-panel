@@ -89,7 +89,7 @@ export default {
       const r = ctx.round;
       let solved = false;
       const next = () => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, 2400); } };
-      const ask = (prompt, opts, columns = 1, subject = null, onRight = next) => choice(wrap, { prompt, subject, ctx, onRight, columns, options: opts.map(([l, correct]) => ({ label: String(l), correct })) });
+      const ask = (prompt, opts, columns = 1, subject = null, onRight = next) => choice(wrap, { prompt, subject, ctx, shuffle: true, onRight, columns, options: opts.map(([l, correct]) => ({ label: String(l), correct })) });
       if (r === 0) categoryRound(wrap, ctx, { readings: [250, 640, 910], done: next });
       else if (r === 1) ask('Lihat hari-hari ketika Pak Darto menyiram. Apa persamaannya?', [['Kelembapan 30–39% (di bawah 40), cahaya tinggi, suhu 30–33 °C', true], ['Kelembapan di atas 50%'], ['Selalu hari genap'], ['Cahaya rendah dan suhu di bawah 27 °C']], 1, table(TRAIN));
       else if (r === 2) countRound(wrap, ctx, { done: next });

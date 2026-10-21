@@ -194,7 +194,7 @@ export default {
       const r = ctx.round;
       let solved = false;
       const next = () => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, 2400); } };
-      const ask = (prompt, opts, columns = 1, subject = null) => choice(wrap, { prompt, subject, ctx, onRight: next, columns, options: opts.map(([l, correct]) => ({ label: String(l), correct })) });
+      const ask = (prompt, opts, columns = 1, subject = null) => choice(wrap, { prompt, subject, ctx, shuffle: true, onRight: next, columns, options: opts.map(([l, correct]) => ({ label: String(l), correct })) });
       if (r === 0) fillRound(wrap, ctx, { rule: 'A', turns: 3, prompt: `Aturan A: "${RULES.A}". Semua mulai pada giliran 1.`, done: next });
       else if (r === 1) { const st = run('A'); ask('Panah menunjuk ke orang yang memegang alat yang ditunggu. Bentuk apa yang terbentuk?', [['Lingkaran: Ani → Bayu → Citra → Dedi → Ani, semua menunggu selamanya', true], ['Garis lurus: Ani menunggu, yang lain makan'], ['Tidak ada panah, semua makan'], ['Dua pasangan yang saling menunggu']], 1, tableView(st)); }
       else if (r === 2) fillRound(wrap, ctx, { rule: 'A', starts: { Dedi: 2 }, given: 1, prompt: 'Aturan A, tetapi Dedi datang terlambat (mulai giliran 2). Lanjutkan sampai semua makan.', done: next });

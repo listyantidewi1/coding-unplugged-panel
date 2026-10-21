@@ -160,7 +160,7 @@ export default {
       const r = ctx.round;
       let solved = false;
       const next = () => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, 2400); } };
-      const ask = (prompt, opts, columns = 1, subject = null) => choice(wrap, { prompt, subject, ctx, onRight: next, columns, options: opts.map(([l, correct]) => ({ label: String(l), correct })) });
+      const ask = (prompt, opts, columns = 1, subject = null) => choice(wrap, { prompt, subject, ctx, shuffle: true, onRight: next, columns, options: opts.map(([l, correct]) => ({ label: String(l), correct })) });
       const seqRound = (events, prompt) => sequenceRound(wrap, ctx, { items: events, want: runToll(events).seen, options: STATES, prompt,
         after: (w) => choice(w, { prompt: 'Berapa kali saldo dipotong?', ctx, columns: 3, onRight: next, options: [0, 1, 2].map((n) => ({ label: `${n} kali`, correct: n === runToll(events).charged })) }) });
       if (r === 0) {

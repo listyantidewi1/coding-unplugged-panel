@@ -5,8 +5,10 @@ import { el, onTap, button, shake } from './util.js';
 
 // One question with big answer buttons. A wrong answer counts a mistake and
 // greys that option out; the right one calls `onRight`.
-export function choice(root, { prompt, subject, options, ctx, onRight, columns }) {
+export function choice(root, { prompt, subject, options, ctx, onRight, columns, shuffle = false }) {
   let done = false;
+  // Mixed order so the right answer is not always on top; numbers stay in counting order.
+  if (shuffle && ctx.rand && !options.every((o) => /^-?[\d.,]+$/.test(o.label ?? ''))) options = ctx.rand.shuffle(options);
   const buttons = options.map((o) => {
     const b = onTap(el('button', { class: 'opt', type: 'button' },
       o.icon ? el('span', { class: 'opt-icon' }, o.icon) : null,

@@ -56,7 +56,7 @@ export default {
       const r = ctx.round;
       let solved = false;
       const next = () => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, 2400); } };
-      const ask = (prompt, opts, columns = 1, subject = null) => choice(wrap, { prompt, subject, ctx, onRight: next, columns, options: opts.map(([label, correct]) => ({ label: String(label), correct })) });
+      const ask = (prompt, opts, columns = 1, subject = null) => choice(wrap, { prompt, subject, ctx, shuffle: true, onRight: next, columns, options: opts.map(([label, correct]) => ({ label: String(label), correct })) });
       if (r === 0) shakeRound(wrap, ctx, { n: ctx.rand.int(4, 6), done: next });
       else if (r === 1) fillNumbers(wrap, ctx, { prompt: 'Berapa salaman untuk n orang?', heads: [3, 4, 5, 6, 10, 36].map(String), want: [3, 4, 5, 6, 10, 36].map(pairs), label: 'Salaman', done: next });
       else if (r === 2) ask('Setiap orang bersalaman dengan n − 1 orang, dan setiap salaman terhitung dua kali. Jadi banyak salaman = …', [['n(n − 1)/2', true], ['n(n − 1)'], ['2n − 1'], ['n²']], 2);

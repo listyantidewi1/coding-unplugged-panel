@@ -57,7 +57,7 @@ export default {
       const r = ctx.round;
       let solved = false;
       const next = () => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, 2400); } };
-      const ask = (prompt, opts, columns = 1, subject = null) => choice(wrap, { prompt, subject, ctx, onRight: next, columns, options: opts.map(([label, correct]) => ({ label: String(label), correct })) });
+      const ask = (prompt, opts, columns = 1, subject = null) => choice(wrap, { prompt, subject, ctx, shuffle: true, onRight: next, columns, options: opts.map(([label, correct]) => ({ label: String(label), correct })) });
       if (r === 0) huntRound(wrap, ctx, { done: next });
       else if (r === 1) selectRound(wrap, ctx, { prompt: 'Saring: ketuk semua baris penjualan hari Rabu.', want: JUAL.filter(match({ col: 'hari', v: 'Rabu' })).map((x) => x.no), done: next });
       else if (r === 2) selectRound(wrap, ctx, { prompt: 'Saring: ketuk semua baris dengan jumlah 5 atau lebih.', want: JUAL.filter(match({ col: 'min', v: 5 })).map((x) => x.no), done: next });

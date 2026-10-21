@@ -57,7 +57,7 @@ export default {
       const r = ctx.round;
       let solved = false;
       const next = () => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, 2400); } };
-      const ask = (prompt, opts, columns = 2, subject = null) => choice(wrap, { prompt, subject, ctx, onRight: next, columns, options: opts.map(([label, correct]) => ({ label: String(label), correct })) });
+      const ask = (prompt, opts, columns = 2, subject = null) => choice(wrap, { prompt, subject, ctx, shuffle: true, onRight: next, columns, options: opts.map(([label, correct]) => ({ label: String(label), correct })) });
       if (r === 0) fillRound(wrap, ctx, { m: 'luhn', body: '1708194', prompt: 'Kartu perpustakaan 1708194?: isi hasil yang digandakan, jumlahnya, lalu digit ceknya.', done: next });
       else if (r === 1) fillRound(wrap, ctx, { m: 'luhn', body: ctx.rand.pick(['3141592', '2718281']), digitOnly: true, prompt: 'Cari digit cek kartu ini.', done: next });
       else if (r === 2) markRound(wrap, ctx, { items: [['luhn', '52034188'], ['luhn', '52534188'], ['luhn', '71628341'], ['luhn', '71682341']], prompt: 'Periksa nomor kartu: benar (✓) atau salah ketik (✗)?', done: next });
