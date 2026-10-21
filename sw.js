@@ -61,6 +61,7 @@ const FILES = [
   'js/activities/smp-07-koperasi.js',
   'js/activities/smp-08-loker.js',
   'js/activities/smp-09-klasemen.js',
+  'js/activities/smp-10-salaman.js',
 ];
 
 self.addEventListener('install', (e) => {

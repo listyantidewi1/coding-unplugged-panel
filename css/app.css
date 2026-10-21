@@ -1565,3 +1565,57 @@ button.bit-sel { cursor: pointer; }
   .klasemen .kls-kartu { font-size: clamp(0.5rem, 3.6cqh, 0.9rem); }
   .klasemen .keys.keypad { grid-template-columns: repeat(12, min(5cqw, 10cqh)); }
 }
+
+/* Semua bersalaman */
+.salaman { gap: 1cqmin; }
+.salam-panggung { display: flex; flex-direction: column; align-items: center; gap: 0.4cqmin; }
+.lingkar { position: relative; width: min(46cqh, 40cqw); aspect-ratio: 1; }
+.lingkar-garis, .lingkar-garis svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.lingkar-garis line { stroke: #2563eb; stroke-width: 0.8; stroke-linecap: round; }
+.orang { position: absolute; transform: translate(-50%, -50%); width: 14%; aspect-ratio: 1; border-radius: 50%; border: max(3px, 0.5cqmin) solid #1e3a8a; background: #fde68a; font: inherit; font-weight: 900; font-size: clamp(0.6rem, 3cqmin, 1.4rem); cursor: pointer; color: #1e293b; padding: 0; }
+.orang.pilih { background: #2563eb; color: #fff; }
+.salam-hitung { margin: 0; font-weight: 900; font-size: clamp(0.8rem, 4cqmin, 2rem); }
+.grafik-salam { width: min(46cqw, 60cqh); }
+.grafik-salam svg { width: 100%; display: block; }
+.grafik-salam .sumbu { stroke: #64748b; stroke-width: 0.4; }
+.grafik-salam .lurus { fill: none; stroke: #16a34a; stroke-width: 0.8; }
+.grafik-salam .lengkung { fill: none; stroke: #dc2626; stroke-width: 0.8; }
+.grafik-salam .titik { fill: #dc2626; }
+.grafik-salam text { font-size: 3.4px; fill: #475569; }
+.k-lengkung { color: #dc2626; font-weight: 800; } .k-lurus { color: #16a34a; font-weight: 800; }
+.salam-samping { display: flex; gap: 3cqw; align-items: center; justify-content: center; }
+.salam-n { font-size: clamp(0.8rem, 3.6cqmin, 1.6rem); min-width: 4em; text-align: center; }
+.salam-tabel .ck-isi.lebar { width: 4.6em; }
+.salam-data { display: flex; flex-wrap: wrap; gap: 0.4em; justify-content: center; font-size: clamp(0.55rem, 2.4cqmin, 1.1rem); }
+.salam-data span { display: flex; flex-direction: column; align-items: center; padding: 0.2em 0.6em; border-radius: 0.5em; background: #f1f5f9; }
+.salam-data span.hi { background: #fef08a; outline: 2px solid #ca8a04; }
+.salam-data small { color: var(--muted); }
+.salam-kode { display: flex; gap: 3cqw; align-items: center; justify-content: center; margin-top: 1cqmin; }
+.salam-kode pre { margin: 0; padding: 0.6em 0.9em; border-radius: 0.8cqmin; background: #0f172a; color: #e2e8f0; font-size: clamp(0.5rem, 2.2cqmin, 1rem); }
+.pasangan { display: grid; grid-template-columns: auto repeat(var(--n), min(6cqw, 7.5cqh)); gap: 0.3cqmin; align-items: center; font-size: clamp(0.5rem, 2.2cqmin, 1rem); }
+.pas-kepala { text-align: center; color: var(--muted); font-weight: 800; padding: 0 0.3em; }
+.pas, .pas-mati { aspect-ratio: 1; border-radius: 0.4cqmin; }
+.pas { font: inherit; font-weight: 900; border: max(2px, 0.35cqmin) solid #94a3b8; background: #fff; cursor: pointer; padding: 0; color: #1e293b; }
+.pas.sudah { background: #dbeafe; border-color: #2563eb; }
+.pas.kena { background: #fde047; border-color: #ca8a04; }
+.pas-mati { background: #f1f5f9; }
+.kalender { display: grid; grid-template-columns: auto repeat(31, min(2.5cqw, 3.6cqh)); gap: 1px; align-items: center; margin-top: 0.6cqmin; font-size: clamp(0.4rem, 1.7cqmin, 0.8rem); }
+.kal-bulan { padding-right: 0.4em; font-weight: 800; color: var(--muted); }
+.kal, .kal-mati { aspect-ratio: 1; }
+.kal { border: 1px solid #cbd5e1; background: #fff; padding: 0; font: inherit; font-weight: 900; font-size: 0.9em; cursor: pointer; color: #1e293b; }
+.kal.isi { background: #bfdbfe; }
+.kal.hi { background: #fde047; outline: 2px solid #dc2626; }
+.salam-dua { display: flex; gap: 3cqw; justify-content: center; margin: 1cqmin 0; }
+.salam-cara { display: flex; flex-direction: column; align-items: center; gap: 0.2em; padding: 0.6em 1.2em; border-radius: 1cqmin; background: #f8fafc; border: 2px solid #cbd5e1; font-size: clamp(0.6rem, 2.8cqmin, 1.3rem); }
+.salam-cara p { margin: 0; }
+.salam-langkah { font-size: 1.6em; font-weight: 900; }
+@container (max-height: 520px) {
+  .salaman > .prompt, .salaman > .reveal { font-size: clamp(0.55rem, 4.2cqh, 1.2rem); }
+  .salaman .salam-data { font-size: clamp(0.5rem, 3.4cqh, 0.9rem); }
+  .salaman .salam-kode pre { display: none; }
+  .salaman .kalender { font-size: clamp(0.4rem, 2.6cqh, 0.7rem); }
+  .salaman .keys.keypad { grid-template-columns: repeat(11, min(5cqw, 9cqh)); }
+  .salaman .salam-tabel { font-size: clamp(0.5rem, 4.4cqh, 1rem); }
+  .salaman .lingkar { width: min(64cqh, 40cqw); }
+  .salaman .orang { font-size: clamp(0.6rem, 4.4cqh, 1.2rem); }
+}

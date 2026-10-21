@@ -48,6 +48,7 @@ import smpTebakHuruf from './smp-06-tebak-huruf.js';
 import smpKoperasi from './smp-07-koperasi.js';
 import smpLoker from './smp-08-loker.js';
 import smpKlasemen from './smp-09-klasemen.js';
+import smpSalaman from './smp-10-salaman.js';
 
 export const JENJANG = [
   { id: 'paud', label: 'PAUD', detail: '4–6 tahun' },
@@ -64,7 +65,7 @@ export const activities = [
   paudGerakUlang, paudJikaLampu, paudAyamTersesat, paudYaTidak, paudTombol,
   sdaMotifBatik, sdaRumahAdat, sdaRumahNenek, sdaResep, sdaSenamPagi, sdaJikaHujan, sdaRuteSalah, sdaTimbangan, sdaGambarRahasia, sdaTabelHewan, sdaCariHalaman, sdaBarisUpacara, sdaTombolLift,
   sdlLampuGapura, sdlPikselWarna, sdlSandiSenter, sdlHematKuota, sdlAnyamanRusak, sdlKartuData, sdlCariRumah, sdlRakBuku, sdlRelKereta, sdlCariKata, sdlGulaKurang, sdlKancil, sdlKurirKampung, sdlMerpatiPos, sdlMesinKantin, sdlMesinCerdas, sdlLatihMesin, sdlDataPribadi,
-  smpKartuPelajar, smpKodeHuruf, smpVideotron, smpLaguMampat, smpAngkaCek, smpTebakHuruf, smpKoperasi, smpLoker, smpKlasemen,
+  smpKartuPelajar, smpKodeHuruf, smpVideotron, smpLaguMampat, smpAngkaCek, smpTebakHuruf, smpKoperasi, smpLoker, smpKlasemen, smpSalaman,
 ]
   .sort((a, b) => order(a) - order(b) || a.id.localeCompare(b.id));
 
