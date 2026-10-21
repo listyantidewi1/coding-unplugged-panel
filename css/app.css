@@ -5191,3 +5191,41 @@ code.beda { background: #fee2e2 !important; color: #991b1b !important; }
 .kbl-board.tebak .kbl-sound { width: 19cqmin; padding: 0.5cqmin; }
 .kbl-board.tebak .kbl-sound .opt-icon, .kbl-guess-opts .move-btn span { font-size: clamp(1rem, 5cqmin, 2.6rem); }
 .kbl-board.tebak .kbl-slot { min-width: 13cqmin; min-height: 10cqmin; }
+
+/* paud-12 Kalung Manik-Manik */
+.kalung-manik { gap: 2cqmin; }
+.km-bead { display: inline-block; width: clamp(1rem, 6cqmin, 3.2rem); aspect-ratio: 1; border-radius: 50%; border: max(2px, 0.4cqmin) solid rgba(0, 0, 0, 0.35); box-shadow: inset -0.25em -0.25em 0 rgba(0, 0, 0, 0.15), inset 0.2em 0.2em 0 rgba(255, 255, 255, 0.45); flex: none; }
+.km-m { background: #ef4444; }
+.km-k { background: #facc15; }
+.km-b { background: #3b82f6; }
+.km-bead.km-beda { outline: max(3px, 0.6cqmin) solid #111827; outline-offset: 2px; position: relative; }
+.km-bead.km-beda::after { content: '✗'; position: absolute; inset: 0; display: grid; place-items: center; font-weight: 900; color: #fff; text-shadow: 0 0 3px #000; }
+.km-bead.km-masuk { animation: km-masuk 0.45s ease-out; }
+@keyframes km-masuk { from { transform: translateX(-3em) scale(0.6); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .km-bead.km-masuk { animation: none; } }
+.km-string { display: flex; align-items: center; gap: 0.6cqmin; padding: 1cqmin 1.5cqmin; border-radius: 99px; background: linear-gradient(transparent 46%, #a16207 46%, #a16207 54%, transparent 54%); flex-wrap: wrap; justify-content: center; max-width: 100%; }
+.km-end { font-size: clamp(0.9rem, 4cqmin, 2rem); color: #a16207; }
+.km-prog { display: inline-flex; align-items: center; gap: 1cqmin; padding: 0.8cqmin 1.5cqmin; border-radius: 2cqmin; background: #ede9fe; border: max(2px, 0.4cqmin) solid #6d28d9; font-size: clamp(0.9rem, 4cqmin, 1.8rem); color: var(--ink); }
+.km-prog.besar { font-size: clamp(1rem, 5cqmin, 2.4rem); }
+.km-num { font-weight: 900; font-size: 1.3em; color: #6d28d9; }
+.km-kurung { display: inline-flex; align-items: center; gap: 0.6cqmin; font-weight: 900; font-size: 1.3em; }
+.opt .km-prog, .opt .km-string { font-size: clamp(0.9rem, 4cqmin, 1.8rem); }
+.km-col { display: flex; flex-direction: column; align-items: center; gap: 1cqmin; }
+.km-cap { color: var(--muted); font-weight: 800; font-size: clamp(0.7rem, 3cqmin, 1.3rem); text-align: center; margin: 0; }
+.km-editor { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 2cqmin 3cqmin; }
+.km-palet { display: flex; gap: 1.5cqmin; padding: 1cqmin 2cqmin; border-radius: 3cqmin; background: #eef2f7; }
+.km-pilih, .km-slot, .km-n { font: inherit; background: none; border: 0; padding: 0.3cqmin; cursor: pointer; border-radius: 1.5cqmin; }
+.km-pilih .km-bead { width: clamp(1.4rem, 9cqmin, 4.4rem); }
+.km-pilih:active { transform: scale(0.94); }
+.km-isi { display: inline-flex; gap: 0.6cqmin; min-width: 20cqmin; justify-content: center; align-items: center; min-height: 7cqmin; }
+.km-kosong { font-size: clamp(0.6rem, 2.6cqmin, 1.1rem); color: var(--muted); font-weight: 700; }
+.km-angka { display: inline-flex; gap: 0.5cqmin; }
+.km-n { font-weight: 900; font-size: 1.2em; color: #6d28d9; border: max(2px, 0.4cqmin) solid transparent; padding: 0 0.6cqmin; }
+.km-n.on { background: #6d28d9; color: #fff; }
+.km-target { display: flex; flex-direction: column; align-items: center; gap: 0.5cqmin; padding: 1cqmin 2cqmin; border-radius: 2cqmin; background: #fef9c3; }
+.km-hasil { display: flex; flex-direction: column; align-items: center; gap: 0.5cqmin; min-height: 8cqmin; }
+.km-pesan { font-weight: 900; font-size: clamp(0.8rem, 3.6cqmin, 1.6rem); }
+.km-pesan.ok { color: var(--good); }
+.km-pesan.beda { color: var(--bad); }
+.km-panggung { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1cqmin; min-height: 18cqmin; }
+.km-hitung { font-weight: 900; font-size: clamp(1.4rem, 9cqmin, 5rem); color: #6d28d9; }
