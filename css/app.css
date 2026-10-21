@@ -2596,3 +2596,13 @@ button.kk-kotak { cursor: pointer; }
 .mb-desa { cursor: pointer; }
 .mb-jalan { font-size: clamp(0.6rem, 2.4cqmin, 1.3rem); color: #475569; margin: 0; }
 .mb-host { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 0.5cqmin; }
+
+/* sma-15 Pipa Air */
+.pa-peta { width: 100%; display: flex; justify-content: center; }
+.pa-peta svg { width: 100%; max-width: 50em; max-height: 52cqh; touch-action: none; background: #f7fee7; border-radius: 1em; }
+.pa-kecil { width: min(100%, 40em); display: flex; flex-direction: column; align-items: center; }
+.pa-kecil svg { height: 34cqh; width: auto; }
+.pa-kecil .reveal { font-size: clamp(0.7rem, 3cqmin, 1.6rem); margin: 0; }
+.pa-titik, .pa-cabang { cursor: pointer; }
+.pa-cabang { cursor: grab; }
+.pa-host { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 0.5cqmin; }
