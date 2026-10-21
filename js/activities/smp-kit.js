@@ -65,3 +65,53 @@ export function codeView(lines, { hl = [], cls = '', onLine = null, warn = [] } 
 
 // Variable table: [[name, value]].
 export const varView = (vars, changed = []) => el('div', { class: 'sk-var' }, vars.map(([n, v]) => el('div', { class: changed.includes(n) ? 'ubah' : '' }, el('small', null, n), el('b', null, String(v)))));
+
+// Step-through runner for pseudocode: code with the current line lit, variable
+// boxes coloured by data type, output, and a clear message when the step
+// limit is reached. opts are passed to makeRunner (vars, input, builtins, limit).
+import { makeRunner, fmt, typeOf, flat } from './pseudo.js';
+export function tracer(lines, { opts = {}, title = '', onEnd = null, speed = 450, showTypes = true, hideVars = [], extra = null, cls = '' } = {}) {
+  let r; let last = null; let timer = null; let prev = {};
+  const host = el('div', { class: `sk-jejak ${cls}` });
+  const draw = () => {
+    const st = r.state; const vars = flat(st);
+    const names = Object.keys(vars).filter((n) => !hideVars.includes(n));
+    const changed = names.filter((n) => JSON.stringify(vars[n]) !== JSON.stringify(prev[n]));
+    const msg = st.error ? el('p', { class: `sk-galat ${st.error.kind}` }, `${st.error.kind === 'batas' ? '⏱' : '⚠'} ${st.error.message}`)
+      : st.done ? el('p', { class: 'sk-beres' }, `✓ Program selesai (${st.steps} langkah).`) : null;
+    host.replaceChildren(
+      el('div', { class: 'sk-jejak-kode' }, title ? el('b', null, title) : null, codeView(lines, { hl: last && !st.done ? [last.line] : [], warn: st.error ? [st.error.line] : [] })),
+      el('div', { class: 'sk-jejak-samping' },
+        el('div', { class: 'sk-tombol' }, button('▶ Langkah', () => go(1), 'primary'), button(timer ? '⏸ Berhenti' : '⏩ Otomatis', toggle), button('⏭ Sampai selesai', () => { stop(); go(100000); }), button('↺ Ulang', reset)),
+        el('p', { class: 'sk-catatan' }, last ? `Baris ${last.line + 1}: ${last.note}` : 'Ketuk Langkah untuk menjalankan baris pertama.'),
+        msg,
+        el('div', { class: 'sk-var' }, names.map((n) => el('div', { class: `${changed.includes(n) ? 'ubah' : ''} t-${typeOf(vars[n]).replace('/', '-')}` }, el('small', null, n), el('b', null, fmt(vars[n], { quote: true })), showTypes ? el('i', null, typeOf(vars[n])) : null))),
+        st.frames.length ? el('p', { class: 'sk-tumpukan' }, `Tumpukan: ${st.frames.map((f) => `${f.name}(${f.args.map((a) => fmt(a, { quote: true })).join(', ')})`).join(' → ')}`) : null,
+        el('div', { class: 'sk-keluaran' }, el('small', null, 'Keluaran'), el('pre', null, [...st.out, ...(st.row.length ? [st.row.join(' ')] : [])].join('\n') || ' ')),
+        extra ? extra(st) : null));
+    prev = JSON.parse(JSON.stringify(vars));
+  };
+  function go(k) {
+    for (let i = 0; i < k; i++) { const g = r.gen.next(); if (g.done) break; last = g.value; if (i < k - 1 && (r.state.done || r.state.error)) break; }
+    draw();
+    if (r.state.done || r.state.error) { stop(); onEnd?.(r.state); }
+  }
+  function stop() { if (timer) { clearInterval(timer); timer = null; } }
+  function toggle() { if (timer) { stop(); draw(); } else { timer = setInterval(() => go(1), speed); draw(); } }
+  function reset(newOpts) { stop(); if (newOpts && !newOpts.type) opts = { ...opts, ...newOpts }; r = makeRunner(lines, opts); last = null; prev = { ...r.state.vars }; draw(); }
+  reset();
+  host.stop = stop; host.reset = reset; host.setLines = (ls) => { lines = ls; reset(); };
+  return host;
+}
+
+// Number stepper: − value +.
+export function stepper(value, onChange, { min = -Infinity, max = Infinity, step = 1, label = '' } = {}) {
+  let v = value; const out = el('b', null, String(v));
+  const set = (d) => { v = Math.min(max, Math.max(min, v + d)); out.textContent = String(v); onChange(v); };
+  return el('div', { class: 'sk-stepper' }, label ? el('small', null, label) : null, button('−', () => set(-step)), out, button('+', () => set(step)));
+}
+// Distinct number options around a right answer.
+export function numOpts(right, wrong, ctx) {
+  const set = [...new Set([right, ...wrong.filter((x) => x !== right)])].slice(0, 4);
+  return set.map((x) => [x, x === right]);
+}
