@@ -56,6 +56,7 @@ const FILES = [
   'js/activities/smp-02-kode-huruf.js',
   'js/activities/smp-03-videotron.js',
   'js/activities/smp-04-lagu-mampat.js',
+  'js/activities/smp-05-angka-cek.js',
 ];
 
 self.addEventListener('install', (e) => {

@@ -1385,3 +1385,41 @@ button.bit-sel { cursor: pointer; }
   .lagu-mampat .kata { font-size: clamp(0.5rem, 2.5cqmin, 1.1rem); }
   .lagu-mampat .mampat-hasil { display: none; }
 }
+
+/* Angka cek */
+.angka-cek { gap: 1.1cqmin; }
+.ck-wadah { display: flex; flex-direction: column; align-items: center; gap: 0.8cqmin; }
+.ck-tabel { display: flex; flex-direction: column; gap: 0.3cqmin; font-family: ui-monospace, Menlo, Consolas, monospace; font-weight: 800; font-size: clamp(0.6rem, 3.2cqmin, 1.5rem); }
+.ck-tabel.ean { font-size: clamp(0.55rem, 2.6cqmin, 1.3rem); }
+.ck-baris { display: flex; gap: 0.25em; align-items: center; }
+.ck-label { width: 5.5em; text-align: right; padding-right: 0.4em; font-family: inherit; font-size: 0.7em; color: var(--muted); }
+.ck-sel, .ck-isi { width: 2.1em; height: 1.7em; display: grid; place-items: center; border-radius: 0.3em; background: #f8fafc; border: 1px solid #e2e8f0; }
+.ck-sel.kecil { font-size: 0.75em; color: #64748b; background: transparent; border-color: transparent; }
+.ck-sel.kurang9 { background: #fef3c7; }
+.ck-isi { font: inherit; background: #fff; border: 2px dashed #94a3b8; cursor: pointer; color: #111827; padding: 0; }
+.ck-isi.fokus { border: 2px solid #1d4ed8; box-shadow: 0 0 0 3px #bfdbfe; }
+.ck-isi.salah { border-color: #ef4444; background: #fee2e2; }
+.ck-jumlah { margin: 0; display: flex; align-items: center; justify-content: center; gap: 0.4em; font-weight: 800; font-size: clamp(0.65rem, 3.2cqmin, 1.5rem); }
+.ck-jumlah .ck-isi { width: 3em; }
+.ck-nomor { display: flex; align-items: center; gap: 0.15em; font-family: ui-monospace, Menlo, Consolas, monospace; font-weight: 900; font-size: clamp(0.7rem, 3.6cqmin, 1.8rem); }
+.ck-digit { font: inherit; width: 1.35em; height: 1.7em; padding: 0; border-radius: 0.3em; border: 1px solid #cbd5e1; background: #fff; color: #111827; cursor: pointer; }
+.ck-digit.hi { background: #fef08a; border-color: #ca8a04; }
+.ck-tukar { font: inherit; font-size: 0.8em; width: 1.2em; padding: 0; border: none; background: transparent; color: #7c3aed; cursor: pointer; }
+.ck-daftar { display: flex; flex-direction: column; gap: 0.6cqmin; }
+.ck-cek { display: flex; align-items: center; gap: 0.8em; padding: 0.25em 0.7em; border-radius: 0.8cqmin; background: #f8fafc; font-size: clamp(0.6rem, 2.8cqmin, 1.3rem); }
+.ck-cek small { width: 4.5em; color: var(--muted); font-weight: 700; }
+.ck-cek .ck-nomor { font-size: clamp(0.6rem, 3cqmin, 1.5rem); }
+.ck-cek .seg-btn { min-width: 2.2em; font-weight: 900; }
+.ck-cek.salah { outline: max(3px, 0.5cqmin) solid #ef4444; }
+.ck-total { min-width: 2.5em; text-align: right; color: #475569; }
+.ck-lab { display: flex; gap: 3cqw; align-items: center; justify-content: center; flex-wrap: wrap; }
+.ck-log { display: flex; gap: 2cqw; font-size: clamp(0.55rem, 2.4cqmin, 1.1rem); }
+.ck-log > div { display: flex; flex-direction: column; gap: 0.2em; min-width: 9em; }
+.ck-log span { padding: 0.1em 0.4em; border-radius: 0.3em; background: #f1f5f9; }
+.ck-log .lolos { background: #fee2e2; color: #991b1b; font-weight: 800; }
+@container (max-height: 520px) {
+  .angka-cek .keys.keypad { grid-template-columns: repeat(11, min(5cqw, 9cqh)); }
+  .angka-cek .ck-tabel, .angka-cek .ck-jumlah { font-size: clamp(0.65rem, 5cqh, 1.3rem); }
+  .angka-cek .ck-tabel.ean { font-size: clamp(0.6rem, min(4.4cqh, 2.4cqw), 1.2rem); }
+  .angka-cek > .prompt { font-size: clamp(0.65rem, 5cqh, 1.3rem); }
+}

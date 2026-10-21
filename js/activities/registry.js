@@ -43,6 +43,7 @@ import smpKartuPelajar from './smp-01-kartu-pelajar.js';
 import smpKodeHuruf from './smp-02-kode-huruf.js';
 import smpVideotron from './smp-03-videotron.js';
 import smpLaguMampat from './smp-04-lagu-mampat.js';
+import smpAngkaCek from './smp-05-angka-cek.js';
 
 export const JENJANG = [
   { id: 'paud', label: 'PAUD', detail: '4–6 tahun' },
@@ -59,7 +60,7 @@ export const activities = [
   paudGerakUlang, paudJikaLampu, paudAyamTersesat, paudYaTidak, paudTombol,
   sdaMotifBatik, sdaRumahAdat, sdaRumahNenek, sdaResep, sdaSenamPagi, sdaJikaHujan, sdaRuteSalah, sdaTimbangan, sdaGambarRahasia, sdaTabelHewan, sdaCariHalaman, sdaBarisUpacara, sdaTombolLift,
   sdlLampuGapura, sdlPikselWarna, sdlSandiSenter, sdlHematKuota, sdlAnyamanRusak, sdlKartuData, sdlCariRumah, sdlRakBuku, sdlRelKereta, sdlCariKata, sdlGulaKurang, sdlKancil, sdlKurirKampung, sdlMerpatiPos, sdlMesinKantin, sdlMesinCerdas, sdlLatihMesin, sdlDataPribadi,
-  smpKartuPelajar, smpKodeHuruf, smpVideotron, smpLaguMampat,
+  smpKartuPelajar, smpKodeHuruf, smpVideotron, smpLaguMampat, smpAngkaCek,
 ]
   .sort((a, b) => order(a) - order(b) || a.id.localeCompare(b.id));
 
