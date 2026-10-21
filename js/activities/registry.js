@@ -94,6 +94,7 @@ import RancangPrompt from './sma-27-rancang-prompt.js';
 import BacaLateral from './sma-28-baca-lateral.js';
 import HakCipta from './sma-29-hak-cipta.js';
 import Hidroponik from './sma-30-hidroponik.js';
+import Mahadata from './sma-31-mahadata.js';
 
 export const JENJANG = [
   { id: 'paud', label: 'PAUD', detail: '4–6 tahun' },
@@ -122,6 +123,7 @@ export const activities = [
   BacaLateral,
   HakCipta,
   Hidroponik,
+  Mahadata,
 ]
   .sort((a, b) => order(a) - order(b) || a.id.localeCompare(b.id));
 
