@@ -5267,3 +5267,39 @@ code.beda { background: #fee2e2 !important; color: #991b1b !important; }
 .tp-hitung { font-weight: 800; color: var(--muted); }
 .tp-kartu.nyala, .tp-ulangi.nyala { background: #fef08a; border-color: #ca8a04; }
 .tp-info { margin: 0; text-align: center; font-weight: 800; font-size: clamp(0.7rem, 3.2cqmin, 1.4rem); }
+
+/* sda-15 Menggambar dengan Perintah */
+.gambar-perintah { gap: 1.5cqmin; }
+.gp-soal { display: flex; flex-direction: column; align-items: center; gap: 1cqmin; }
+.gp-prog-teks { font-weight: 900; font-size: clamp(0.8rem, 3.8cqmin, 1.8rem); padding: 0.6cqmin 2cqmin; border-radius: 2cqmin; background: #ede9fe; color: var(--ink); text-align: center; }
+.gp-prog-teks.tutup { background: #f1f5f9; color: var(--muted); }
+.gp-kisi { width: min(40cqmin, 60cqw); height: auto; aspect-ratio: 1; background: #fffdf5; border-radius: 1.5cqmin; border: max(2px, 0.4cqmin) solid var(--line); }
+.gp-kisi.kecil { width: min(18cqmin, 20cqw); }
+.gp-tata .gp-kisi { width: min(52cqmin, 44cqw); }
+.gp-titik { fill: #64748b; }
+.gp-ketuk { fill: transparent; cursor: pointer; }
+.gp-mulai { fill: #111827; }
+.gp-garis { stroke: #1d4ed8; stroke-width: 0.14; stroke-linecap: round; }
+.gp-garis.timpa { stroke: #f59e0b; stroke-width: 0.24; transition: stroke 0.6s, stroke-width 0.6s; }
+.gp-garis.angkat { stroke: #94a3b8; stroke-width: 0.06; stroke-dasharray: 0.12 0.12; }
+.gp-pensil { font-size: 0.7px; }
+.gp-pensil.naik { opacity: 0.55; }
+.gp-tata { display: flex; gap: 3cqw; flex-wrap: wrap; justify-content: center; align-items: flex-start; }
+.gp-kanan { display: flex; flex-direction: column; align-items: center; gap: 1.5cqmin; max-width: 56cqw; }
+.gp-target { display: flex; flex-direction: column; align-items: center; gap: 0.6cqmin; }
+.gp-target .gp-kisi { width: min(36cqmin, 28cqw); }
+.gp-editor { display: flex; flex-direction: column; align-items: center; gap: 1cqmin; }
+.gp-program { display: flex; flex-wrap: wrap; gap: 0.8cqmin; min-height: 8cqmin; padding: 1cqmin; border: max(2px, 0.4cqmin) dashed var(--line); border-radius: 2cqmin; max-width: 100%; align-items: center; }
+.gp-kartu { display: inline-flex; align-items: center; gap: 0.4cqmin; padding: 0.4cqmin 0.8cqmin; border-radius: 1.5cqmin; border: max(2px, 0.4cqmin) solid #334155; background: #fff; font-size: clamp(0.9rem, 4.2cqmin, 2rem); color: var(--ink); }
+.gp-kartu.pena { border-color: #b45309; background: #fffbeb; }
+.gp-kartu.nyala { background: #fef08a; border-color: #ca8a04; }
+.gp-angka { font: inherit; font-weight: 900; min-width: 1.4em; border-radius: 0.4em; border: max(2px, 0.3cqmin) solid #6d28d9; background: #f5f3ff; color: #6d28d9; cursor: pointer; }
+.gp-hapus { font: inherit; font-size: 0.6em; border: 0; background: none; color: var(--bad); font-weight: 900; cursor: pointer; }
+.gp-kosong { color: var(--muted); font-weight: 700; font-size: clamp(0.6rem, 2.6cqmin, 1.1rem); }
+.gp-palet { display: flex; flex-wrap: wrap; justify-content: center; gap: 1cqmin; padding: 0.8cqmin 1.5cqmin; border-radius: 2cqmin; background: #eef2f7; }
+.gp-pilih { font: inherit; display: flex; flex-direction: column; align-items: center; font-size: clamp(1rem, 5cqmin, 2.4rem); padding: 0.4cqmin 1cqmin; border-radius: 1.5cqmin; border: max(2px, 0.4cqmin) solid #334155; background: #fff; cursor: pointer; }
+.gp-pilih small { font-size: 0.4em; font-weight: 800; color: var(--ink); }
+.gp-pilih.pena { border-color: #b45309; }
+.gp-hitung { font-weight: 800; color: var(--muted); }
+.gp-info { margin: 0; text-align: center; font-weight: 800; font-size: clamp(0.7rem, 3.2cqmin, 1.4rem); }
+.opt .gp-kisi.kecil { width: min(22cqmin, 18cqw); }

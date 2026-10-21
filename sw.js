@@ -162,6 +162,7 @@ const FILES = [
   'js/activities/paud-11-kalau-bel.js',
   'js/activities/paud-12-kalung-manik.js',
   'js/activities/sda-14-tanam-padi.js',
+  'js/activities/sda-15-gambar-perintah.js',
 ];
 
 self.addEventListener('install', (e) => {
