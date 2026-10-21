@@ -5490,3 +5490,58 @@ button.pls-chip, .pls-pilih { cursor: pointer; }
 .clg-info { font-weight: 700; text-align: center; max-width: 92cqw; }
 .clg-ekstra { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start; gap: 1.5cqmin; }
 .celengan .clg-ekstra .clg-jejak-tempat { max-height: 26cqh; }
+
+/* sdl-22 Isi Terus sampai Penuh */
+.spn-soal, .spn-atas { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 2cqmin; }
+.spn-kode { margin: 0; font: 800 clamp(0.6rem, 2.4cqmin, 1.15rem)/1.35 ui-monospace, monospace; padding: 1cqmin 2cqmin; border-radius: 2cqmin; background: #e0f2fe; color: #0c4a6e; white-space: pre-wrap; text-align: left; }
+.spn-tempat { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-end; gap: 2cqmin; }
+.spn-tempat.kolom { flex-direction: column; align-items: center; }
+.spn-kolom { display: flex; flex-direction: column; align-items: center; gap: 1cqmin; }
+.spn-bak { position: relative; width: 24cqmin; height: calc(var(--tinggi) * 26cqmin); border: max(3px, 0.6cqmin) solid #64748b; border-top: 0; border-radius: 0 0 2cqmin 2cqmin; background: #f8fafc; overflow: hidden; }
+.spn-air { position: absolute; left: 0; right: 0; bottom: 0; height: 0; background: linear-gradient(#7dd3fc, #0284c7); transition: height 0.25s; }
+.spn-bak.tuang::after { content: '🪣'; position: absolute; top: 0; right: 0; font-size: clamp(1rem, 5cqmin, 2.4rem); animation: spn-tuang 0.5s forwards; }
+@keyframes spn-tuang { from { transform: translateY(-60%) rotate(0); } 80% { transform: translateY(0) rotate(-60deg); opacity: 1; } to { opacity: 0; } }
+.spn-tumpah { min-height: 1.4em; font-weight: 800; color: #0369a1; }
+.spn-level { font-weight: 900; }
+.spn-putaran { font-weight: 900; font-size: clamp(0.8rem, 3.2cqmin, 1.6rem); padding: 0.5cqmin 1.5cqmin; border-radius: 1.5cqmin; background: #f1f5f9; color: #0f172a; }
+.spn-lampu { font-weight: 800; padding: 0.5cqmin 1.5cqmin; border-radius: 1.5cqmin; border: max(2px, 0.3cqmin) solid var(--line); color: var(--muted); }
+.spn-lampu.salah { border-color: #dc2626; background: #fee2e2; color: #7f1d1d; }
+.spn-lampu.benar { border-color: #16a34a; background: #dcfce7; color: #14532d; }
+.spn-lorong { display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: 0.5cqmin; width: min(90cqw, calc(var(--n) * 11cqmin)); }
+.spn-ubin { position: relative; aspect-ratio: 1; display: grid; place-items: center; border-radius: 1cqmin; background: #e7e5e4; border: max(2px, 0.3cqmin) solid #a8a29e; }
+.spn-ubin small { position: absolute; top: 0.3cqmin; left: 0.6cqmin; font-weight: 800; color: #57534e; }
+.spn-ubin.dipel { background: linear-gradient(135deg, #cffafe, #a5f3fc 60%, #fff); border-color: #06b6d4; }
+.spn-ubin.lewat { animation: spn-kedip 0.5s 4; border-color: var(--bad); }
+@keyframes spn-kedip { 50% { box-shadow: 0 0 0 max(3px, 0.6cqmin) var(--bad); } }
+.spn-robot { font-size: clamp(1rem, 5cqmin, 2.6rem); }
+.spn-dinding { display: grid; place-items: center; font-size: clamp(1rem, 6cqmin, 3rem); }
+.spn-kotak { display: flex; flex-direction: column; align-items: center; padding: 1cqmin 2cqmin; border-radius: 1.5cqmin; border: max(3px, 0.5cqmin) solid #7c2d12; background: #fff7ed; color: #431407; font-weight: 800; font-style: italic; }
+.spn-isi { font-style: normal; font-size: clamp(1.2rem, 6cqmin, 3rem); }
+.spn-nilai { min-width: 5.5em; text-align: center; font-size: clamp(0.9rem, 3.4cqmin, 1.6rem); }
+.spn-stepper.kunci { pointer-events: none; opacity: 0.7; }
+.spn-petunjuk { display: flex; gap: 3cqmin; font-size: clamp(1rem, 4.5cqmin, 2.2rem); }
+.spn-info { font-weight: 700; text-align: center; max-width: 92cqw; }
+
+/* sdl-23 Robot Penjelajah Labirin */
+.lbr-soal, .lbr-atas { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 2cqmin; }
+.lbr-kolom { display: flex; flex-direction: column; align-items: center; gap: 1cqmin; min-width: 0; }
+.lbr-kode { margin: 0; font: 800 clamp(0.55rem, 2.2cqmin, 1.05rem)/1.3 ui-monospace, monospace; padding: 1cqmin 1.6cqmin; border-radius: 2cqmin; background: #ede9fe; color: #2e1065; text-align: left; white-space: pre; }
+.lbr-labirin { display: grid; grid-template-columns: 0.5fr repeat(calc(var(--n) - 1), minmax(0, 1fr)); gap: 0.4cqmin; width: min(52cqw, calc(var(--n) * 9cqmin)); }
+.lbr-kepala { display: grid; place-items: center; font-weight: 800; color: var(--muted); font-size: clamp(0.5rem, 2.2cqmin, 1rem); }
+.lbr-kotak { position: relative; aspect-ratio: 1; display: grid; place-items: center; border-radius: 0.8cqmin; font-size: clamp(0.8rem, 4cqmin, 2rem); }
+.lbr-kotak.lantai { background: #f8fafc; border: max(1px, 0.2cqmin) solid #cbd5e1; }
+.lbr-kotak.dinding { background: #9a3412; background-image: repeating-linear-gradient(0deg, transparent 0 1.6cqmin, #7c2d12 1.6cqmin 1.9cqmin); }
+.lbr-kotak.keluar { background: #dcfce7; border: max(2px, 0.3cqmin) solid #16a34a; }
+.lbr-kotak.jejak::before { content: ''; position: absolute; inset: 30%; border-radius: 50%; background: #6d28d9; opacity: calc(var(--j, 0.35)); }
+.lbr-kotak.ya { box-shadow: inset 0 0 0 max(3px, 0.6cqmin) #16a34a; }
+.lbr-kotak.tidak { box-shadow: inset 0 0 0 max(3px, 0.6cqmin) #dc2626; }
+.lbr-robot { position: relative; z-index: 1; font-size: clamp(0.6rem, 2.8cqmin, 1.4rem); white-space: nowrap; letter-spacing: -0.2em; }
+.lbr-hitung { font-weight: 900; padding: 0.4cqmin 1.4cqmin; border-radius: 1.5cqmin; background: #f1f5f9; color: #0f172a; }
+.lbr-editor { display: flex; flex-direction: column; gap: 0.3cqmin; padding: 1cqmin 1.5cqmin; border-radius: 2cqmin; background: #ede9fe; color: #2e1065; font: 800 clamp(0.6rem, 2.3cqmin, 1.1rem)/1.3 ui-monospace, monospace; }
+.lbr-editor.kunci button { pointer-events: none; }
+.lbr-baris { display: flex; align-items: center; gap: 0.6cqmin; padding-left: calc(var(--d, 0) * 3cqmin); }
+.lbr-pilih, .lbr-aksi { font: inherit; padding: 0.1em 0.6em; border-radius: 1cqmin; border: max(2px, 0.3cqmin) solid #6d28d9; background: #fff; color: #2e1065; cursor: pointer; }
+.lbr-aksi { border-color: #0f766e; color: #134e4a; }
+.lbr-hapus { font: inherit; border: 0; background: none; color: var(--bad); cursor: pointer; }
+.lbr-info { font-weight: 700; text-align: center; max-width: 92cqw; }
+.robot-labirin .lbr-atas .lbr-labirin { width: min(44cqw, calc(var(--n) * 7cqmin)); }
