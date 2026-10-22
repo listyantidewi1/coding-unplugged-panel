@@ -63,6 +63,19 @@ export const sound = {
     if (muted) return;
     [440, 554, 659, 880].forEach((f, i) => tone(f, i * 0.06, 0.12, 'sine', 0.08));
   },
+  // School bell, bamboo kentongan and whistle for the event activity.
+  bell() {
+    if (muted) return;
+    [0, 0.28, 0.56].forEach((t) => { tone(1318, t, 0.5, 'sine', 0.12); tone(1976, t, 0.35, 'sine', 0.05); });
+  },
+  kentongan() {
+    if (muted) return;
+    [0, 0.22, 0.44].forEach((t) => { tone(420, t, 0.12, 'triangle', 0.4); tone(630, t, 0.06, 'square', 0.05); });
+  },
+  whistle() {
+    if (muted) return;
+    for (let i = 0; i < 8; i++) tone(i % 2 ? 2350 : 2150, i * 0.06, 0.07, 'sine', 0.1);
+  },
   win() {
     if (muted) return;
     [523, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.12, 0.25, 'triangle', 0.12));

@@ -82,6 +82,80 @@ import smaPipaAir from './sma-15-pipa-air.js';
 import smaKelasObjek from './sma-16-kelas-objek.js';
 import smaPlatNomor from './sma-17-plat-nomor.js';
 import smaSatuKoki from './sma-18-satu-koki.js';
+import LabJaringan from './sma-19-lab-jaringan.js';
+import KodeHttp from './sma-20-kode-http.js';
+import SandiBerkunci from './sma-21-sandi-berkunci.js';
+import ArisanJujur from './sma-22-arisan-jujur.js';
+import KunciPublik from './sma-23-kunci-publik.js';
+import BankSampah from './sma-24-bank-sampah.js';
+import UjiTuring from './sma-25-uji-turing.js';
+import SeleksiBeasiswa from './sma-26-seleksi-beasiswa.js';
+import RancangPrompt from './sma-27-rancang-prompt.js';
+import BacaLateral from './sma-28-baca-lateral.js';
+import HakCipta from './sma-29-hak-cipta.js';
+import Hidroponik from './sma-30-hidroponik.js';
+import Mahadata from './sma-31-mahadata.js';
+import PekerjaanKa from './sma-32-pekerjaan-ka.js';
+import DuaLangkah from './sma-33-dua-langkah.js';
+import BasisData from './sma-34-basis-data.js';
+import DiagramAlir from './smp-26-diagram-alir.js';
+import NilaiRapor from './smp-27-nilai-rapor.js';
+import IuranKas from './smp-28-iuran-kas.js';
+import TargetTabungan from './smp-29-target-tabungan.js';
+import OngkosKirim from './smp-30-ongkos-kirim.js';
+import SuhuSeminggu from './smp-31-suhu-seminggu.js';
+import MesinKonversi from './smp-32-mesin-konversi.js';
+import OlahTeks from './smp-33-olah-teks.js';
+import UjiProgram from './smp-34-uji-program.js';
+import KodeGelembung from './smp-35-kode-gelembung.js';
+import CariBinerKode from './smp-36-cari-biner-kode.js';
+import SimulasiDadu from './smp-37-simulasi-dadu.js';
+import BlokKeTeks from './smp-38-blok-ke-teks.js';
+import MenaraHanoi from './smp-39-menara-hanoi.js';
+import LampuOtomatis from './smp-40-lampu-otomatis.js';
+import UlarTangga from './smp-41-ular-tangga.js';
+import AplikasiKantin from './smp-42-aplikasi-kantin.js';
+import PythonKasir from './sma-35-python-kasir.js';
+import RekapBazar from './sma-36-rekap-bazar.js';
+import DataLomba from './sma-37-data-lomba.js';
+import FungsiLingkup from './sma-38-fungsi-lingkup.js';
+import RekursiMemo from './sma-39-rekursi-memo.js';
+import RimaPantun from './sma-40-rima-pantun.js';
+import KasusUji from './sma-41-kasus-uji.js';
+import PesanGalat from './sma-42-pesan-galat.js';
+import PercepatKode from './sma-43-percepat-kode.js';
+import UrutCariKode from './sma-44-urut-cari-kode.js';
+import TumpukanKode from './sma-45-tumpukan-kode.js';
+import BfsAngkot from './sma-46-bfs-angkot.js';
+import OopPerpustakaan from './sma-47-oop-perpustakaan.js';
+import KnnKode from './sma-48-knn-kode.js';
+import PetualanganTeks from './sma-49-petualangan-teks.js';
+import CsvJson from './sma-50-csv-json.js';
+import WebAntrean from './sma-51-web-antrean.js';
+import PakaiLibrary from './sma-52-pakai-library.js';
+import sma53DuaKasir from './sma-53-dua-kasir.js';
+import sma55GitKertas from './sma-55-git-kertas.js';
+import sma56Mikrokontroler from './sma-56-mikrokontroler.js';
+import sma57ProyekAplikasi from './sma-57-proyek-aplikasi.js';
+import paudKalauBel from './paud-11-kalau-bel.js';
+import paudKalungManik from './paud-12-kalung-manik.js';
+import sdaTanamPadi from './sda-14-tanam-padi.js';
+import sdaGambarPerintah from './sda-15-gambar-perintah.js';
+import sdaGerakBernama from './sda-16-gerak-bernama.js';
+import sdlUbinTeras from './sdl-19-ubin-teras.js';
+import sdlPilahSampah from './sdl-20-pilah-sampah.js';
+import sdlCelengan from './sdl-21-celengan.js';
+import sdlSampaiPenuh from './sdl-22-sampai-penuh.js';
+import sdlRobotLabirin from './sdl-23-robot-labirin.js';
+import sdlTangkapMangga from './sdl-24-tangkap-mangga.js';
+import sdlMotifTenun from './sdl-25-motif-tenun.js';
+import sdlDaftarBelanja from './sdl-26-daftar-belanja.js';
+import sdlSyaratWahana from './sdl-27-syarat-wahana.js';
+import sdlSegiBanyak from './sdl-28-segi-banyak.js';
+import sdlKuisBuatanku from './sdl-29-kuis-buatanku.js';
+import sdlLampuPenyeberangan from './sdl-30-lampu-penyeberangan.js';
+import sdlDetektifBug from './sdl-31-detektif-bug.js';
+import sdlCeritaInteraktif from './sdl-32-cerita-interaktif.js';
 
 export const JENJANG = [
   { id: 'paud', label: 'PAUD', detail: '4–6 tahun' },
@@ -102,7 +176,58 @@ export const activities = [
   smpMejaBundar, smpAmplopBerlapis, smpKembalian, smpGerbangTol, smpKomputerKertas, smpSandiGeser, smpAplikasiJadwal, smpPenyiram, smpMesinPencari, smpPesanBerantai,
   smpJejakDigital, smpDeepfake, smpChatbot,
   smaAksaraUnicode, smaKodeHemat, smaAntreanTumpukan, smaPohonCari, smaGudangBeras, smaPendaftaran, smaPangkatCepat, smaPentasSeni, smaKabelDusun, smaBagasi, smaMudahDicek,
-  smaKurirKeliling, smaJadwalUjian, smaMenaraBts, smaPipaAir, smaKelasObjek, smaPlatNomor, smaSatuKoki,
+  smaKurirKeliling, smaJadwalUjian, smaMenaraBts, smaPipaAir, smaKelasObjek, smaPlatNomor, smaSatuKoki, LabJaringan, KodeHttp, SandiBerkunci, ArisanJujur, KunciPublik,
+  BankSampah,
+  UjiTuring,
+  SeleksiBeasiswa,
+  RancangPrompt,
+  BacaLateral,
+  HakCipta,
+  Hidroponik,
+  Mahadata,
+  PekerjaanKa,
+  DuaLangkah,
+  BasisData,
+  DiagramAlir,
+  NilaiRapor,
+  IuranKas,
+  TargetTabungan,
+  OngkosKirim,
+  SuhuSeminggu,
+  MesinKonversi,
+  OlahTeks,
+  UjiProgram,
+  KodeGelembung,
+  CariBinerKode,
+  SimulasiDadu,
+  BlokKeTeks,
+  MenaraHanoi,
+  LampuOtomatis,
+  UlarTangga,
+  AplikasiKantin,
+  PythonKasir,
+  RekapBazar,
+  DataLomba,
+  FungsiLingkup,
+  RekursiMemo,
+  RimaPantun,
+  KasusUji,
+  PesanGalat,
+  PercepatKode,
+  UrutCariKode,
+  TumpukanKode,
+  BfsAngkot,
+  OopPerpustakaan,
+  KnnKode,
+  PetualanganTeks,
+  CsvJson,
+  WebAntrean,
+  PakaiLibrary,
+  sma53DuaKasir, sma55GitKertas, sma56Mikrokontroler, sma57ProyekAplikasi,
+  paudKalauBel, paudKalungManik,
+  sdaTanamPadi, sdaGambarPerintah, sdaGerakBernama,
+  sdlUbinTeras, sdlPilahSampah, sdlCelengan, sdlSampaiPenuh, sdlRobotLabirin, sdlTangkapMangga, sdlMotifTenun, sdlDaftarBelanja, sdlSyaratWahana, sdlSegiBanyak,
+  sdlKuisBuatanku, sdlLampuPenyeberangan, sdlDetektifBug, sdlCeritaInteraktif,
 ]
   .sort((a, b) => order(a) - order(b) || a.id.localeCompare(b.id));
 
