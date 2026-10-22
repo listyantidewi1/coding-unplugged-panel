@@ -578,6 +578,11 @@ export const PENGANTAR = {
   "Masalah seperti ini disebut <b>kondisi balapan</b> (<i>race condition</i>): hasil program bergantung pada urutan langkah dua program yang berjalan bersamaan. Kedua kasir memakai <b>data bersama</b>, yaitu stok, tetapi masing-masing juga punya <b>data milik sendiri</b>, yaitu salinan stok yang sedang dihitungnya. Perbaikannya adalah <b>kunci</b> (<i>lock</i>): hanya kasir yang memegang kunci yang boleh membaca dan mengubah stok, sedangkan kasir lain menunggu. Namun, kunci juga membawa bahaya baru, yaitu <b>kebuntuan</b> (<i>deadlock</i>), ketika dua kasir saling menunggu kunci yang dipegang kasir lain, seperti di <code>smp-13-meja-bundar</code>.",
   "Di aktivitas ini kamu akan menjalankan dua program kasir bergantian langkah demi langkah, mencari urutan yang membuat stok kacau, memperbaikinya dengan kunci, lalu menemukan dan mencegah kebuntuan."
  ],
+ "sma-54-rapikan-kode": [
+  "Setiap tahun, OSIS SMA Negeri 1 Wanasari (rekaan) mengadakan Lomba Cerdas Cermat antarkelas. Skornya dihitung dengan program Python buatan Kak Bayu, alumni yang sudah lulus tiga tahun lalu. Program itu masih bekerja, tetapi tidak ada yang berani mengubahnya. Nama variabelnya hanya satu huruf, angka poinnya tersebar di banyak baris, dan bagian yang mirip ditulis berulang. Tahun ini panitia ingin menambah babak final dan menanggapi keluhan peserta, misalnya regu yang memilih lewat justru kehilangan poin.",
+  "Kode seperti ini disebut <b>kode warisan</b>: kode yang dipakai setiap hari, tetapi sulit dipahami dan diubah. Programmer menanganinya dengan <b>merapikan kode</b> (<i>refactoring</i>), yaitu mengubah susunan kode supaya lebih mudah dibaca dan diubah <b>tanpa mengubah perilakunya</b>. Supaya yakin perilakunya tidak berubah, perilaku lama dicatat lebih dulu dengan <b>uji karakterisasi</b>. Setelah itu, kode dirapikan sedikit demi sedikit dan diuji di setiap langkah. Perbaikan bug dikerjakan sesudahnya sebagai langkah tersendiri. Kemampuan ini penting karena di dunia kerja, programmer lebih sering mengubah kode yang sudah ada daripada menulis kode baru.",
+  "Di aktivitas ini kamu akan menelusuri kode Kak Bayu, mencatat perilakunya, merapikannya langkah demi langkah, memeriksa versi rapi buatan teman, lalu memperbaiki bugnya dengan aman."
+ ],
  "sma-55-git-kertas": [
   "Sari, Dodi, dan Rina dari Klub Informatika SMA Negeri 1 Wanasari (rekaan) membuat program kuis untuk acara pengenalan klub. Awalnya mereka saling mengirim berkas lewat pesan. Seminggu kemudian, ada berkas bernama kuis_final.py, kuis_final2.py, dan kuis_final_revisi_beneran.py, dan tidak ada yang yakin mana yang terbaru. Perubahan Dodi bahkan pernah hilang karena tertimpa berkas Rina.",
   "Programmer bekerja sama dengan <b>kendali versi</b>, dan alat yang paling banyak dipakai adalah <b>Git</b>. Setiap kali sebuah perubahan selesai, programmer membuat <b>commit</b>, yaitu potret seluruh berkas pada saat itu, lengkap dengan penulis, pesan singkat, dan <b>induk</b>, yaitu commit sebelumnya. Untuk mencoba fitur baru tanpa mengganggu versi yang sedang dipakai, programmer membuat <b>cabang</b>. Setelah fitur selesai dan diuji, cabang <b>digabungkan</b> kembali. Bila dua orang mengubah baris yang sama dengan cara berbeda, Git tidak bisa memilih sendiri dan melaporkan <b>konflik</b>, sehingga manusia harus memutuskan. Riwayat commit juga membantu mencari kapan sebuah bug muncul dan membatalkannya tanpa menghapus jejak.",
@@ -960,7 +965,7 @@ export const KATEGORI = {
  "sma-51-web-antrean": "coding",
  "sma-52-pakai-library": "coding",
  "sma-53-dua-kasir": "coding",
- "sma-54-validasi-input": "coding",
+ "sma-54-rapikan-kode": "coding",
  "sma-55-git-kertas": "coding",
  "sma-56-mikrokontroler": "coding",
  "sma-57-proyek-aplikasi": "coding"

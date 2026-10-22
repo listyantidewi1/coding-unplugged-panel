@@ -156,6 +156,7 @@ import sdlKuisBuatanku from './sdl-29-kuis-buatanku.js';
 import sdlLampuPenyeberangan from './sdl-30-lampu-penyeberangan.js';
 import sdlDetektifBug from './sdl-31-detektif-bug.js';
 import sdlCeritaInteraktif from './sdl-32-cerita-interaktif.js';
+import smaRapikanKode from './sma-54-rapikan-kode.js';
 
 export const JENJANG = [
   { id: 'paud', label: 'PAUD', detail: '4–6 tahun' },
@@ -228,6 +229,7 @@ export const activities = [
   sdaTanamPadi, sdaGambarPerintah, sdaGerakBernama,
   sdlUbinTeras, sdlPilahSampah, sdlCelengan, sdlSampaiPenuh, sdlRobotLabirin, sdlTangkapMangga, sdlMotifTenun, sdlDaftarBelanja, sdlSyaratWahana, sdlSegiBanyak,
   sdlKuisBuatanku, sdlLampuPenyeberangan, sdlDetektifBug, sdlCeritaInteraktif,
+  smaRapikanKode,
 ]
   .sort((a, b) => order(a) - order(b) || a.id.localeCompare(b.id));
 
