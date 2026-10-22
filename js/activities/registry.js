@@ -69,6 +69,19 @@ import smaKodeHemat from './sma-02-kode-hemat.js';
 import smaAntreanTumpukan from './sma-03-antrean-tumpukan.js';
 import smaPohonCari from './sma-04-pohon-cari.js';
 import smaGudangBeras from './sma-05-gudang-beras.js';
+import smaPendaftaran from './sma-06-pendaftaran.js';
+import smaPangkatCepat from './sma-07-pangkat-cepat.js';
+import smaPentasSeni from './sma-08-pentas-seni.js';
+import smaKabelDusun from './sma-09-kabel-dusun.js';
+import smaBagasi from './sma-10-bagasi.js';
+import smaMudahDicek from './sma-11-mudah-dicek.js';
+import smaKurirKeliling from './sma-12-kurir-keliling.js';
+import smaJadwalUjian from './sma-13-jadwal-ujian.js';
+import smaMenaraBts from './sma-14-menara-bts.js';
+import smaPipaAir from './sma-15-pipa-air.js';
+import smaKelasObjek from './sma-16-kelas-objek.js';
+import smaPlatNomor from './sma-17-plat-nomor.js';
+import smaSatuKoki from './sma-18-satu-koki.js';
 
 export const JENJANG = [
   { id: 'paud', label: 'PAUD', detail: '4–6 tahun' },
@@ -88,7 +101,8 @@ export const activities = [
   smpKartuPelajar, smpKodeHuruf, smpVideotron, smpLaguMampat, smpAngkaCek, smpTebakHuruf, smpKoperasi, smpLoker, smpKlasemen, smpSalaman, smpGotongRoyong, smpOjek,
   smpMejaBundar, smpAmplopBerlapis, smpKembalian, smpGerbangTol, smpKomputerKertas, smpSandiGeser, smpAplikasiJadwal, smpPenyiram, smpMesinPencari, smpPesanBerantai,
   smpJejakDigital, smpDeepfake, smpChatbot,
-  smaAksaraUnicode, smaKodeHemat, smaAntreanTumpukan, smaPohonCari, smaGudangBeras,
+  smaAksaraUnicode, smaKodeHemat, smaAntreanTumpukan, smaPohonCari, smaGudangBeras, smaPendaftaran, smaPangkatCepat, smaPentasSeni, smaKabelDusun, smaBagasi, smaMudahDicek,
+  smaKurirKeliling, smaJadwalUjian, smaMenaraBts, smaPipaAir, smaKelasObjek, smaPlatNomor, smaSatuKoki,
 ]
   .sort((a, b) => order(a) - order(b) || a.id.localeCompare(b.id));
 
