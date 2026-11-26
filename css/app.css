@@ -6430,3 +6430,27 @@ button.at-orang { font-size: clamp(0.55rem, 3.4cqmin, 1.8rem); }
 .pk6-rumus b { font-size: 1.2em; color: #1e3a8a; }
 .pk6-rumus span { font-weight: 800; font-variant-numeric: tabular-nums; }
 .pk6-sama { padding: 0.3em 0.6em; border-radius: 0.5em; border: 3px dashed #64748b; background: #fff; color: #334155; font: inherit; font-weight: 800; cursor: pointer; }
+
+/* sma-07 Mesin Pangkat Hemat */
+.mph-mesin { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.4em; padding: 0.4em 0.8em; border-radius: 0.8em; background: #1e293b; color: #e2e8f0; font-size: clamp(0.6rem, 3cqmin, 1.6rem); max-width: 100%; }
+.mph-mesin > b { font-size: 1.3em; color: #fbbf24; }
+.mph-slot { display: inline-flex; align-items: center; justify-content: center; min-width: 3.6em; min-height: 2.6em; border-radius: 0.5em; border: 2px dashed #64748b; color: #94a3b8; }
+.mph-slot.hasil { border-color: #fbbf24; }
+.mph-slot .mph-kartu { border-width: 2px; }
+.mph-hitung { margin-left: 0.6em; padding: 0.15em 0.6em; border-radius: 1em; background: #334155; font-weight: 800; white-space: nowrap; }
+.mph-kartu-baris { display: flex; flex-wrap: wrap; gap: 0.45em; justify-content: center; font-size: clamp(0.6rem, 3.2cqmin, 1.7rem); }
+.mph-kartu { display: inline-flex; flex-direction: column; align-items: center; padding: 0.25em 0.6em; border-radius: 0.55em; border: 3px solid #7c3aed; background: #f5f3ff; color: #111827; font: inherit; cursor: pointer; }
+.mph-kartu b { font-size: 1.25em; }
+.mph-kartu small { font-size: 0.55em; color: #475569; }
+.mph-kartu.pilih { background: #fde68a; border-color: #ca8a04; transform: translateY(-0.15em); }
+.mph-kartu.sasaran { background: #bbf7d0; border-color: #16a34a; }
+.mph-jam-area { display: flex; flex-wrap: wrap; gap: 0.6em; align-items: center; justify-content: center; }
+.mph-jam-area:empty { display: none; }
+.mph-jam-wrap { display: flex; gap: 0.8em; align-items: center; font-size: clamp(0.6rem, 2.8cqmin, 1.5rem); }
+.mph-jam svg { width: min(26cqh, 30cqw); height: auto; display: block; }
+.mph-jam-kanan { display: flex; flex-direction: column; align-items: center; gap: 0.3em; }
+.mph-jam-kanan small { color: #64748b; }
+.mph-jam-angka { font-size: 2em; color: #dc2626; font-variant-numeric: tabular-nums; }
+.mph-putar { display: grid; grid-template-columns: repeat(2, auto); gap: 0.3em; }
+@container (max-height: 520px) { .mph-jam svg { width: min(20cqh, 26cqw); } }
+.mph-main .pk-akar { font-size: clamp(0.7rem, 3.4cqmin, 1.8rem); }
