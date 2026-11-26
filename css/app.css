@@ -6352,3 +6352,44 @@ button.at-orang { font-size: clamp(0.55rem, 3.4cqmin, 1.8rem); }
 .pk-main .pc-pool { font-size: clamp(0.75rem, 4cqmin, 1.7rem); gap: 0.35em; }
 .pk-main .pc-pool .seg-btn { padding: 0.35em 0.7em; }
 @container (max-height: 520px) { .pk-main .pc-pohon svg { max-height: 38cqh; } .pk-main .pk-gerbang { font-size: clamp(0.6rem, 2.6cqmin, 1.3rem); } }
+
+/* sma-05 Regu Hemat Tenaga */
+.rh-main .gb-baris { height: 26cqh; }
+.rh-kupon { display: flex; align-items: center; gap: 0.5em; font-size: clamp(0.55rem, 2.4cqmin, 1.2rem); max-width: 100%; }
+.rh-kupon small { font-weight: 900; color: #92400e; white-space: nowrap; }
+.rh-kupon b { white-space: nowrap; color: #92400e; }
+.rh-sobek { display: flex; flex-wrap: wrap; gap: 0.18em; min-width: 0; }
+.rh-sobek i { width: 0.8em; height: 1.2em; border-radius: 0.15em; background: #fbbf24; border: 1px dashed #b45309; transition: opacity 0.2s, transform 0.2s; }
+.rh-sobek i.robek { opacity: 0.18; transform: rotate(12deg) translateY(0.2em); }
+.rh-kupon.tipis b { color: #b91c1c; }
+.gb-karung em { position: absolute; top: -1.2em; font-style: normal; }
+.gb-karung { position: relative; }
+.gb-karung.calon { outline: 4px dashed #7c3aed; outline-offset: 2px; }
+.rh-meja { display: flex; gap: 0.6em; align-items: stretch; justify-content: center; font-size: clamp(0.55rem, 2.6cqmin, 1.35rem); width: 100%; max-width: 100%; }
+.rh-meja:empty { display: none; }
+.rh-lajur { flex: 1 1 0; min-width: 0; max-width: 34%; display: flex; flex-direction: column; gap: 0.25em; padding: 0.35em 0.5em; border-radius: 0.6em; font: inherit; cursor: pointer; text-align: center; }
+.rh-lajur.kiri { border: 3px solid #2563eb; background: #eff6ff; color: #1e3a8a; }
+.rh-lajur.kanan { border: 3px solid #dc2626; background: #fef2f2; color: #7f1d1d; }
+.rh-lajur:disabled { cursor: default; opacity: 0.85; }
+.rh-lajur small { font-weight: 900; }
+.rh-lajur div { display: flex; flex-wrap: wrap; gap: 0.2em; justify-content: center; }
+.rh-lajur div span { padding: 0 0.35em; border-radius: 0.3em; background: #fff; font-weight: 800; }
+.rh-lajur .kosong { background: none; font-style: italic; opacity: 0.6; font-weight: 400; }
+.rh-timbangan { display: flex; align-items: center; gap: 0.4em; padding: 0.3em 0.7em; border-radius: 0.6em; background: #f5f5f4; border: 3px solid #78716c; font-weight: 900; white-space: nowrap; }
+.rh-timbangan b { font-size: 1.3em; color: #44403c; }
+.rh-piv { padding: 0.1em 0.4em; border-radius: 0.3em; background: #fde047; }
+.rh-cur { padding: 0.1em 0.4em; border-radius: 0.3em; background: #fef3c7; outline: 2px dashed #1d4ed8; }
+.rh-atas { display: flex; flex-wrap: wrap; gap: 0.6em 1.2em; align-items: center; justify-content: center; }
+.rh-rahasia { display: flex; gap: 1em; justify-content: center; font-size: clamp(0.7rem, 3.6cqmin, 1.9rem); }
+.rh-karung { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; width: 4.2em; height: 4.6em; padding-bottom: 0.4em; border-radius: 1.4em 1.4em 0.5em 0.5em; border: 3px solid #b45309; background: #fef3c7; font: inherit; cursor: pointer; color: #111827; }
+.rh-karung b { font-size: 1.3em; }
+.rh-karung span { font-size: 0.6em; color: #78350f; }
+.rh-karung.pilih { outline: 4px solid #f97316; transform: translateY(-0.2em); }
+.rh-karung.dipakai { opacity: 0.45; }
+.rh-fakta, .rh-jajar, .rh-susun { display: flex; flex-wrap: wrap; gap: 0.35em; align-items: center; justify-content: center; font-size: clamp(0.55rem, 2.6cqmin, 1.35rem); }
+.rh-fakta small, .rh-jajar small { font-weight: 800; color: #475569; }
+.rh-fakta span { padding: 0.1em 0.5em; border-radius: 0.4em; background: #e0e7ff; color: #312e81; font-weight: 800; }
+.rh-jajar span, .rh-susun span { min-width: 1.8em; padding: 0.15em 0.4em; border-radius: 0.4em; border: 2px dashed #94a3b8; text-align: center; font-weight: 900; }
+.rh-jajar span.isi, .rh-susun span.isi { border-style: solid; border-color: #16a34a; background: #dcfce7; }
+.rh-pool { justify-content: center; font-size: clamp(0.65rem, 3cqmin, 1.5rem); }
+@container (max-height: 520px) { .rh-main .gb-baris { height: 20cqh; } .rh-rahasia { font-size: clamp(0.6rem, 2.8cqmin, 1.4rem); } }
