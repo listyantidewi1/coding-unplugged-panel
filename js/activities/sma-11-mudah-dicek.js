@@ -4,8 +4,8 @@
 // 4×4 sudoku and a PIN show the same check-versus-search gap.
 
 import { el, onTap, button, shake } from '../core/util.js';
-import { choice } from '../core/kit.js';
 import { say, pickTeams, scoreBar, finishBoard, fmtNum } from './sma-kit.js';
+import { misiHead, fill } from './misi-kit.js';
 
 export const KARUNG = [40, 64, 53, 36, 49, 68, 38, 45, 73, 72];
 export const TANPA = [35, 36, 67, 40, 51, 72, 43, 42, 69, 37];
@@ -57,42 +57,271 @@ function trucks(host, ctx, { ws = KARUNG, onFair, onCheck, locked = () => false 
   return t;
 }
 
-function greedyRound(wrap, ctx, { done }) {
-  const g = greedySplit(KARUNG);
-  let k = 0;
-  const stage = el('div');
-  const msg = el('p', { class: 'reveal info' }, 'Ambil karung dari yang terberat. Masukkan ke truk yang saat itu lebih ringan (sama berat: truk A).');
-  const draw = () => {
-    const A = k ? g.steps[k - 1].A : 0; const B = k ? g.steps[k - 1].B : 0;
-    stage.replaceChildren(el('div', { class: 'mc-urut' }, g.steps.map((s, j) => el('span', { class: `mc-karung kecil ${j < k ? `di-${s.truck}` : j === k ? 'kini' : ''}` }, el('small', null, `#${s.i + 1}`), el('b', null, KARUNG[s.i]), j < k ? el('em', null, s.truck) : null))),
-      el('div', { class: 'mc-skor' }, el('span', null, `Truk A: ${A} kg`), el('span', null, `Truk B: ${B} kg`)));
-  };
-  const put = (truck) => {
-    if (k >= g.steps.length) return;
-    const s = g.steps[k];
-    if (s.truck !== truck) { ctx.mistake(); shake(stage); say(msg, 'bad', `Truk ${s.truck} sedang lebih ringan${k && g.steps[k - 1].A === g.steps[k - 1].B ? ' (sama berat: truk A)' : ''}.`); return; }
-    k++; ctx.sound.tap(); draw();
-    if (k === g.steps.length) { say(msg, '', `Truk A ${g.A} kg, truk B ${g.B} kg: hampir, tetapi tidak adil. Cepat, tetapi tidak menjamin tepat sama.`); done(); }
-  };
-  draw();
-  wrap.append(el('p', { class: 'prompt' }, 'Cara rakus: karung terberat ke truk yang lebih ringan.'), stage, el('div', { class: 'kode-baris' }, button('Truk A', () => put('A'), 'primary'), button('Truk B', () => put('B'), 'primary')), msg);
+// ---------- Permainan: Gudang Kopi ----------
+// Sack cards on two truck beds: check proposals against a stopwatch, race to
+// find the fair split, predict the balancing robot, dial the universe
+// calculator, check a sudoku group by group, and prove that no fair split exists.
+
+const sack = (ws, i, extra = {}) => el('span', { class: 'mc-karung gk11-karung', 'data-i': i, ...extra }, el('small', null, `#${i + 1}`), el('b', null, ws[i]));
+
+// A stopwatch that stops by itself once its node leaves the page.
+function stopwatch() {
+  const t0 = Date.now();
+  const node = el('span', { class: 'gk11-jam' }, '⏱️ 0 detik');
+  let stopped = null;
+  const id = setInterval(() => { if (!node.isConnected && stopped == null) { clearInterval(id); return; } if (stopped == null) node.textContent = `⏱️ ${Math.floor((Date.now() - t0) / 1000)} detik`; }, 250);
+  return { node, secs: () => Math.max(1, Math.round(((stopped ?? Date.now()) - t0) / 1000)), stop() { if (stopped == null) { stopped = Date.now(); clearInterval(id); node.textContent = `⏱️ ${this.secs()} detik`; } } };
 }
 
-function sudokuRound(wrap, ctx, { done }) {
-  const { bad } = sudokuErrors(RINA);
-  const found = new Set();
-  const msg = el('p', { class: 'reveal info' }, 'Periksa setiap baris, kolom, dan kotak 2 × 2. Ketuk angka yang bentrok.');
-  const grid = el('div', { class: 'mc-sudoku' });
-  const draw = () => grid.replaceChildren(...RINA.flatMap((row, r) => row.map((v, c) => onTap(el('button', { class: `mc-sd ${found.has(`${r},${c}`) ? 'salah' : ''} ${c === 1 ? 'kanan' : ''} ${r === 1 ? 'bawah' : ''}`, type: 'button', 'data-rc': `${r},${c}` }, v), () => {
-    const key = `${r},${c}`;
-    if (found.has(key)) return;
-    if (!bad.has(key)) { ctx.mistake(); shake(grid); say(msg, 'bad', `Baris, kolom, dan kotak untuk angka ${v} ini tidak bentrok.`); return; }
-    found.add(key); ctx.sound.tap(); draw();
-    if (found.size === bad.size) { say(msg, '', 'Salah: kolom 3 berisi 3, 1, 4, 1 dan kolom 4 berisi 4, 2, 3, 2. Baris dan kotak benar.'); done(); }
-  }))));
-  draw();
-  wrap.append(el('p', { class: 'prompt' }, 'Sudoku 4 × 4 jawaban Rina: benar atau salah?'), grid, msg);
+// Misi 1: proposals laid out on the two trucks; tap Adil or Tidak adil.
+function scaleRound(wrap, ctx, { ws, props, done }) {
+  let n = 0;
+  let wait = false;
+  const times = [];
+  const stage = el('div', { class: 'gk11-meja' });
+  const tools = el('div', { class: 'kode-baris' });
+  const msg = el('p', { class: 'reveal info' }, 'Jumlahkan berat kedua truk, lalu putuskan.');
+  let clock;
+  function draw(reveal = false) {
+    const p = props[n];
+    const A = sum(p.a.map((i) => ws[i]));
+    const B = sum(ws) - A;
+    const truck = (name, list, w) => el('div', { class: `mc-truk gk11-truk ${reveal ? (A === B ? 'adil' : 'timpang') : ''}` }, el('div', { class: 'mc-truk-kepala' }, `🚚 Truk ${name}`, el('b', null, reveal ? `${w} kg` : '? kg')), el('div', { class: 'mc-muatan' }, list.map((i) => sack(ws, i))));
+    fill(stage, el('div', { class: 'gk11-usulan' }, el('b', null, `📋 Usulan ${p.who}`), el('small', null, `${n + 1} dari ${props.length}`), clock.node),
+      el('div', { class: 'mc-dua' }, truck('A', p.a, A), truck('B', ws.map((_, i) => i).filter((i) => !p.a.includes(i)), B)));
+  }
+  function start() {
+    clock = stopwatch();
+    wait = false;
+    draw();
+    fill(tools, button('⚖️ Adil', () => judge(true), 'primary'), button('❌ Tidak adil', () => judge(false), 'primary'));
+  }
+  function judge(fair) {
+    if (wait) return;
+    const p = props[n];
+    const A = sum(p.a.map((i) => ws[i]));
+    const B = sum(ws) - A;
+    if (fair !== (A === B)) { ctx.mistake(); shake(stage); say(msg, 'bad', fair ? 'Coba jumlahkan lagi: beratnya belum sama.' : 'Coba jumlahkan lagi: beratnya sama.'); return; }
+    wait = true;
+    clock.stop();
+    times.push(clock.secs());
+    ctx.sound.good();
+    draw(true);
+    fill(tools);
+    n++;
+    if (n < props.length) { say(msg, '', `${A} dan ${B} kg: ${A === B ? 'adil' : 'tidak adil'}. Diperiksa dalam ${clock.secs()} detik.`); setTimeout(() => { if (stage.isConnected) { say(msg, 'info', 'Jumlahkan berat kedua truk, lalu putuskan.'); start(); } }, 2600); return; }
+    say(msg, '', `${A} dan ${B} kg: ${A === B ? 'adil' : 'tidak adil'}. Setiap usulan diperiksa dalam beberapa detik: ${ws.length} penjumlahan saja.`);
+    done();
+  }
+  wrap.append(stage, tools, msg);
+  start();
 }
+
+// Misi 2: move sacks between trucks until both weigh the same; tries and time are shown.
+function raceRound(wrap, ctx, { ws, done }) {
+  const clock = stopwatch();
+  const msg = el('p', { class: 'reveal hint' }, 'Ketuk karung untuk memindahkannya ke truk lain.');
+  let fin = false;
+  wrap.append(el('div', { class: 'gk11-usulan' }, el('b', null, `🏁 Lomba Cari · ${ws.length} karung, ${sum(ws)} kg`), clock.node));
+  trucks(wrap, ctx, { ws, locked: () => fin, onFair(tries) { fin = true; clock.stop(); ctx.sound.good(); say(msg, '', `Adil: ${sum(ws) / 2} dan ${sum(ws) / 2} kg setelah ${tries} percobaan, ${clock.secs()} detik. Memeriksa cepat, mencari lama.`); done(); } });
+  wrap.append(msg);
+}
+
+// Misi 3: the balancing robot. Tap the truck that gets the next (heaviest) sack.
+function robotRound11(wrap, ctx, { ws, done }) {
+  const g = greedySplit(ws);
+  let k = 0;
+  const stage = el('div', { class: 'gk11-meja' });
+  const msg = el('p', { class: 'reveal info' }, 'Robot mengambil karung terberat dan menaruhnya di truk yang lebih ringan (sama berat: truk A). Ketuk truk tujuannya.');
+  function draw() {
+    const A = k ? g.steps[k - 1].A : 0;
+    const B = k ? g.steps[k - 1].B : 0;
+    const box = (name, w) => onTap(el('button', { class: `mc-truk gk11-truk gk11-tujuan ${k === g.steps.length && A === B ? 'adil' : ''}`, type: 'button', 'data-truk': name },
+      el('div', { class: 'mc-truk-kepala' }, `🚚 Truk ${name}`, el('b', null, `${w} kg`)),
+      el('div', { class: 'mc-muatan' }, g.steps.slice(0, k).filter((s) => s.truck === name).map((s) => sack(ws, s.i)))), () => put(name));
+    const s = g.steps[k];
+    fill(stage, el('div', { class: 'gk11-antre' }, el('span', { class: 'gk11-robot' }, '🤖'), s ? sack(ws, s.i, { class: 'mc-karung gk11-karung kini' }) : el('b', null, 'Selesai'),
+      el('small', null, g.steps.slice(k + 1).map((t) => ws[t.i]).join(' · '))),
+    el('div', { class: 'mc-dua' }, box('A', A), box('B', B)));
+  }
+  function put(name) {
+    if (k >= g.steps.length) return;
+    const s = g.steps[k];
+    if (s.truck !== name) {
+      const A = k ? g.steps[k - 1].A : 0; const B = k ? g.steps[k - 1].B : 0;
+      ctx.mistake(); shake(stage);
+      say(msg, 'bad', A === B ? 'Sama berat: robot memilih truk A.' : `Truk ${A < B ? 'A' : 'B'} lebih ringan (${Math.min(A, B)} kg).`);
+      return;
+    }
+    k++;
+    ctx.sound.tap();
+    draw();
+    if (k < g.steps.length) { say(msg, 'info', `Karung ${ws[s.i]} kg ke truk ${name}.`); return; }
+    say(msg, '', `Truk A ${g.A} kg, truk B ${g.B} kg: ${g.A === g.B ? 'adil' : `selisih ${Math.abs(g.A - g.B)} kg, padahal pembagian adil ada`}. Robot cepat, tetapi tidak menjamin adil.`);
+    done();
+  }
+  wrap.append(stage, msg);
+  draw();
+}
+
+// Misi 4: the universe calculator. Set the number of sacks, then pick the time.
+const UMUR_SEMESTA = 1.38e10;
+const CALC11 = [
+  { n: 50, opts: [['sekitar 3 jam', false], ['sekitar 130 hari', true], ['sekitar 36 tahun', false]], a: '2⁵⁰ : 10⁸ ≈ 1,13 × 10⁷ detik ≈ 130 hari.' },
+  { n: 100, opts: [['sekitar 260 hari', false], ['sekitar 4.000 tahun', false], ['sekitar 4 × 10¹⁴ tahun', true]], a: '2¹⁰⁰ : 10⁸ ≈ 1,27 × 10²² detik ≈ 4 × 10¹⁴ tahun, sekitar 29.000 kali umur alam semesta.' },
+];
+function calcRound(wrap, ctx, { done }) {
+  let c = 0;
+  let n = 10;
+  let wait = false;
+  let order = ctx.rand.shuffle(CALC11[0].opts);
+  const card = el('div');
+  const view = el('div', { class: 'gk11-mesin' });
+  const dial = el('div', { class: 'kode-baris' });
+  const opts = el('div', { class: 'kode-baris gk11-opsi' });
+  const msg = el('p', { class: 'reveal info' });
+  function draw() {
+    const q = CALC11[c];
+    fill(card, el('div', { class: 'pp8-kejadian' }, el('small', null, `🌌 Pesanan ${c + 1} dari ${CALC11.length}`), el('b', null, `Gudang dengan ${q.n} karung. Komputer memeriksa 10⁸ pembagian per detik.`), el('span', null, 'Berapa lama mencoba semua pembagian?')));
+    fill(view, el('span', null, '📦 ', el('b', null, n), ' karung'), el('span', null, '🔢 2', el('sup', null, n), ' = ', el('b', null, fmtSci(2 ** n)), ' pembagian'), el('span', null, '✅ memeriksa satu: ', el('b', null, `${n} penjumlahan`)));
+    fill(opts, order.map(([l, ok]) => button(l, (ev) => pick(ok, ev?.currentTarget), n === q.n ? 'primary' : '')));
+  }
+  const step = (d) => { if (wait) return; n = Math.max(1, Math.min(120, n + d)); ctx.sound.tap(); draw(); };
+  function pick(ok, node) {
+    if (wait) return;
+    const q = CALC11[c];
+    if (n !== q.n) { ctx.sound.bad(); say(msg, 'bad', `Atur dulu: ${q.n} karung.`); return; }
+    if (!ok) { ctx.mistake(); shake(node || opts); say(msg, 'bad', `2^${q.n} : 10⁸ detik. Hitung lagi.`); return; }
+    ctx.sound.good();
+    say(msg, '', q.a);
+    c++;
+    wait = true;
+    if (c === CALC11.length) { done(); return; }
+    setTimeout(() => { if (!card.isConnected) return; wait = false; order = ctx.rand.shuffle(CALC11[c].opts); draw(); say(msg, 'info', 'Atur banyak karung, lalu pilih perkiraan waktunya.'); }, 3200);
+  }
+  fill(dial, button('−10', () => step(-10)), button('−1', () => step(-1)), button('+1', () => step(1)), button('+10', () => step(10)));
+  wrap.append(card, view, dial, opts, msg);
+  say(msg, 'info', 'Atur banyak karung, lalu pilih perkiraan waktunya.');
+  draw();
+}
+
+// Misi 5: check a 4 × 4 sudoku. Tap the groups (row, column, box) that are wrong.
+function groupsOf() {
+  const g = [];
+  for (let i = 0; i < 4; i++) g.push({ id: `b${i}`, label: `Baris ${i + 1}`, cells: [0, 1, 2, 3].map((c) => [i, c]) });
+  for (let i = 0; i < 4; i++) g.push({ id: `k${i}`, label: `Kolom ${i + 1}`, cells: [0, 1, 2, 3].map((r) => [r, i]) });
+  ['kiri atas', 'kanan atas', 'kiri bawah', 'kanan bawah'].forEach((nm, j) => { const r0 = j < 2 ? 0 : 2; const c0 = j % 2 ? 2 : 0; g.push({ id: `t${j}`, label: `Kotak ${nm}`, cells: [[r0, c0], [r0, c0 + 1], [r0 + 1, c0], [r0 + 1, c0 + 1]] }); });
+  return g;
+}
+function sudokuRound11(wrap, ctx, { grid: G, who, done }) {
+  const groups = groupsOf();
+  const wrong = (gr) => new Set(gr.cells.map(([r, c]) => G[r][c])).size < 4;
+  const bad = groups.filter(wrong).map((g) => g.id);
+  const found = new Set();
+  let sel = null;
+  let fin = false;
+  const board = el('div', { class: 'gk11-sudoku' });
+  const tabs = el('div', { class: 'gk11-kotak-tab' });
+  const msg = el('p', { class: 'reveal info' }, `Periksa 4 baris, 4 kolom, dan 4 kotak. Ketuk kelompok yang salah.`);
+  const tab = (g) => onTap(el('button', { class: `gk11-tab ${found.has(g.id) ? 'salah' : ''} ${sel === g.id ? 'pilih' : ''}`, type: 'button', 'data-g': g.id }, found.has(g.id) ? `✗ ${g.label}` : g.label), (ev) => tapGroup(g, ev.currentTarget));
+  function draw() {
+    const hi = new Set((groups.find((g) => g.id === sel)?.cells || []).map(([r, c]) => `${r},${c}`));
+    const red = new Set(groups.filter((g) => found.has(g.id)).flatMap((g) => g.cells.map(([r, c]) => `${r},${c}`)));
+    fill(board, el('span'), [0, 1, 2, 3].map((c) => tab(groups[4 + c])), [0, 1, 2, 3].flatMap((r) => [tab(groups[r]),
+      ...[0, 1, 2, 3].map((c) => el('span', { class: `gk11-sel ${c === 1 ? 'kanan' : ''} ${r === 1 ? 'bawah' : ''} ${hi.has(`${r},${c}`) ? 'sorot' : ''} ${red.has(`${r},${c}`) ? 'merah' : ''}` }, G[r][c]))]));
+    fill(tabs, groups.slice(8).map(tab));
+  }
+  function tapGroup(g, node) {
+    if (fin || found.has(g.id)) return;
+    sel = g.id;
+    if (!bad.includes(g.id)) { ctx.mistake(); draw(); shake(node); say(msg, 'bad', `${g.label} berisi ${g.cells.map(([r, c]) => G[r][c]).join(', ')}: lengkap 1 sampai 4.`); return; }
+    found.add(g.id);
+    ctx.sound.tap();
+    draw();
+    const vals = g.cells.map(([r, c]) => G[r][c]);
+    const dup = vals.find((v, i) => vals.indexOf(v) !== i);
+    if (found.size < bad.length) { say(msg, 'bad', `${g.label} (${vals.join(', ')}): angka ${dup} muncul dua kali.`); return; }
+    fin = true;
+    const names = bad.map((id) => groups.find((x) => x.id === id).label.toLowerCase());
+    say(msg, '', `Sudoku ${who} salah di ${names.slice(0, -1).join(', ')} dan ${names[names.length - 1]}. Cukup 12 kelompok diperiksa.`);
+    done();
+  }
+  wrap.append(board, tabs, msg);
+  draw();
+}
+
+// A valid 4 × 4 sudoku from a random relabelling, then two cells in one row swapped.
+function randomSudoku(rand) {
+  const base = [[1, 2, 3, 4], [3, 4, 1, 2], [2, 1, 4, 3], [4, 3, 2, 1]];
+  const p = rand.shuffle([1, 2, 3, 4]);
+  const g = base.map((row) => row.map((v) => p[v - 1]));
+  const r = rand.int(0, 3);
+  const [c1, c2] = rand.pick([[0, 2], [1, 3], [0, 3], [1, 2]]);
+  [g[r][c1], g[r][c2]] = [g[r][c2], g[r][c1]];
+  return g;
+}
+
+// Web variation: 8–10 sacks of 30–80 kg with exactly one fair split.
+function randomSacks(rand) {
+  for (let t = 0; t < 2000; t++) {
+    const n = rand.int(8, 10);
+    const ws = Array.from({ length: n }, () => rand.int(30, 80));
+    if (sum(ws) % 2) continue;
+    const s = search(ws);
+    if (s.fair.length !== 1) continue;
+    const g = greedySplit(ws);
+    if (g.A === g.B) continue;
+    return { ws, fair: s.fair[0] };
+  }
+  return { ws: KARUNG, fair: search(KARUNG).fair[0] };
+}
+// Three proposals for the random sacks: the fair one and two near misses.
+function proposals(ws, fair, rand) {
+  const others = ws.map((_, i) => i).filter((i) => !fair.includes(i));
+  const pairs = fair.flatMap((a) => others.map((b) => [a, b])).filter(([a, b]) => ws[a] !== ws[b]).sort((x, y) => Math.abs(ws[x[0]] - ws[x[1]]) - Math.abs(ws[y[0]] - ws[y[1]]));
+  const swap = ([a, b]) => fair.filter((i) => i !== a).concat(b).sort((x, y) => x - y);
+  const list = [{ who: 'Bima', a: swap(pairs[0]) }, { who: 'Citra', a: [...fair] }, { who: 'Fajar', a: swap(pairs[Math.min(pairs.length - 1, 1)]) }];
+  return rand.shuffle(list);
+}
+
+// Misi Bos: prove that the sacks cannot be split fairly.
+function proofRound(wrap, ctx, { done }) {
+  const ws = TANPA;
+  const s = search(ws);
+  let fin = false;
+  let t;
+  let best = Infinity;
+  const msg = el('p', { class: 'reveal hint' }, `Total ${sum(ws)} kg. Ketua yakin tidak ada pembagian adil. Cari pembagian paling dekat, lalu nyatakan.`);
+  const machine = el('div', { class: 'gk11-mesin' }, el('span', null, '💻 Komputer siap memeriksa semua pembagian.'));
+  wrap.append(el('div', { class: 'gk11-usulan' }, el('b', null, '🔍 Tantangan Ketua'), el('small', null, 'Selisih terkecil yang kamu temukan: '), el('b', { class: 'gk11-terbaik' }, '–')));
+  t = trucks(wrap, ctx, { ws, locked: () => fin, onCheck() { const A = sum([...t.inA].map((i) => ws[i])); const d = Math.abs(sum(ws) - 2 * A); if (d < best) { best = d; wrap.querySelector('.gk11-terbaik').textContent = `${d} kg`; } } });
+  wrap.append(machine, el('div', { class: 'kode-baris' }, button('🚫 Nyatakan: tidak ada yang adil', () => {
+    if (fin) return;
+    fin = true;
+    let k = 0;
+    const id = setInterval(() => {
+      k = Math.min(s.tried, k + 23);
+      fill(machine, el('span', null, '💻 Memeriksa ', el('b', null, `${k} / ${s.tried}`), ' pembagian'), el('span', null, 'adil: ', el('b', null, '0')));
+      if (!machine.isConnected) { clearInterval(id); return; }
+      if (k < s.tried) return;
+      clearInterval(id);
+      fill(machine, el('span', null, '💻 Semua ', el('b', null, s.tried), ' pembagian gagal'), el('span', null, 'selisih terkecil ', el('b', null, `${s.best} kg`)));
+      if (best > s.best) { fin = false; ctx.mistake(); say(msg, 'bad', `Benar, tidak ada. Tetapi kamu belum menemukan yang paling dekat (${s.best} kg). Cari dulu, lalu nyatakan lagi.`); return; }
+      ctx.sound.good();
+      say(msg, '', `Selisih ${s.best} kg sudah paling dekat. Membuktikan "ada" cukup satu contoh; membuktikan "tidak ada" butuh memeriksa semua ${s.tried} pembagian.`);
+      done();
+    }, 40);
+  }, 'primary')), msg);
+}
+
+const HEAD11 = {
+  timbang: ['Meja Timbang', 'Periksa setiap usulan pembagian karung secepatnya. Jam mencatat waktumu.'],
+  cari: ['Lomba Cari', 'Pindahkan karung sampai kedua truk sama berat. Penghitung mencatat percobaanmu.'],
+  robot: ['Robot Penyeimbang', 'Tebak truk tujuan setiap karung sebelum robot bergerak.'],
+  semesta: ['Kalkulator Alam Semesta', 'Mencoba semua pembagian: berapa lama untuk gudang yang besar?'],
+  sudoku: ['Periksa Sudoku', 'Memeriksa jawaban sudoku itu cepat. Temukan kelompok yang salah.'],
+  boss: ['Buktikan Tidak Ada', 'Ketua yakin karung ini tidak bisa dibagi adil. Buktikan.'],
+};
 
 export default {
   id: 'sma-11-mudah-dicek',
@@ -110,33 +339,28 @@ export default {
     { id: 'giliran', icon: '🔁', label: 'Teka-teki Rahasia', desc: 'Satu tim diam-diam membagi karung; layar menambah karung penyeimbang. Tim berikutnya mencari pembagian adil dengan percobaan terbatas', create: createTeams },
   ],
   create(root, ctx) {
-    const wrap = el('div', { class: 'act mudah-dicek' });
+    const wrap = el('div', { class: 'act mudah-dicek gk11-main' });
     root.append(wrap);
+    const R = randomSacks(ctx.rand);
+    const props = proposals(R.ws, R.fair, ctx.rand);
+    const cadangan = ctx.rand.shuffle([31, 47, 52, 58, 63, 66, 70, 77]);
+    const sd = randomSudoku(ctx.rand);
     function render() {
       wrap.replaceChildren();
       const r = ctx.round;
       let solved = false;
-      const next = () => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, 2400); } };
-      const ask = (prompt, opts, columns = 1, subject = null, onRight = next) => choice(wrap, { prompt, subject, ctx, shuffle: true, onRight, columns, options: opts.map(([l, correct]) => ({ label: String(l), correct })) });
-      const then = (fn) => () => { wrap.replaceChildren(); fn(); };
-      const table = el('div', { class: 'pd-kode' }, KARUNG.map((w, i) => el('span', null, el('small', null, `#${i + 1}`), w)));
-      if (r === 0) ask('Usulan Dimas: truk A berisi karung 1, 2, 3, 7, 9; sisanya truk B. Adil?', [['Tidak: A 268 kg, B 270 kg', true], ['Ya: keduanya 269 kg'], ['Tidak: A 270 kg, B 268 kg'], ['Tidak: A 250 kg, B 288 kg']], 1, table,
-        then(() => ask('Usulan Sari: truk A berisi karung 2, 4, 5, 8, 10. Adil? Berapa langkah untuk memeriksa satu usulan?', [['Tidak (266 dan 272); hanya sekitar 10 langkah menjumlah dan membandingkan', true], ['Ya (269 dan 269); sekitar 1.024 langkah'], ['Tidak (266 dan 272); sekitar 1.024 langkah'], ['Ya; tidak perlu diperiksa']], 1, el('div', { class: 'pd-kode' }, KARUNG.map((w, i) => el('span', null, el('small', null, `#${i + 1}`), w))))));
-      else if (r === 1) {
-        const msg = el('p', { class: 'reveal hint' }, 'Ketuk karung untuk memindahkannya. Truk yang adil menyala hijau.');
-        let fin = false;
-        wrap.append(el('p', { class: 'prompt' }, 'Cari pembagian yang adil: kedua truk sama berat.'));
-        trucks(wrap, ctx, { locked: () => fin, onFair(tries) { fin = true; say(msg, '', `Adil! 269 kg dan 269 kg, setelah mencoba ${tries} pembagian. Memeriksa cepat, mencarinya lama.`); next(); } });
-        wrap.append(msg);
-      } else if (r === 2) ask('Setiap karung bisa masuk truk A atau B. Berapa cara membagi, berapa yang benar-benar berbeda, dan berapa kg per truk?', [['1.024 cara; 512 berbeda (tukar truk sama saja); total 538 kg, jadi 269 kg per truk', true], ['20 cara; 10 berbeda; 269 kg'], ['100 cara; 50 berbeda; 538 kg'], ['1.024 cara; 1.024 berbeda; 538 kg']]);
-      else if (r === 3) greedyRound(wrap, ctx, { done: next });
-      else if (r === 4) ask('Komputer memeriksa 10⁸ pembagian per detik. Berapa lama mencoba semua pembagian 50 karung dan 100 karung?', [['50 karung ≈ 130 hari; 100 karung ≈ 4 × 10¹⁴ tahun, sekitar 29.000 kali umur alam semesta', true], ['50 karung 5 detik; 100 karung 10 detik'], ['50 karung 130 hari; 100 karung 260 hari'], ['Keduanya kurang dari sedetik']], 1, el('div', { class: 'au-status' }, '2⁵⁰ ≈ 1,13 × 10¹⁵ · 2¹⁰⁰ ≈ 1,27 × 10³⁰'),
-        then(() => ask('Berapa lama memeriksa satu usulan untuk 100 karung?', [['Sangat cepat: sekitar 100 penjumlahan', true], ['2¹⁰⁰ langkah'], ['Sekitar 130 hari'], ['Tidak bisa diperiksa']])));
-      else if (r === 5) sudokuRound(wrap, ctx, { done: () => { setTimeout(() => { wrap.replaceChildren(); ask('Berapa kelompok yang harus diperiksa pada sudoku 4 × 4?', [['12: 4 baris, 4 kolom, 4 kotak', true], ['16 kotak'], ['4'], ['24']], 4); }, 1600); } });
-      else if (r === 6) ask('PIN 6 angka: server memeriksa berapa kali, dan penebak tanpa petunjuk mungkin harus mencoba sampai berapa kali?', [['Server 1 kali mencocokkan; penebak sampai 1.000.000 kali', true], ['Server 1.000.000 kali; penebak 1 kali'], ['Keduanya 6 kali'], ['Keduanya 1.000.000 kali']], 1, el('div', { class: 'au-status' }, '🔒 • • • • • •'));
-      else if (r === 7) ask('Persoalan yang jawabannya mudah diperiksa termasuk NP; yang mudah dicari termasuk P. Apa status pertanyaan "apakah setiap persoalan NP juga P?"', [['Belum ada yang bisa membuktikannya; termasuk tujuh Masalah Milenium berhadiah 1 juta dolar', true], ['Sudah terbukti ya'], ['Sudah terbukti tidak'], ['Pertanyaan itu tidak ada artinya']]);
-      else if (r === 8) ask('Mengapa keamanan kata sandi justru butuh persoalan yang mudah diperiksa tetapi sulit dicari?', [['Pemilik masuk cepat karena server memeriksa sekejap, sedangkan penyerang harus mencari di antara sangat banyak kemungkinan', true], ['Supaya server bekerja lebih keras'], ['Supaya kata sandi bisa ditebak'], ['Tidak ada hubungannya']]);
-      else ask('Tantangan: karung 35, 36, 67, 40, 51, 72, 43, 42, 69, 37 (total 492). Ketua yakin tidak ada pembagian adil. Bagaimana meyakinkan orang lain?', [['Harus menunjukkan semua 512 pembagian gagal (atau alasan khusus); membuktikan "ada" cukup menunjukkan satu pembagian', true], ['Cukup menunjukkan satu pembagian yang gagal'], ['Totalnya genap, jadi pasti ada'], ['Cukup menjalankan cara rakus']], 1, el('div', { class: 'au-status' }, `Komputer: ${search(TANPA).tried} pembagian dicek, selisih terkecil ${search(TANPA).best} kg`));
+      const next = (wait = 4800) => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, wait); } };
+      const head = (key, no) => wrap.append(misiHead(no, ...HEAD11[key], '☕'));
+      if (r === 0) { head('timbang', 1); scaleRound(wrap, ctx, { ws: KARUNG, props: [{ who: 'Dimas', a: [0, 1, 2, 6, 8] }, { who: 'Sari', a: [1, 3, 4, 7, 9] }], done: () => next() }); }
+      else if (r === 1) { head('cari', 2); raceRound(wrap, ctx, { ws: KARUNG, done: () => next() }); }
+      else if (r === 2) { head('robot', 3); robotRound11(wrap, ctx, { ws: KARUNG, done: () => next(5200) }); }
+      else if (r === 3) { head('semesta', 4); calcRound(wrap, ctx, { done: () => next(5200) }); }
+      else if (r === 4) { head('sudoku', 5); sudokuRound11(wrap, ctx, { grid: RINA, who: 'Rina', done: () => next() }); }
+      else if (r === 5) { head('timbang', 1); scaleRound(wrap, ctx, { ws: R.ws, props, done: () => next() }); }
+      else if (r === 6) { head('cari', 2); raceRound(wrap, ctx, { ws: R.ws, done: () => next() }); }
+      else if (r === 7) { head('robot', 3); robotRound11(wrap, ctx, { ws: cadangan, done: () => next(5200) }); }
+      else if (r === 8) { head('sudoku', 5); sudokuRound11(wrap, ctx, { grid: sd, who: 'Joko', done: () => next() }); }
+      else { head('boss', 'Bos'); proofRound(wrap, ctx, { done: () => next(5600) }); }
     }
     render();
   },

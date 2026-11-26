@@ -6488,7 +6488,7 @@ button.at-orang { font-size: clamp(0.55rem, 3.4cqmin, 1.8rem); }
 @container (max-height: 520px) { .tk9-main .kd-peta svg { max-height: 40cqh; } }
 @container (max-aspect-ratio: 1/1) { .tk9-main .kd-peta svg { max-height: 40cqh; } .tk9-main .tk9-antre { font-size: clamp(0.5rem, 2cqmin, 1rem); } }
 @container (max-width: 1000px) and (min-height: 600px) { .tk9-main .kd-peta svg { max-height: 38cqh; } .tk9-main .kode-baris .btn { font-size: clamp(0.7rem, 3cqmin, 1.4rem); } }
-:is(.kk-main, .rh-main, .pk6-main, .mph-main, .pp8-main, .tk9-main, .kb10-main) .reveal { font-size: clamp(0.7rem, 3cqmin, 1.6rem); text-wrap: balance; }
+:is(.kk-main, .rh-main, .pk6-main, .mph-main, .pp8-main, .tk9-main, .kb10-main, .gk11-main) .reveal { font-size: clamp(0.7rem, 3cqmin, 1.6rem); text-wrap: balance; }
 @container (max-width: 1000px) and (min-height: 600px) { .tk9-main .kd-peta svg { max-height: 46cqh; } }
 
 /* sma-10 Konter Bagasi */
@@ -6555,3 +6555,36 @@ button.at-orang { font-size: clamp(0.55rem, 3.4cqmin, 1.8rem); }
 .kb10-pisau { font-size: clamp(0.6rem, 2.8cqmin, 1.4rem); font-variant-numeric: tabular-nums; }
 .kb10-main .kode-baris .btn { font-size: clamp(0.6rem, 2.8cqmin, 1.4rem); }
 @container (max-height: 520px) { .kb10-main .misi-tujuan { display: none; } .kb10-balok { min-height: 2.4em; } .kb10-koper { height: 1.7em; } }
+
+/* sma-11 Gudang Kopi */
+.gk11-main { gap: 0.5cqmin; }
+.gk11-meja { display: flex; flex-direction: column; align-items: center; gap: 0.6cqmin; width: 100%; }
+.gk11-usulan { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.3em 0.9em; font-size: clamp(0.6rem, 2.9cqmin, 1.45rem); }
+.gk11-usulan small { color: #475569; font-weight: 700; }
+.gk11-jam { padding: 0.05em 0.6em; border-radius: 999px; background: #0f172a; color: #fde68a; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.gk11-main .mc-truk.timpang { border-color: #dc2626; background: #fef2f2; }
+.gk11-main .mc-truk { min-height: 14cqmin; }
+.gk11-main .mc-karung { font-size: clamp(0.65rem, 3cqmin, 1.7rem); min-width: 8cqmin; min-height: 8cqmin; }
+.gk11-karung { cursor: default; }
+.gk11-tujuan { font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.gk11-tujuan:hover { border-color: #2563eb; }
+.gk11-antre { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 0.4em 0.8em; font-size: clamp(0.6rem, 2.8cqmin, 1.4rem); }
+.gk11-robot { font-size: 2em; }
+.gk11-antre small { color: #64748b; font-weight: 700; font-variant-numeric: tabular-nums; }
+.gk11-main .mc-karung.kini { outline: 4px solid #2563eb; animation: gk11-angkat 0.9s ease-in-out infinite alternate; }
+@keyframes gk11-angkat { to { transform: translateY(-0.2em); } }
+.gk11-mesin { display: flex; flex-wrap: wrap; gap: 0.4em 1.2em; justify-content: center; padding: 0.45em 1em; border-radius: 0.7em; background: #0f172a; color: #e2e8f0; font-size: clamp(0.6rem, 3cqmin, 1.6rem); font-variant-numeric: tabular-nums; }
+.gk11-mesin b { color: #fde68a; }
+.gk11-opsi .btn { font-size: clamp(0.6rem, 2.9cqmin, 1.4rem); }
+.gk11-sudoku { display: grid; grid-template-columns: auto repeat(4, minmax(0, 1fr)); gap: 0; width: min(80cqmin, 96%); font-size: clamp(0.6rem, 2.8cqmin, 1.4rem); }
+.gk11-sel { display: grid; place-items: center; aspect-ratio: 1.4; border: 1px solid #94a3b8; background: #fff; color: #111827; font-size: 2em; font-weight: 800; }
+.gk11-sel.kanan { border-right: 4px solid #111827; }
+.gk11-sel.bawah { border-bottom: 4px solid #111827; }
+.gk11-sel.sorot { background: #dbeafe; }
+.gk11-sel.merah { background: #fee2e2; color: #b91c1c; }
+.gk11-tab { font: inherit; padding: 0.2em 0.4em; margin: 0.12em; min-width: 0; overflow-wrap: anywhere; border-radius: 0.4em; border: 2px solid #cbd5e1; background: #f8fafc; color: #1e293b; font-weight: 800; cursor: pointer; white-space: nowrap; }
+.gk11-tab.pilih { border-color: #2563eb; }
+.gk11-tab.salah { background: #fee2e2; border-color: #dc2626; color: #b91c1c; }
+.gk11-kotak-tab { display: flex; flex-wrap: wrap; justify-content: center; font-size: clamp(0.6rem, 2.8cqmin, 1.4rem); }
+.gk11-terbaik { font-variant-numeric: tabular-nums; }
+@container (max-height: 520px) { .gk11-main .misi-tujuan { display: none; } .gk11-sudoku { width: min(115cqmin, 96%); } .gk11-sel { aspect-ratio: 2.2; font-size: 1.6em; } }
