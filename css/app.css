@@ -6488,7 +6488,7 @@ button.at-orang { font-size: clamp(0.55rem, 3.4cqmin, 1.8rem); }
 @container (max-height: 520px) { .tk9-main .kd-peta svg { max-height: 40cqh; } }
 @container (max-aspect-ratio: 1/1) { .tk9-main .kd-peta svg { max-height: 40cqh; } .tk9-main .tk9-antre { font-size: clamp(0.5rem, 2cqmin, 1rem); } }
 @container (max-width: 1000px) and (min-height: 600px) { .tk9-main .kd-peta svg { max-height: 38cqh; } .tk9-main .kode-baris .btn { font-size: clamp(0.7rem, 3cqmin, 1.4rem); } }
-:is(.kk-main, .rh-main, .pk6-main, .mph-main, .pp8-main, .tk9-main, .kb10-main, .gk11-main) .reveal { font-size: clamp(0.7rem, 3cqmin, 1.6rem); text-wrap: balance; }
+:is(.kk-main, .rh-main, .pk6-main, .mph-main, .pp8-main, .tk9-main, .kb10-main, .gk11-main, .rk13-main) .reveal { font-size: clamp(0.7rem, 3cqmin, 1.6rem); text-wrap: balance; }
 @container (max-width: 1000px) and (min-height: 600px) { .tk9-main .kd-peta svg { max-height: 46cqh; } }
 
 /* sma-10 Konter Bagasi */
@@ -6588,3 +6588,31 @@ button.at-orang { font-size: clamp(0.55rem, 3.4cqmin, 1.8rem); }
 .gk11-kotak-tab { display: flex; flex-wrap: wrap; justify-content: center; font-size: clamp(0.6rem, 2.8cqmin, 1.4rem); }
 .gk11-terbaik { font-variant-numeric: tabular-nums; }
 @container (max-height: 520px) { .gk11-main .misi-tujuan { display: none; } .gk11-sudoku { width: min(115cqmin, 96%); } .gk11-sel { aspect-ratio: 2.2; font-size: 1.6em; } }
+
+/* sma-13 Ruang Kurikulum */
+.rk13-main { gap: 0.5cqmin; }
+.rk13-murid-besar { display: flex; flex-direction: column; align-items: center; padding: 0.3em 1.2em; border-radius: 0.6em; background: #ecfdf5; border: 3px solid #16a34a; box-shadow: 0 0.2em 0 #15803d; font-size: clamp(0.6rem, 2.9cqmin, 1.5rem); }
+.rk13-murid-besar small { color: #166534; font-weight: 800; }
+.rk13-murid-besar b { font-size: 1.3em; }
+.rk13-robot { display: flex; align-items: center; gap: 0.35em; padding: 0.15em 0.7em; border-radius: 0.6em; background: #e0e7ff; border: 3px solid #4f46e5; font-size: clamp(0.6rem, 2.7cqmin, 1.4rem); }
+.rk13-robot small { color: #3730a3; font-weight: 700; }
+.rk13-main .ju-graf svg { max-height: 46cqh; }
+.rk13-papan { display: flex; flex-direction: column; align-items: center; gap: 0.5cqmin; width: 100%; }
+.rk13-baki { display: flex; flex-wrap: wrap; gap: 0.35em; justify-content: center; align-items: center; min-height: 2.6em; width: 100%; padding: 0.25em; border-radius: 0.6em; border: 2px dashed #cbd5e1; background: #f8fafc; font-size: clamp(0.55rem, 2.6cqmin, 1.3rem); }
+.rk13-baki > small { color: #64748b; font-weight: 700; }
+.rk13-kartu { font: inherit; display: flex; flex-direction: column; align-items: center; line-height: 1.05; padding: 0.2em 0.5em; border-radius: 0.45em; border: 2px solid #334155; background: #fff; color: #111827; cursor: pointer; }
+.rk13-kartu small { font-size: 0.6em; color: #475569; max-width: 7em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rk13-kartu.pilih { outline: 4px solid #f97316; transform: translateY(-0.12em); }
+.rk13-sesi-baris { display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: 0.4em; width: 100%; font-size: clamp(0.55rem, 2.6cqmin, 1.3rem); }
+.rk13-kolom { display: flex; flex-direction: column; align-items: stretch; gap: 0.25em; min-height: 6.5em; padding: 0.25em; border-radius: 0.6em; background: color-mix(in srgb, var(--w) 25%, #fff); border: 3px solid var(--w); cursor: pointer; min-width: 0; }
+.rk13-kolom.siap { box-shadow: 0 0 0 3px #fdba74 inset; }
+.rk13-kolom-kepala { font-weight: 900; text-align: center; color: #1f2937; font-size: 0.85em; white-space: nowrap; }
+.rk13-kolom .rk13-kartu { width: 100%; }
+.rk13-orang { display: flex; flex-wrap: wrap; gap: 0.3em; justify-content: center; font-size: clamp(0.5rem, 2.3cqmin, 1.15rem); }
+.rk13-orang-kartu { display: flex; align-items: center; gap: 0.2em; padding: 0.1em 0.4em; border-radius: 0.4em; border: 2px solid #cbd5e1; background: #fff; }
+.rk13-orang-kartu i { font-style: normal; font-weight: 700; padding: 0 0.25em; border-radius: 0.25em; background: #f1f5f9; }
+.rk13-orang-kartu.protes { border-color: #dc2626; background: #fee2e2; color: #991b1b; }
+.rk13-status { margin: 0; font-weight: 700; color: #334155; font-size: clamp(0.55rem, 2.5cqmin, 1.25rem); }
+.rk13-status.bad { color: #b91c1c; }
+.rk13-kejadian-area { display: flex; flex-direction: column; align-items: center; gap: 0.6cqmin; width: 100%; }
+@container (max-height: 520px) { .rk13-main .misi-tujuan { display: none; } .rk13-kolom { min-height: 4.6em; } .rk13-kartu small { display: none; } .rk13-main .ju-graf svg { max-height: 50cqh; } .rk13-baki, .rk13-sesi-baris { font-size: clamp(0.55rem, 3.6cqmin, 1.3rem); } .rk13-orang, .rk13-status { font-size: clamp(0.5rem, 3cqmin, 1.15rem); } .rk13-murid-besar { font-size: clamp(0.6rem, 3.2cqmin, 1.5rem); } }
