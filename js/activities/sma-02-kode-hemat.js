@@ -4,7 +4,7 @@
 // codes, Morse and Shannon's bound.
 
 import { el, onTap, button, shake } from '../core/util.js';
-import { choice } from '../core/kit.js';
+import { misiHead, fill } from './misi-kit.js';
 import { say, pickTeams, scoreBar, finishBoard, fmtNum } from './sma-kit.js';
 
 export const PANTUN = ['Anak kancil makan nanas,', 'Nanas manis di kala siang,', 'Kalau sudah lama malas,', 'Ilmu hilang kawan pun hilang.'];
@@ -162,63 +162,195 @@ function codeTable(codes, freq, highlight = null) {
   return el('div', { class: 'kh-kode' }, keys.map((c) => el('div', { class: `kh-sel ${highlight === c ? 'on' : ''}` }, el('b', null, c), el('code', null, codes[c]), freq ? el('small', null, `${freq[c]} × ${codes[c].length} = ${freq[c] * codes[c].length}`) : null)));
 }
 
-const pantunBox = (letter) => el('div', { class: 'kh-pantun' }, PANTUN.map((line) => el('div', null, [...line].map((c) => (letter && c.toUpperCase() === letter ? el('mark', null, c) : c)))));
 
-function countRound(wrap, ctx, { done }) {
-  const pool = ['I', 'K', 'L', 'M', 'S', 'U', 'G', 'H', 'D'];
-  const letter = ctx.rand.pick(pool);
-  const want = FREQ[letter];
-  const opts = [...new Set([want - 2, want - 1, want, want + 1, want + 2].filter((v) => v > 0))].slice(0, 4);
-  choice(wrap, { prompt: `Berapa kali huruf ${letter} muncul di pantun ini? Huruf besar dan kecil dianggap sama.`, subject: pantunBox(null), ctx, onRight: done, columns: opts.length, options: opts.map((v) => ({ label: String(v), correct: v === want })) });
+// ---------- Permainan: Chip Papan Berjalan ----------
+// The team are technicians of the school's scrolling sign. Its chip holds 300
+// bits for one pantun: build the Huffman tree with cards while a chip meter
+// fills, walk the tree to read messages, write letters in bits, and find every
+// way to read a code that needs separators.
+
+export const SHORT = 'KAKAK MAKAN NANAS';
+const WORDS = ['KAWAN', 'SIANG', 'NANAS', 'MALAS'];
+const SECRET = ['KANCIL', 'HILANG', 'SIANG', 'KAWAN', 'MALAS', 'ILMU'];
+export const RAKA = { A: '0', N: '1', L: '01' };
+export const MORSE = { E: '•', T: '—', A: '•—', N: '—•', S: '•••', V: '•••—', I: '••', U: '••—' };
+// Every way to split `bits` into codes.
+export function parses(bits, codes, pre = []) {
+  if (!bits) return [pre];
+  return Object.entries(codes).filter(([, c]) => bits.startsWith(c)).flatMap(([ch, c]) => parses(bits.slice(c.length), codes, [...pre, ch]));
 }
 
-function mergeRound(wrap, ctx, { done }) {
-  const msg = el('p', { class: 'reveal info' }, 'Ketuk dua kartu dengan nilai terkecil untuk digabung. Kartu gabungan ikut dipilih lagi.');
-  wrap.append(el('p', { class: 'prompt' }, 'Bangun pohon Huffman untuk pantun ini.'));
+// Horizontal chip meter with marks: [[value, label, cls]].
+function chipMeter(max, marks, limit = Infinity) {
+  const bar = el('i', { class: 'kh-meter-isi' });
+  const num = el('b');
+  const node = el('div', { class: 'kh-meter' }, el('small', null, '📟 Meteran chip'),
+    el('div', { class: 'kh-meter-skala' }, bar, marks.map(([v, l, cls]) => el('span', { class: `kh-tanda ${cls || ''}`, style: { left: `${(v / max) * 100}%` } }, el('small', null, l)))), num);
+  return {
+    node,
+    set(v) { bar.style.width = `${Math.min(100, (v / max) * 100)}%`; num.textContent = `${v} bit`; node.classList.toggle('lewat', v > limit); },
+  };
+}
+
+// Misi 1 · Gabung Kartu.
+function chipRound(wrap, ctx, { freq, long, done }) {
+  const n = Object.values(freq).reduce((a, b) => a + b, 0);
+  const k = Object.keys(freq).length;
+  const fb = fixedBits(k);
+  const meter = long
+    ? chipMeter(420, [[300, '🔴 batas chip 300', 'batas'], [336, 'kode 4 bit: 336'], [420, 'kode 5 bit: 420']], 300)
+    : chipMeter(n * fb, [[n * fb, `kode ${fb} bit: ${n * fb}`]]);
+  meter.set(0);
+  const msg = el('p', { class: 'reveal info' }, 'Ketuk dua kartu dengan nilai terkecil. Nilai kartu gabungan masuk ke meteran chip.');
   const host = el('div', { class: 'kh-papan' });
-  wrap.append(host, msg);
-  mergeBoard(host, {
-    freq: FREQ,
+  wrap.append(...[long ? null : el('div', { class: 'au-status' }, SHORT), meter.node, host, msg].filter(Boolean));
+  const board = mergeBoard(host, {
+    freq,
     onPick(ok, got, want) {
-      if (ok) { ctx.sound.tap(); say(msg, 'info', `Gabung ${got[0]} + ${got[1]} = ${got[0] + got[1]}.`); return; }
-      ctx.mistake();
-      shake(host);
+      if (ok) { ctx.sound.tap(); meter.set(board.total); say(msg, 'info', `Gabung ${got[0]} + ${got[1]} = ${got[0] + got[1]}. Meteran naik ${got[0] + got[1]} bit.`); return; }
+      ctx.mistake(); shake(host);
       say(msg, 'bad', `${got[0]} dan ${got[1]} bukan dua yang terkecil. Yang terkecil sekarang ${want[0]} dan ${want[1]}.`);
     },
-    onDone(root, total) {
-      const codes = codesOf(root);
-      say(msg, '', `Selesai: 13 penggabungan, kartu teratas 84, total ${total} bit (kode tetap 5 bit: 420 bit).`);
-      wrap.append(codeTable(codes));
-      setTimeout(done, 400);
+    onDone(rootNode, total) {
+      meter.set(total);
+      say(msg, '', long ? `Pohon selesai: ${total} bit, muat di chip 300 bit! Kode tetap 5 bit (420) dan 4 bit (336) tidak muat.` : `Pohon selesai: ${total} bit, lebih hemat dari kode tetap ${fb} bit (${n * fb}).`);
+      done();
     },
   });
 }
 
-function decodeRound(wrap, ctx, { done }) {
-  const all = MESSAGE.join('');
+// Misi 2 · Turuni Pohon: follow the bits from the root; every leaf is a letter.
+function descendRound(wrap, ctx, word, done) {
+  const bits = [...word].map((c) => CODE[c]).join('');
+  const tree = trieOf(CODE);
   let pos = 0;
+  let node = tree;
+  let path = [tree.id];
   let out = '';
-  let finished = false;
-  const letters = Object.keys(CODE).sort();
-  const stage = el('div');
-  const msg = el('p', { class: 'reveal info' }, 'Cocokkan bit paling depan dengan tabel kode, lalu ketuk hurufnya.');
-  const draw = () => stage.replaceChildren(
-    el('div', { class: 'kh-bit' }, [...all].map((b, i) => [i === MESSAGE[0].length ? el('span', { class: 'kh-jeda' }, ' / ') : null, el('span', { class: i < pos ? 'kh-habis' : '' }, b)])),
-    el('div', { class: 'au-status' }, out || '…'));
+  let busy = false;
+  const pic = el('div', { class: 'kh-pohon' });
+  const tape = el('div', { class: 'kh-bit kh-pita' });
+  const word$ = el('div', { class: 'au-status kh-kata' });
+  const msg = el('p', { class: 'reveal info' }, 'Token di puncak pohon. Baca bit berikutnya: 0 turun ke kiri, 1 turun ke kanan.');
+  function draw() {
+    pic.innerHTML = forestSvg([tree], { bits: true, path: new Set(path) });
+    fill(tape, [...bits].map((b, i) => el('span', { class: i < pos ? 'kh-habis' : i === pos ? 'kh-kini' : '' }, b)));
+    word$.textContent = out || '…';
+  }
+  function go(b) {
+    if (busy || pos >= bits.length) return;
+    if (b !== bits[pos]) { ctx.mistake(); say(msg, 'bad', `Bit berikutnya ${bits[pos]}, jadi turun ke ${bits[pos] === '0' ? 'kiri' : 'kanan'}.`); return; }
+    node = b === '0' ? node.l : node.r; path.push(node.id); pos += 1; ctx.sound.tap();
+    if (node.ch) {
+      out += node.ch;
+      say(msg, 'info', `Sampai di daun ${node.ch}. Token kembali ke puncak.`);
+      if (pos === bits.length) { draw(); say(msg, '', `Pesannya: ${out}. Tidak perlu jeda, karena setiap huruf ada di ujung cabang.`); done(); return; }
+      busy = true; draw();
+      setTimeout(() => { node = tree; path = [tree.id]; busy = false; draw(); }, 650);
+      return;
+    }
+    draw();
+  }
   draw();
-  const keys = el('div', { class: 'keys keypad kh-huruf' }, letters.map((c) => onTap(el('button', { class: 'key', type: 'button' }, c), (e) => {
-    if (finished) return;
-    if (all.startsWith(CODE[c], pos)) {
-      pos += CODE[c].length;
-      out += c;
-      if (pos === MESSAGE[0].length) out += ' ';
-      ctx.sound.tap();
-      draw();
-      if (pos === all.length) { finished = true; say(msg, '', 'MANIS ILMU. Tidak perlu jeda: tidak ada kode yang menjadi awal kode lain.'); done(); }
-    } else { ctx.mistake(); shake(e.currentTarget || keys); say(msg, 'bad', `Kode ${c} = ${CODE[c]}, tidak cocok dengan bit berikutnya.`); }
-  })));
-  wrap.append(el('p', { class: 'prompt' }, 'Uraikan pesan Bu Guru.'), codeTable(CODE), stage, keys, msg);
+  wrap.append(pic, tape, el('div', { class: 'kh-turun' },
+    onTap(el('button', { class: 'kpb-cap besar kh-nol', type: 'button', 'data-b': '0' }, '⬋ 0 kiri'), () => go('0')),
+    word$,
+    onTap(el('button', { class: 'kpb-cap besar kh-satu', type: 'button', 'data-b': '1' }, 'kanan 1 ⬊'), () => go('1'))), msg);
 }
+
+// Misi 3 · Susun Surat: pick the bit piece for each letter; some pieces are decoys.
+function composeRound(wrap, ctx, word, done) {
+  const need = [...new Set(word)];
+  const decoys = ctx.rand.shuffle(Object.keys(CODE).filter((c) => !need.includes(c))).slice(0, 3);
+  const pieces = ctx.rand.shuffle([...need, ...decoys].map((c) => CODE[c]));
+  let k = 0;
+  const msg = el('p', { class: 'reveal info' }, `Tulis ${word} dalam bit: ketuk potongan kode huruf demi huruf. Ada potongan pengecoh.`);
+  const board = el('div', { class: 'kh-surat' });
+  function draw() {
+    fill(board,
+      el('div', { class: 'kh-slot-slot' }, [...word].map((c, i) => el('div', { class: `kh-slot ${i < k ? 'isi' : i === k ? 'kini' : ''}` }, el('b', null, c), el('code', null, i < k ? CODE[c] : '…')))),
+      el('div', { class: 'kh-bit' }, [...word].slice(0, k).map((c) => CODE[c]).join('') || '…'),
+      k < word.length ? el('div', { class: 'kpb-opsi' }, pieces.map((p) => onTap(el('button', { class: 'kpb-cap kh-potong', type: 'button', 'data-p': p }, p), () => put(p)))) : null);
+  }
+  function put(p) {
+    if (k >= word.length) return;
+    const want = word[k];
+    if (p !== CODE[want]) {
+      const who = Object.keys(CODE).find((c) => CODE[c] === p);
+      ctx.mistake(); say(msg, 'bad', `${p} adalah kode ${who}, bukan ${want}.`); return;
+    }
+    k += 1; ctx.sound.tap();
+    if (k === word.length) { draw(); say(msg, '', `${word} = ${[...word].map((c) => CODE[c]).join('')} (${[...word].map((c) => CODE[c]).join('').length} bit).`); done(); return; }
+    say(msg, 'info', `Bagus. Sekarang huruf ${word[k]}.`); draw();
+  }
+  draw();
+  wrap.append(codeTable(CODE), board, msg);
+}
+
+// Misi 4 · Banyak Cara Baca: place cut lines; every new valid reading joins the list.
+function readingsRound(wrap, ctx, { bits, codes, done, end }) {
+  const all = parses(bits, codes).map((p) => p.join(''));
+  const cuts = new Set();
+  const found = [];
+  const msg = el('p', { class: 'reveal info' }, `Ketuk ✂ di antara simbol untuk memotong, lalu tekan Baca. Temukan semua ${all.length} cara baca.`);
+  const board = el('div', { class: 'kh-surat' });
+  const segs = () => { const out = []; let s = 0; for (let i = 1; i <= bits.length; i++) if (i === bits.length || cuts.has(i)) { out.push(bits.slice(s, i)); s = i; } return out; };
+  const inv = Object.fromEntries(Object.entries(codes).map(([c, b]) => [b, c]));
+  function read() {
+    if (found.length === all.length) return;
+    const s = segs();
+    const bad = s.findIndex((x) => !inv[x]);
+    if (bad >= 0) { ctx.mistake(); say(msg, 'bad', `Potongan "${s[bad]}" bukan kode huruf mana pun.`); return; }
+    const w = s.map((x) => inv[x]).join('');
+    if (found.includes(w)) { say(msg, 'info', `${w} sudah ada di daftar. Coba potongan lain.`); return; }
+    found.push(w); ctx.sound.good(); cuts.clear();
+    if (found.length === all.length) { draw(); say(msg, '', end); done(); return; }
+    say(msg, 'info', `Cara baca baru: ${w}. ${all.length - found.length} lagi.`); draw();
+  }
+  function draw() {
+    let piece = 0;
+    fill(board,
+      el('div', { class: 'kh-kode' }, Object.entries(codes).map(([c, b]) => el('div', { class: 'kh-sel' }, el('b', null, c), el('code', null, b)))),
+      el('div', { class: 'kpb-pita' }, el('small', null, 'Pesan tanpa jeda'),
+        el('div', { class: 'kpb-pita-bit' }, [...bits].flatMap((b, i) => {
+          if (i && cuts.has(i)) piece += 1;
+          return [i > 0 ? onTap(el('button', { class: `kpb-gunting ${cuts.has(i) ? 'on' : ''}`, type: 'button', 'data-cut': i, 'aria-label': `potong sebelum simbol ${i + 1}` }, cuts.has(i) ? '✂' : '╎'), () => { if (cuts.has(i)) cuts.delete(i); else cuts.add(i); ctx.sound.tap(); draw(); }) : null,
+            el('span', { class: `kpb-bit au-w${piece % 4}` }, b)];
+        }))),
+      found.length < all.length ? button('📖 Baca', read, 'primary') : null,
+      el('div', { class: 'kh-daftar' }, el('small', null, `Daftar cara baca: ${found.length} dari ${all.length}`), el('div', { class: 'kpb-kartu-kartu' }, found.map((w) => el('span', { class: 'kh-baca' }, w)))));
+  }
+  draw();
+  wrap.append(board, msg);
+}
+
+// Misi Bos · Perbaiki kode Raka: change A so no code is the start of another, then the message has one reading.
+function fixRound(wrap, ctx, done) {
+  const opts = ctx.rand.shuffle(['00', '10', '11', '010']);
+  const msg = el('p', { class: 'reveal info' }, 'N = 1 dan L = 01 tetap. Pilih kode baru untuk A supaya tidak ada kode yang menjadi awal kode lain.');
+  const stage = el('div', { class: 'kh-surat' });
+  fill(stage, el('div', { class: 'kh-kode' }, el('div', { class: 'kh-sel' }, el('b', null, 'A'), el('code', null, '?')), el('div', { class: 'kh-sel' }, el('b', null, 'N'), el('code', null, '1')), el('div', { class: 'kh-sel' }, el('b', null, 'L'), el('code', null, '01'))),
+    el('div', { class: 'kpb-opsi' }, opts.map((o) => onTap(el('button', { class: 'kpb-cap kh-potong', type: 'button', 'data-p': o }, `A = ${o}`), () => {
+      const codes = { ...RAKA, A: o };
+      if (!isPrefixFree(codes)) {
+        const [a, b] = Object.entries(codes).flatMap(([x, cx]) => Object.entries(codes).filter(([y, cy]) => x !== y && cy.startsWith(cx)).map(([y]) => [x, y]))[0];
+        ctx.mistake(); say(msg, 'bad', `Masih ganda: kode ${a} (${codes[a]}) adalah awal kode ${b} (${codes[b]}).`); return;
+      }
+      ctx.sound.good(); wrap.replaceChildren(misiHead('Bos', 'Kode Raka Diperbaiki', 'A = 00, N = 1, L = 01. Coba lagi semua cara membaca 0101.', '📟'));
+      readingsRound(wrap, ctx, { bits: '0101', codes, done, end: 'Sekarang 0101 hanya bisa dibaca LL. Kode prefiks tidak butuh jeda.' });
+    }))));
+  wrap.append(stage, msg);
+}
+
+const HEAD02 = {
+  chip: ['Gabung Kartu', 'Kalian teknisi papan tulisan berjalan sekolah. Chipnya hanya muat 300 bit untuk satu pantun. Bangun pohon Huffman sambil mengawasi meteran chip.'],
+  chipShort: ['Gabung Kartu', 'Bangun pohon Huffman untuk tulisan pendek ini sambil mengawasi meteran chip.'],
+  down: ['Turuni Pohon', 'Bu Guru mengirim pesan berbit dengan pohon kodenya. Gerakkan token mengikuti bit sampai bertemu huruf.'],
+  compose: ['Susun Surat', 'Balas Bu Guru dalam bit memakai tabel kode yang sama.'],
+  raka: ['Banyak Cara Baca', 'Raka membuat kode sendiri: A = 0, N = 1, L = 01. Pesannya 0101 dikirim tanpa jeda.'],
+  morse: ['Banyak Cara Baca: Morse', 'Sandi Morse untuk 8 huruf, dikirim tanpa jeda: • • • —'],
+  boss: ['Perbaiki Kode Raka', 'Ubah satu kode saja supaya setiap pesan Raka hanya punya satu cara baca.'],
+};
 
 export default {
   id: 'sma-02-kode-hemat',
@@ -237,29 +369,26 @@ export default {
     { id: 'giliran', icon: '🔁', label: 'Gabung Bergiliran', desc: 'Tim bergantian memilih dua simpul untuk digabung; pilihan yang salah menambah bit tim itu, bit paling sedikit menang', create: createTeams },
   ],
   create(root, ctx) {
-    const wrap = el('div', { class: 'act kode-hemat' });
+    const wrap = el('div', { class: 'act kode-hemat kh-main' });
     root.append(wrap);
+    const solo = !ctx.mode || ctx.mode === 'solo';
+    const word = ctx.rand.pick(WORDS);
+    const secret = ctx.rand.pick(SECRET.filter((w) => w !== 'ILMU'));
     function render() {
       wrap.replaceChildren();
       const r = ctx.round;
       let solved = false;
-      const next = () => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, 2400); } };
-      const ask = (prompt, opts, columns = 1, subject = null, onRight = next) => choice(wrap, { prompt, subject, ctx, shuffle: true, onRight, columns, options: opts.map(([l, correct]) => ({ label: String(l), correct })) });
-      const then = (fn) => () => { wrap.replaceChildren(); fn(); };
-      if (r === 0) countRound(wrap, ctx, { done: next });
-      else if (r === 1) mergeRound(wrap, ctx, { done: next });
-      else if (r === 2) ask('Pantun ini berisi 84 huruf. Dengan kode tetap 5 bit per huruf butuh berapa bit, dan berapa persen hematnya bila memakai kode Huffman (276 bit)?', [['420 bit; hemat sekitar 34%', true], ['420 bit; hemat sekitar 66%'], ['84 bit; tidak hemat'], ['336 bit; hemat sekitar 18%']], 1, codeTable(CODE, FREQ),
-        then(() => ask('Pantun ini hanya memakai 14 huruf berbeda. Berapa bit per huruf cukup untuk kode tetap, dan berapa panjang rata-rata kode Huffman?', [['4 bit (2⁴ = 16 ≥ 14), total 336 bit; Huffman rata-rata 276 : 84 ≈ 3,29 bit', true], ['3 bit, total 252 bit; Huffman rata-rata 3,29 bit'], ['4 bit, total 336 bit; Huffman rata-rata 2 bit'], ['14 bit, total 1.176 bit; Huffman rata-rata 3,29 bit']])));
-      else if (r === 3) ask('Kelompok Sinta dan kelompok Bayu mendapat kode yang berbeda untuk huruf yang sama, padahal keduanya membangun pohon dengan benar. Bagaimana total bitnya?', [['Sama-sama 276 bit: pilihan saat ada nilai sama dan letak kiri–kanan mengubah kode, bukan totalnya', true], ['Salah satu pasti salah karena kodenya berbeda'], ['Total bit berbeda, yang lebih kecil yang benar'], ['Total bit bergantung pada urutan huruf dalam abjad']]);
-      else if (r === 4) ask('Raka membuat kode sendiri: A = 0, N = 1, L = 01. Apa arti 01?', [['Bisa AN, bisa L: maknanya ganda, jadi penerima butuh jeda', true], ['Pasti L'], ['Pasti AN'], ['Tidak berarti apa-apa']], 1, el('div', { class: 'au-status' }, 'A = 0 · N = 1 · L = 01'),
-        then(() => ask('Mengapa kode Huffman tidak pernah bermasalah seperti kode Raka?', [['Setiap huruf ada di ujung cabang, jadi tidak ada kode yang menjadi awal kode lain', true], ['Karena kode Huffman selalu 5 bit'], ['Karena hurufnya diurutkan menurut abjad'], ['Karena kodenya selalu diawali 1']])));
-      else if (r === 5) decodeRound(wrap, ctx, { done: next });
-      else if (r === 6) ask('Sandikan kata KANCIL dengan kode Bu Guru.', [['011110111011000000001', true], ['011110111011001000001'], ['01111011101100000001'], ['10011110111011000001']], 1, codeTable(CODE));
-      else if (r === 7) ask('Dalam sandi Morse, E = · dan T = − mendapat kode paling pendek. Apakah keduanya sering muncul di pantun ini?', [['Tidak muncul sama sekali; Morse dirancang untuk bahasa Inggris, yang huruf tersering E dan T', true], ['Ya, E dan T paling sering muncul'], ['E sering, T jarang'], ['Morse disusun menurut abjad, bukan frekuensi']], 1, el('div', { class: 'au-status' }, 'E ·  T −  A · −  N − ·  S · · ·  V · · · −  I · ·  U · · −'),
-        then(() => ask('Tanpa jeda, · · · − bisa dibaca V. Mana yang juga merupakan cara membacanya?', [['ST, IA, EU, atau EEET', true], ['Hanya V'], ['NA'], ['TTTE']], 1, null,
-          then(() => ask('Mengapa Morse butuh jeda sedangkan kode Huffman tidak?', [['Banyak kode Morse menjadi awal kode lain (E = · adalah awal A = · −), jadi jeda dipakai sebagai simbol ketiga', true], ['Karena Morse lebih cepat'], ['Karena Morse memakai bunyi'], ['Karena Huffman memakai lebih banyak bit']])))));
-      else if (r === 8) ask('Penerima harus tahu tabel kodenya. Kapan kode Huffman justru tidak menguntungkan?', [['Pesannya pendek sehingga tabel lebih besar dari bit yang dihemat, atau semua simbol muncul hampir sama sering', true], ['Pesannya sangat panjang'], ['Ada huruf yang sangat sering muncul'], ['Teksnya berbahasa Indonesia']]);
-      else ask('Tantangan: batas Shannon untuk pantun ini H ≈ 3,25 bit per huruf, sedangkan Huffman rata-rata 3,29. Mengapa Huffman tidak bisa tepat mencapai H?', [['Setiap kode Huffman panjangnya bilangan bulat bit, padahal panjang ideal −log₂ p biasanya pecahan (A: ≈ 1,81 bit, kodenya 2)', true], ['Karena pohonnya dibangun salah'], ['Karena Shannon salah hitung'], ['Karena pantun terlalu pendek untuk dihitung']], 1, el('div', { class: 'au-status' }, 'H = −Σ p × log₂ p ≈ 3,25'));
+      const next = (wait = 3200) => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, wait); } };
+      const head = (key, no) => wrap.append(misiHead(no, ...HEAD02[key], '📟'));
+      if (r === 0 || r === 5) {
+        const long = r === 0 && solo;
+        head(long ? 'chip' : 'chipShort', 1);
+        chipRound(wrap, ctx, { freq: long ? FREQ : countLetters(SHORT), long, done: () => next(4200) });
+      } else if (r === 1 || r === 4 || r === 8) { head('down', 2); descendRound(wrap, ctx, r === 1 ? 'MANIS' : r === 4 ? 'ILMU' : secret, () => next()); }
+      else if (r === 2 || r === 6) { head('compose', 3); composeRound(wrap, ctx, r === 2 ? 'KANCIL' : word, () => next()); }
+      else if (r === 3) { head('raka', 4); readingsRound(wrap, ctx, { bits: '0101', codes: RAKA, done: () => next(4200), end: '0101 bisa dibaca ANAN, ANL, LAN, atau LL. Kode A = 0 adalah awal kode L = 01, jadi maknanya ganda.' }); }
+      else if (r === 7) { head('morse', 4); readingsRound(wrap, ctx, { bits: '•••—', codes: MORSE, done: () => next(4200), end: '8 cara baca! Banyak kode Morse menjadi awal kode lain, jadi Morse butuh jeda sebagai simbol ketiga.' }); }
+      else { head('boss', 'Bos'); fixRound(wrap, ctx, () => next(4200)); }
     }
     render();
   },

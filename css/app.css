@@ -6273,3 +6273,37 @@ button.kpb-paket { cursor: pointer; }
 @container (max-aspect-ratio: 6/5) { .kpb-meja:not(.kolom) { flex-direction: column; } .kpb-jam { width: min(70cqw, 36cqh); } .kpb-nampan-nampan { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @container (max-height: 520px) { .kpb-baki { min-height: 3.5em; } .kpb-kiri .au-huruf { font-size: clamp(0.5rem, 2.4cqmin, 1rem); } }
 @keyframes kpb-nyala { 50% { transform: translateY(-0.2em); box-shadow: 0 0.4em 0.8em #f59e0b88; } }
+
+/* ---------- sma-02 Chip Papan Berjalan: meteran chip, turuni pohon, susun surat, cara baca ---------- */
+.kh-main .reveal { font-size: clamp(0.7rem, 2.8cqmin, 1.5rem); margin: 0; }
+.kh-main .kh-pohon svg { max-height: 46cqh; }
+.kh-meter { display: flex; align-items: center; gap: 0.8em; width: min(100%, 60em); font-size: clamp(0.55rem, 2.3cqmin, 1.2rem); }
+.kh-meter > small { font-weight: 900; color: #475569; white-space: nowrap; }
+.kh-meter > b { font-family: ui-monospace, monospace; white-space: nowrap; min-width: 4.5em; }
+.kh-meter-skala { position: relative; flex: 1 1 auto; height: 1.4em; margin-right: 3em; border-radius: 0.5em; background: #e2e8f0; border: 2px solid #334155; margin-bottom: 1.3em; }
+.kh-meter-isi { position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: 0.4em; background: linear-gradient(90deg, #4ade80, #16a34a); transition: width 0.5s ease-out; }
+.kh-meter.lewat .kh-meter-isi { background: linear-gradient(90deg, #fb923c, #dc2626); }
+.kh-tanda { position: absolute; top: -0.2em; bottom: -0.2em; border-left: 2px dashed #334155; }
+.kh-tanda.batas { border-left: 3px solid #dc2626; }
+.kh-tanda small { position: absolute; top: 100%; left: 0; transform: translateX(-50%); white-space: nowrap; font-size: 0.72em; font-weight: 800; color: #334155; }
+.kh-tanda.batas small { color: #dc2626; transform: translateX(-100%); }
+.kh-pita span { padding: 0 0.04em; }
+.kh-kini { background: #fde68a; border-radius: 0.2em; outline: 2px solid #d97706; }
+.kh-turun { display: flex; align-items: center; justify-content: center; gap: 1.2em; flex-wrap: wrap; font-size: clamp(0.65rem, 2.8cqmin, 1.4rem); }
+.kh-kata { min-width: 5em; text-align: center; font-family: ui-monospace, monospace; font-weight: 900; letter-spacing: 0.1em; }
+.kh-nol { background: #dbeafe !important; border-color: #1d4ed8 !important; color: #1e3a8a !important; }
+.kh-satu { background: #fee2e2 !important; border-color: #b91c1c !important; color: #7f1d1d !important; }
+.kh-surat { display: flex; flex-direction: column; align-items: center; gap: 1.2cqmin; width: 100%; font-size: clamp(0.6rem, 2.6cqmin, 1.4rem); }
+.kh-slot-slot { display: flex; flex-wrap: wrap; gap: 0.4em; justify-content: center; }
+.kh-slot { display: flex; flex-direction: column; align-items: center; gap: 0.1em; min-width: 3em; padding: 0.25em 0.5em; border-radius: 0.5em; border: 3px dashed #94a3b8; background: #fff; }
+.kh-slot b { font-size: 1.3em; }
+.kh-slot code { font-weight: 800; color: #475569; }
+.kh-slot.kini { border-color: #d97706; background: #fef3c7; }
+.kh-slot.isi { border-style: solid; border-color: #16a34a; background: #dcfce7; }
+.kh-potong { letter-spacing: 0.06em; }
+.kh-daftar { display: flex; flex-direction: column; align-items: center; gap: 0.3em; }
+.kh-daftar > small { font-weight: 800; color: #475569; }
+.kh-main .kpb-pita { font-size: 1.5em; }
+.kh-main .kh-surat .kh-kode { font-size: 1.1em; }
+.kh-baca { font-family: ui-monospace, monospace; font-weight: 900; padding: 0.15em 0.6em; border-radius: 0.4em; background: #dcfce7; border: 2px solid #16a34a; animation: pop 0.25s; }
+@container (max-height: 520px) { .kh-main .kh-pohon svg { max-height: 36cqh; } .kh-main .kh-kode { font-size: clamp(0.45rem, 1.8cqmin, 0.9rem); } }
