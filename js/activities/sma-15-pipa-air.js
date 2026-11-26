@@ -4,8 +4,8 @@
 // meet at 120°, like a soap film.
 
 import { el, onTap, button, shake } from '../core/util.js';
-import { choice } from '../core/kit.js';
 import { say, pickTeams, scoreBar, finishBoard } from './sma-kit.js';
+import { misiHead, fill } from './misi-kit.js';
 
 const R3 = Math.sqrt(3);
 export const km = (x) => x.toFixed(2).replace('.', ',');
@@ -46,7 +46,7 @@ export function relax(pts, pipa, branch, rounds = 200) {
 }
 
 // Pipe board: drag branch points; in edit mode tap two points to add or remove a pipe.
-function pipeBoard(host, ctx, { map, edit = false, onChange, onDrop, locked = () => false, showMst = false }) {
+function pipeBoard(host, ctx, { map, edit = false, onChange, onDrop, locked = () => false, showMst = false, hideLen = false }) {
   const pts = {}; const name = {};
   for (const [k, [n, x, y]] of Object.entries(map.dusun)) { pts[k] = [x, y]; name[k] = n; }
   let branch = Object.keys(map.cabang || {});
@@ -69,13 +69,13 @@ function pipeBoard(host, ctx, { map, edit = false, onChange, onDrop, locked = ()
     useMst() { b.clear(); pipa = mst(pts, dusun); draw(); },
     toggleMst() { mstOn = !mstOn; draw(); } };
   function draw() {
-    const lines = pipa.map(([a, c]) => { const [ax, ay] = [X(pts[a][0]), Y(pts[a][1])]; const [cx, cy] = [X(pts[c][0]), Y(pts[c][1])]; const mx = (ax + cx) / 2; const my = (ay + cy) / 2; return `<line x1="${ax}" y1="${ay}" x2="${cx}" y2="${cy}" stroke="#0284c7" stroke-width="9" stroke-linecap="round"/><rect x="${mx - 30}" y="${my - 14}" width="60" height="26" rx="8" fill="#fff" stroke="#0284c7" stroke-width="2"/><text x="${mx}" y="${my + 6}" font-size="17" font-weight="800" text-anchor="middle">${km(dist(pts[a], pts[c]))}</text>`; });
+    const lines = pipa.map(([a, c]) => { const [ax, ay] = [X(pts[a][0]), Y(pts[a][1])]; const [cx, cy] = [X(pts[c][0]), Y(pts[c][1])]; const mx = (ax + cx) / 2; const my = (ay + cy) / 2; const pipe = `<line x1="${ax}" y1="${ay}" x2="${cx}" y2="${cy}" stroke="#0284c7" stroke-width="9" stroke-linecap="round"/>`; if (hideLen || dist(pts[a], pts[c]) < 0.02) return pipe; return `${pipe}<rect x="${mx - 30}" y="${my - 14}" width="60" height="26" rx="8" fill="#fff" stroke="#0284c7" stroke-width="2"/><text x="${mx}" y="${my + 6}" font-size="17" font-weight="800" text-anchor="middle">${km(dist(pts[a], pts[c]))}</text>`; });
     const ghost = mstOn ? mst(pts, dusun).map(([a, c]) => `<line x1="${X(pts[a][0])}" y1="${Y(pts[a][1])}" x2="${X(pts[c][0])}" y2="${Y(pts[c][1])}" stroke="#a855f7" stroke-width="5" stroke-dasharray="10 8"/>`) : [];
     const dots = dusun.map((k) => { const x = X(pts[k][0]); const y = Y(pts[k][1]); return `<g data-p="${k}" class="pa-titik"><circle cx="${x}" cy="${y}" r="30" fill="transparent"/><rect x="${x - 20}" y="${y - 20}" width="40" height="40" rx="8" fill="${sel === k ? '#fed7aa' : '#dcfce7'}" stroke="#166534" stroke-width="3"/><text x="${x}" y="${y + 8}" font-size="22" font-weight="900" text-anchor="middle">${k}</text><text x="${x}" y="${y + (y > 260 ? 44 : -28)}" font-size="16" font-weight="700" text-anchor="middle" fill="#334155">${name[k]}</text></g>`; });
     const bs = branch.map((k) => { const x = X(pts[k][0]); const y = Y(pts[k][1]); const ang = angles(pts, pipa, k); return `<g data-p="${k}" data-drag="1" class="pa-cabang"><circle cx="${x}" cy="${y}" r="34" fill="transparent"/><circle cx="${x}" cy="${y}" r="17" fill="${sel === k ? '#fed7aa' : '#f97316'}" stroke="#7c2d12" stroke-width="3"/><text x="${x}" y="${y + 6}" font-size="17" font-weight="900" text-anchor="middle" fill="#fff">${k}</text>${ang.length === 3 ? `<text x="${x}" y="${y + 40}" font-size="15" font-weight="800" text-anchor="middle" fill="#7c2d12">${ang.map((a) => `${Math.round(a)}°`).join(' ')}</text>` : ''}</g>`; });
     box.innerHTML = `<svg viewBox="0 0 700 400" role="img" aria-label="Peta dusun dan pipa">${ghost.join('')}${lines.join('')}${dots.join('')}${bs.join('')}</svg>`;
     const ok = connected(dusun, pipa);
-    info.textContent = `Total pipa ${km(total(pts, pipa))} km${ok ? '' : ' · belum semua dusun tersambung'}${mstOn ? ` · pohon merentang minimum (ungu) ${km(total(pts, mst(pts, dusun)))} km` : ''}`;
+    info.textContent = `Total pipa ${hideLen ? '?' : km(total(pts, pipa))} km${ok ? '' : ' · belum semua dusun tersambung'}${mstOn ? ` · pohon merentang minimum (ungu) ${km(total(pts, mst(pts, dusun)))} km` : ''}`;
     info.className = `reveal ${ok ? 'info' : 'bad'}`;
   }
   let drag = null;
@@ -125,6 +125,127 @@ function dragRound(wrap, ctx, { map, prompt, hint, done }) {
   return b;
 }
 
+// ---------- Permainan: Tukang Pipa Hemat ----------
+// A tight budget thread decides: only the right branch points (120°) fit.
+// Rival teams lay almost-right networks, and the boss map needs no branch at all.
+
+const RP_PER_KM = 80; // juta rupiah per km pipa
+const rp = (x) => `Rp${(x * RP_PER_KM).toFixed(1).replace('.', ',')} juta`;
+const budgetOf = (best) => Math.ceil(best * 1.01 * 100) / 100;
+
+function threadGauge(budget) {
+  const bar = el('i');
+  const num = el('b');
+  const node = el('div', { class: 'tp15-benang' }, el('small', null, '🧵 Benang anggaran'), el('span', { class: 'tp15-pipa' }, bar), num);
+  return { node, set(t) { bar.style.width = `${Math.min(100, (t / budget) * 100)}%`; node.classList.toggle('lewat', t > budget + 1e-9); num.textContent = `${km(t)} / ${km(budget)} km`; } };
+}
+
+// Drag the branch points until the network fits the budget thread.
+function budgetRound(wrap, ctx, { map, budget, start, done, win, hint }) {
+  const gauge = threadGauge(budget);
+  const msg = el('p', { class: 'reveal info' }, hint);
+  let fin = false;
+  wrap.append(gauge.node);
+  const b = pipeBoard(wrap, ctx, {
+    map: { ...map, cabang: start || map.cabang },
+    locked: () => fin,
+    onChange: (t) => gauge.set(t),
+    onDrop(t) {
+      gauge.set(t);
+      if (t <= budget + 1e-9) { fin = true; ctx.sound.good(); say(msg, '', win(t, b)); done(); return; }
+      say(msg, 'info', `${km(t)} km: benang kurang ${km(t - budget)} km. Perhatikan sudut di titik cabang.`);
+    },
+  });
+  gauge.set(b.total());
+  wrap.append(el('div', { class: 'kode-baris' }, button('🧼 Bantuan selaput sabun', () => { if (fin) return; ctx.mistake(); b.set(relax(b.pts, b.pipa, b.branch, 3)); gauge.set(b.total()); say(msg, 'info', `Selaput sabun menarik titik cabang sedikit: ${km(b.total())} km. Seret lagi.`); })), msg);
+  return b;
+}
+
+// Misi 4: drag the branch point until all three angles read 120°.
+function angleRound(wrap, ctx, { map, done }) {
+  const msg = el('p', { class: 'reveal info' }, 'Seret titik cabang S sampai ketiga sudutnya 120°.');
+  let fin = false;
+  const b = pipeBoard(wrap, ctx, {
+    map,
+    locked: () => fin,
+    onDrop(t) {
+      const a = angles(b.pts, b.pipa, 'S');
+      if (a.length === 3 && a.every((x) => Math.abs(x - 120) <= 3)) { fin = true; ctx.sound.good(); say(msg, '', `Tiga pipa, tiga sudut 120°: ${km(t)} km, jaringan terpendek. Untuk n dusun paling banyak ada n − 2 titik cabang seperti ini.`); done(); return; }
+      say(msg, 'info', a.length === 3 ? `Sudut ${a.map((x) => `${Math.round(x)}°`).join(', ')}. Geser menjauhi sudut yang terlalu besar.` : 'Seret titik cabang ke dalam segitiga.');
+    },
+  });
+  wrap.append(msg);
+}
+
+// Misi 3: rival teams. Is their network shorter, the same, or longer than ours?
+function rivalRound(wrap, ctx, { map, ours, rivals, done }) {
+  let n = 0;
+  let wait = false;
+  const area = el('div', { class: 'tp15-saingan' });
+  const msg = el('p', { class: 'reveal info' });
+  const tools = el('div', { class: 'kode-baris' });
+  const netOf = (rv) => ({ ...map, cabang: rv.cabang || {}, pipa: rv.pipa || map.pipa });
+  const lengthOf = (rv) => { const m = netOf(rv); const pts = {}; for (const [k, [, x, y]] of Object.entries(m.dusun)) pts[k] = [x, y]; Object.assign(pts, m.cabang); return total(pts, m.pipa); };
+  function draw(reveal) {
+    const rv = rivals[n];
+    const host = el('div', { class: 'pa-kecil' });
+    pipeBoard(host, ctx, { map: netOf(rv), locked: () => true, hideLen: !reveal });
+    fill(area, el('div', { class: 'pp8-kejadian' }, el('small', null, `🏗️ Tim saingan ${n + 1} dari ${rivals.length}`), el('b', null, `${rv.who}: ${rv.note}`), el('span', null, `Dibanding jaringan kita (${km(ours)} km)?`)), host);
+  }
+  function answer(v, node) {
+    if (wait) return;
+    const t = lengthOf(rivals[n]);
+    const d = t - ours;
+    const truth = Math.abs(d) < 0.005 ? 'sama' : d < 0 ? 'pendek' : 'panjang';
+    if (v !== truth) { ctx.mistake(); shake(node || area); say(msg, 'bad', 'Lihat sudut di titik cabangnya. Coba lagi.'); return; }
+    wait = true;
+    ctx.sound.good();
+    draw(true);
+    say(msg, '', truth === 'sama' ? `${km(t)} km: sama panjang. Semua titik cabangnya 120°, hanya diputar.` : `${km(t)} km: lebih panjang ${km(d)} km, sekitar ${rp(d)}.`);
+    n++;
+    if (n === rivals.length) { fill(tools); done(); return; }
+    setTimeout(() => { if (!area.isConnected) return; wait = false; draw(false); say(msg, 'info', 'Tebak dulu, baru panjangnya dibuka.'); }, 3000);
+  }
+  fill(tools, [['⬇️ Lebih pendek', 'pendek'], ['🟰 Sama', 'sama'], ['⬆️ Lebih panjang', 'panjang']].map(([l, v]) => button(l, (e) => answer(v, e?.currentTarget))));
+  wrap.append(area, tools, msg);
+  say(msg, 'info', 'Tebak dulu, baru panjangnya dibuka.');
+  draw(false);
+}
+
+// Web variations: a triangle with all angles below 115°, and a rectangle.
+function randomTriangle(rand) {
+  for (let t = 0; t < 400; t++) {
+    const P = [[rand.int(0, 8) / 10, rand.int(0, 6) / 10], [rand.int(20, 30) / 10, rand.int(0, 8) / 10], [rand.int(8, 22) / 10, rand.int(12, 20) / 10]];
+    const ang = (a, b, c) => { const u = [b[0] - a[0], b[1] - a[1]]; const v = [c[0] - a[0], c[1] - a[1]]; return (Math.acos((u[0] * v[0] + u[1] * v[1]) / (Math.hypot(...u) * Math.hypot(...v))) * 180) / Math.PI; };
+    const A = [ang(P[0], P[1], P[2]), ang(P[1], P[0], P[2]), ang(P[2], P[0], P[1])];
+    if (A.some((x) => x > 112 || x < 25)) continue;
+    const map = { label: 'Segitiga acak', dusun: { K: ['Krajan', ...P[0]], N: ['Ngasem', ...P[1]], T: ['Tegal', ...P[2]] }, pipa: [['S', 'K'], ['S', 'N'], ['S', 'T']] };
+    const c = [(P[0][0] + P[1][0] + P[2][0]) / 3, (P[0][1] + P[1][1] + P[2][1]) / 3];
+    const pts = { K: P[0], N: P[1], T: P[2], S: c };
+    const best = total(relax(pts, map.pipa, ['S'], 400), map.pipa);
+    const side = [P[0], P[1]].map((p) => p);
+    return { map: { ...map, best, cabang: { S: [(side[0][0] + side[1][0]) / 2, (side[0][1] + side[1][1]) / 2] } }, best };
+  }
+  return { map: PETA.segitiga, best: PETA.segitiga.best };
+}
+function randomRect(rand) {
+  const h = rand.int(8, 13) / 10;
+  const w = Math.max(h + 0.3, rand.int(14, 26) / 10);
+  const best = w + R3 * h;
+  return { map: { label: 'Persegi panjang acak', best, dusun: { A: ['Asri', 0, h], B: ['Banjar', w, h], C: ['Cikal', w, 0], D: ['Dadap', 0, 0] }, cabang: { P: [w * 0.3, h * 0.8], Q: [w * 0.7, h * 0.2] }, pipa: PETA.persegi.pipa }, best, w, h };
+}
+
+const LEBAR = { label: 'Segitiga lebar', best: 2 * Math.hypot(1.5, 0.35), dusun: { K: ['Krajan', 0, 0], N: ['Ngasem', 3, 0], T: ['Tegal', 1.5, 0.35] }, cabang: { S: [1.5, 0.05] }, pipa: [['S', 'K'], ['S', 'N'], ['S', 'T']] };
+
+const HEAD15 = {
+  segitiga: ['Segitiga Tiga Dusun', 'Benang anggaran ketat. Seret titik cabang sampai jaringan muat.'],
+  persegi: ['Persegi Empat Dusun', 'Dua titik cabang. Hanya letak yang tepat muat di benang anggaran.'],
+  saingan: ['Tim Saingan', 'Tim lain memasang jaringan yang hampir tepat. Tebak: lebih pendek, sama, atau lebih panjang?'],
+  sudut: ['Aturan 120°', 'Di jaringan terpendek, tiga pipa bertemu dengan sudut sama besar.'],
+  panjang: ['Persegi Panjang', 'Satu titik cabang di pusat justru lebih buruk dari pohon merentang minimum. Cari yang lebih baik.'],
+  boss: ['Segitiga Lebar', 'Dusun Tegal hampir segaris dengan dua dusun lain. Di mana titik cabang terbaik?'],
+};
+
 export default {
   id: 'sma-15-pipa-air',
   title: 'Pipa Air Bersih Antardusun',
@@ -141,28 +262,36 @@ export default {
     { id: 'giliran', icon: '🔁', label: 'Geser Bergiliran', desc: 'Tim bergantian menggeser titik cabang sekali; geseran yang memperpendek jaringan mendapat poin', create: createTeams },
   ],
   create(root, ctx) {
-    const wrap = el('div', { class: 'act pipa-air' });
+    const wrap = el('div', { class: 'act pipa-air tp15-main' });
     root.append(wrap);
+    const tri = randomTriangle(ctx.rand);
+    const tri2 = randomTriangle(ctx.rand);
+    const rect = randomRect(ctx.rand);
+    const P = PETA.persegi;
+    const L = PETA.panjang;
+    const s = 0.5 / R3;
     function render() {
       wrap.replaceChildren();
       const r = ctx.round;
       let solved = false;
-      const next = () => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, 2400); } };
-      const ask = (prompt, opts, columns = 1, subject = null, onRight = next) => choice(wrap, { prompt, subject, ctx, shuffle: true, onRight, columns, options: opts.map(([l, correct]) => ({ label: String(l), correct })) });
-      const pic = (map, cabang, pipa) => { const h = el('div', { class: 'pa-kecil' }); pipeBoard(h, ctx, { map: { ...map, cabang, pipa }, locked: () => true }); return h; };
-      const T = PETA.segitiga; const Q = PETA.persegi;
-      if (r === 0) ask('Segitiga sama sisi 2 km. Jika pipa hanya boleh dari dusun ke dusun, berapa panjang terpendeknya, dan berapa tinggi segitiga?', [['4 km (dua sisi); tinggi √3 ≈ 1,73 km', true], ['6 km (tiga sisi); tinggi 2 km'], ['4 km; tinggi 1 km'], ['3,46 km; tinggi 1,73 km']], 1, pic(T, {}, [['K', 'N'], ['N', 'T']]));
-      else if (r === 1) dragRound(wrap, ctx, { map: T, prompt: 'Seret titik cabang S supaya total pipa sependek mungkin.', hint: 'Perhatikan total panjang dan sudut di antara tiga pipa.', done: next });
-      else if (r === 2) ask('Titik cabang di tengah alas memberi 1 + 1 + 1,73 = 3,73 km; di titik berat 3 × 1,15 = 3,46 km. Berapa penghematan titik berat dibanding 4 km?', [['0,54 km, sekitar 13 %, sekitar Rp43 juta', true], ['0,27 km, sekitar 7 %, sekitar Rp22 juta'], ['0,54 km, sekitar 54 %, sekitar Rp54 juta'], ['1 km, sekitar 25 %, sekitar Rp80 juta']], 1, pic(T, { S: [1, R3 / 3] }, T.pipa));
-      else if (r === 3) ask('Persegi 1 km. Berapa panjang pohon merentang minimum, dan berapa jaringan berbentuk X dengan satu titik cabang di pusat?', [['3 km; X ≈ 4 × 0,71 = 2,83 km', true], ['4 km; X = 2 km'], ['3 km; X ≈ 4 × 0,5 = 2 km'], ['2,83 km; X = 3 km']], 1, pic(Q, { P: [0.5, 0.5] }, [['P', 'A'], ['P', 'B'], ['P', 'C'], ['P', 'D']]));
-      else if (r === 4) dragRound(wrap, ctx, { map: Q, prompt: 'Dua titik cabang: P ke dua dusun kiri, Q ke dua dusun kanan, lalu P–Q. Seret keduanya.', hint: 'Targetnya lebih pendek dari 2,83 km.', done: next });
-      else if (r === 5) ask('Urutkan jaringan persegi dari yang terpendek, dan apa aturan di setiap titik cabang jaringan terpendek?', [['Dua titik cabang 2,73 < X 2,83 < pohon merentang minimum 3; tiga pipa bertemu dengan sudut 120°', true], ['X 2,83 < dua titik cabang 2,73 < 3; empat pipa bersudut 90°'], ['Pohon merentang minimum paling pendek; sudut 60°'], ['Semuanya sama panjang']], 1, pic(Q, { P: [0.5 / R3, 0.5], Q: [1 - 0.5 / R3, 0.5] }, Q.pipa));
-      else if (r === 6) ask('Paling banyak berapa titik cabang untuk n dusun, dan mengapa pohon merentang minimum (sma-09) tidak menemukan jaringan ini?', [['n − 2; pohon merentang minimum hanya menyambung di dusun, padahal jaringan terpendek butuh titik baru yang bukan dusun', true], ['n; karena pohon merentang minimum salah hitung'], ['n − 1; karena pipa lebih mahal dari kabel'], ['1; karena titik cabang hanya satu']]);
-      else if (r === 7) ask('Untuk 50 dusun, mengapa mencari jaringan terpendek sulit, padahal memeriksa sebuah usulan mudah?', [['Banyak titik cabang, letak, dan cara menghubungkan meledak; memeriksa cukup menjumlah panjang pipa dan melihat semua dusun tersambung', true], ['Karena pipa tidak bisa diukur'], ['Karena 50 dusun selalu butuh 50 titik cabang'], ['Karena memeriksa usulan butuh mencoba semua susunan']]);
-      else if (r === 8) ask('Paku di antara dua lembar plastik dicelup ke air sabun. Mengapa selaput sabun "menghitung" jaringan terpendek?', [['Tegangan permukaan membuat luas selaput sekecil mungkin; di antara dua lembar plastik luas sebanding dengan panjang garis, jadi garisnya bertemu bertiga dengan sudut 120°', true], ['Karena sabun mengikuti garis lurus antarpaku'], ['Karena selaput selalu membentuk lingkaran'], ['Karena air sabun lebih berat di tengah']], 1, pic(Q, { P: [0.5 / R3, 0.5], Q: [1 - 0.5 / R3, 0.5] }, Q.pipa));
-      else {
-        dragRound(wrap, ctx, { map: PETA.panjang, prompt: 'Tantangan: persegi panjang 2 × 1 km. Satu titik cabang di pusat memberi 4,47 km, lebih buruk dari pohon merentang minimum 4 km. Seret P dan Q.', hint: 'Pipa tengah sejajar sisi panjang.', done: next });
-      }
+      const next = (wait = 4800) => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, wait); } };
+      const head = (k, no) => wrap.append(misiHead(no, ...HEAD15[k], '🚰'));
+      if (r === 0) { head('segitiga', 1); budgetRound(wrap, ctx, { map: PETA.segitiga, budget: 3.5, start: { S: [1, 0] }, hint: 'Titik cabang di tengah sisi: 3,73 km. Benang hanya 3,5 km.', win: (t) => `${km(t)} km, muat! Titik berat: 3 × 1,15 = 3,46 km, sudut 120°. Hemat 0,54 km dari 4 km: sekitar 13 % atau Rp43 juta.`, done: () => next(5600) }); }
+      else if (r === 1) { head('persegi', 2); budgetRound(wrap, ctx, { map: P, budget: 2.75, start: { P: [0.3, 0.8], Q: [0.7, 0.2] }, hint: 'Bentuk X di pusat: 2,83 km. Benang hanya 2,75 km. Seret P dan Q.', win: (t) => `${km(t)} km, muat! Tepatnya 1 + √3 ≈ 2,73 km, titik cabang 0,29 km dari sisi. X 2,83 dan pohon merentang minimum 3 tidak muat.`, done: () => next(5600) }); }
+      else if (r === 2) { head('saingan', 3); rivalRound(wrap, ctx, { map: P, ours: 1 + R3, rivals: [
+        { who: 'Tim Kembar', note: 'titik cabang 0,4 km dari sisi', cabang: { P: [0.4, 0.5], Q: [0.6, 0.5] } },
+        { who: 'Tim Miring', note: 'P ke dua dusun atas, Q ke dua dusun bawah', cabang: { P: [0.5, 1 - s], Q: [0.5, s] }, pipa: [['P', 'A'], ['P', 'B'], ['Q', 'C'], ['Q', 'D'], ['P', 'Q']] },
+        { who: 'Tim Lurus', note: 'tanpa titik cabang', cabang: {}, pipa: [['A', 'B'], ['B', 'C'], ['C', 'D']] }], done: () => next(5200) }); }
+      else if (r === 3) { head('sudut', 4); angleRound(wrap, ctx, { map: { label: 'Segitiga miring', dusun: { K: ['Krajan', 0, 0], N: ['Ngasem', 3, 0], T: ['Tegal', 0.8, 1.8] }, cabang: { S: [1.6, 0.25] }, pipa: [['S', 'K'], ['S', 'N'], ['S', 'T']] }, done: () => next(5600) }); }
+      else if (r === 4) { head('panjang', 5); budgetRound(wrap, ctx, { map: L, budget: 3.77, start: { P: [0.5, 0.8], Q: [1.5, 0.2] }, hint: 'Pusat: 4,47 km. Pohon merentang minimum: 4 km. Benang 3,77 km.', win: (t) => `${km(t)} km, muat! Tepatnya 2 + √3 ≈ 3,73 km, pipa tengah sejajar sisi panjang.`, done: () => next(5600) }); }
+      else if (r === 5) { head('segitiga', 1); budgetRound(wrap, ctx, { map: tri.map, budget: budgetOf(tri.best), hint: `Peta baru. Benang ${km(budgetOf(tri.best))} km.`, win: (t) => `${km(t)} km, muat! Terpendek ${km(tri.best)} km, sudut 120°.`, done: () => next(5600) }); }
+      else if (r === 6) { head('persegi', 2); budgetRound(wrap, ctx, { map: rect.map, budget: budgetOf(rect.best), hint: `Persegi panjang ${km(rect.w)} × ${km(rect.h)} km. Benang ${km(budgetOf(rect.best))} km.`, win: (t) => `${km(t)} km, muat! Terpendek ${km(rect.w)} + √3 × ${km(rect.h)} ≈ ${km(rect.best)} km.`, done: () => next(5600) }); }
+      else if (r === 7) { head('saingan', 3); rivalRound(wrap, ctx, { map: L, ours: 2 + R3, rivals: [
+        { who: 'Tim Pusat', note: 'satu titik cabang di pusat', cabang: { P: [1, 0.5] }, pipa: [['P', 'A'], ['P', 'B'], ['P', 'C'], ['P', 'D']] },
+        { who: 'Tim Kembar', note: 'titik cabang di tengah tiap separuh', cabang: { P: [0.5, 0.5], Q: [1.5, 0.5] } },
+        { who: 'Tim Tepat', note: 'titik cabang 0,29 km dari sisi pendek', cabang: { P: [s, 0.5], Q: [2 - s, 0.5] } }], done: () => next(5200) }); }
+      else if (r === 8) { head('sudut', 4); angleRound(wrap, ctx, { map: tri2.map, done: () => next(5600) }); }
+      else { head('boss', 'Bos'); budgetRound(wrap, ctx, { map: LEBAR, budget: 3.09, hint: 'Benang 3,09 km. Seret S.', win: (t) => `${km(t)} km, muat! Sudut di Tegal lebih dari 120°, jadi titik cabang terbaik ada di Tegal sendiri. Paling banyak n − 2 titik cabang: kadang tidak perlu sama sekali.`, done: () => next(5600) }); }
     }
     render();
   },

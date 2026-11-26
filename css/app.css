@@ -6488,7 +6488,7 @@ button.at-orang { font-size: clamp(0.55rem, 3.4cqmin, 1.8rem); }
 @container (max-height: 520px) { .tk9-main .kd-peta svg { max-height: 40cqh; } }
 @container (max-aspect-ratio: 1/1) { .tk9-main .kd-peta svg { max-height: 40cqh; } .tk9-main .tk9-antre { font-size: clamp(0.5rem, 2cqmin, 1rem); } }
 @container (max-width: 1000px) and (min-height: 600px) { .tk9-main .kd-peta svg { max-height: 38cqh; } .tk9-main .kode-baris .btn { font-size: clamp(0.7rem, 3cqmin, 1.4rem); } }
-:is(.kk-main, .rh-main, .pk6-main, .mph-main, .pp8-main, .tk9-main, .kb10-main, .gk11-main, .rk13-main, .nd14-main) .reveal { font-size: clamp(0.7rem, 3cqmin, 1.6rem); text-wrap: balance; }
+:is(.kk-main, .rh-main, .pk6-main, .mph-main, .pp8-main, .tk9-main, .kb10-main, .gk11-main, .rk13-main, .nd14-main, .tp15-main) .reveal { font-size: clamp(0.7rem, 3cqmin, 1.6rem); text-wrap: balance; }
 @container (max-width: 1000px) and (min-height: 600px) { .tk9-main .kd-peta svg { max-height: 46cqh; } }
 
 /* sma-10 Konter Bagasi */
@@ -6624,3 +6624,17 @@ button.at-orang { font-size: clamp(0.55rem, 3.4cqmin, 1.8rem); }
 .nd14-main .mb-peta svg { max-height: 52cqh; }
 .nd14-main .mb-peta.kecil svg { height: 40cqh; }
 @container (max-height: 520px) { .nd14-main .misi-tujuan { display: none; } .nd14-main .mb-peta svg { max-height: 46cqh; } .nd14-main .mb-peta.kecil svg { height: 40cqh; } }
+
+/* sma-15 Tukang Pipa Hemat */
+.tp15-main { gap: 0.5cqmin; }
+.tp15-benang { display: flex; align-items: center; gap: 0.5em; font-size: clamp(0.6rem, 2.8cqmin, 1.4rem); }
+.tp15-benang small { font-weight: 900; color: #475569; }
+.tp15-pipa { display: block; width: min(18em, 42cqw); height: 0.9em; border-radius: 0.45em; background: #e2e8f0; overflow: hidden; }
+.tp15-pipa i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #38bdf8, #0284c7); transition: width 0.2s; }
+.tp15-benang.lewat .tp15-pipa i { background: linear-gradient(90deg, #f97316, #dc2626); }
+.tp15-benang b { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tp15-benang.lewat b { color: #b91c1c; }
+.tp15-saingan { display: flex; flex-direction: column; align-items: center; gap: 0.5cqmin; width: 100%; }
+.tp15-main .pa-peta svg { max-height: 50cqh; }
+.tp15-main .pa-kecil svg { height: 36cqh; }
+@container (max-height: 520px) { .tp15-main .misi-tujuan { display: none; } .tp15-main .pa-peta svg { max-height: 44cqh; } .tp15-main .pa-kecil svg { height: 34cqh; } }
