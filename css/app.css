@@ -6393,3 +6393,40 @@ button.at-orang { font-size: clamp(0.55rem, 3.4cqmin, 1.8rem); }
 .rh-jajar span.isi, .rh-susun span.isi { border-style: solid; border-color: #16a34a; background: #dcfce7; }
 .rh-pool { justify-content: center; font-size: clamp(0.65rem, 3cqmin, 1.5rem); }
 @container (max-height: 520px) { .rh-main .gb-baris { height: 20cqh; } .rh-rahasia { font-size: clamp(0.6rem, 2.8cqmin, 1.4rem); } }
+
+/* sma-06 Pemburu Kode Kembar */
+.pk6-baris { gap: 0.35em; }
+.pk6-kartu { display: flex; flex-direction: column; align-items: center; padding: 0.2em 0.45em; border-radius: 0.45em; border: 3px solid #cbd5e1; background: #fff; font-size: clamp(0.6rem, 3cqmin, 1.6rem); font-variant-numeric: tabular-nums; transition: transform 0.12s; }
+.pk6-kartu small { font-size: 0.55em; color: #64748b; }
+.pk6-kartu.nyala { border-color: #f97316; background: #fff7ed; transform: translateY(-0.25em); box-shadow: 0 0.2em 0 #fdba74; }
+.pk6-kartu.kembar { border-color: #dc2626; background: #fee2e2; }
+.pk6-turus { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.15em 0.45em; font-size: clamp(0.55rem, 2.6cqmin, 1.35rem); max-width: 100%; }
+.pk6-turus small { font-weight: 900; color: #475569; }
+.pk6-turus span { font-family: ui-monospace, monospace; font-weight: 900; color: #1e3a8a; letter-spacing: -0.05em; }
+.pk6-turus .pk6-lima { text-decoration: line-through; text-decoration-thickness: 0.12em; }
+.pk6-turus b { padding: 0 0.4em; border-radius: 0.3em; background: #1e3a8a; color: #fff; }
+.pk6-ctl { gap: 0.6em; }
+.pk6-main .pd-datang { flex-wrap: wrap; gap: 0.4em 1.2em; }
+.pk6-datang b { padding: 0 0.3em; border-radius: 0.3em; background: #fde68a; }
+.pk6-n { display: flex; flex-wrap: wrap; gap: 0.4em 0.8em; align-items: center; justify-content: center; font-size: clamp(0.65rem, 3.2cqmin, 1.7rem); }
+.pk6-n b { color: #1d4ed8; }
+.pk6-n small { color: #64748b; }
+.pk6-mesin { display: flex; flex-wrap: wrap; gap: 0.6em; justify-content: center; font-size: clamp(0.55rem, 2.6cqmin, 1.35rem); width: 100%; }
+.pk6-m { flex: 1 1 0; min-width: 0; max-width: 14em; display: flex; flex-direction: column; align-items: center; gap: 0.15em; padding: 0.4em 0.5em; border-radius: 0.6em; border: 3px solid #94a3b8; background: #f8fafc; color: #111827; font: inherit; cursor: pointer; }
+.pk6-m:disabled { cursor: default; }
+.pk6-m b { font-size: 1.15em; }
+.pk6-m small { color: #64748b; }
+.pk6-m code { font-weight: 800; color: #1e3a8a; }
+.pk6-m em { font-style: normal; font-weight: 900; min-height: 1.2em; }
+.pk6-m.pilih { border-color: #7c3aed; background: #f5f3ff; }
+.pk6-m.lolos { border-color: #16a34a; background: #f0fdf4; }
+.pk6-m.gagal { border-color: #dc2626; background: #fef2f2; }
+.pk6-waktu { font-weight: 900; }
+.pk6-bar { display: block; width: 100%; height: 0.5em; border-radius: 0.25em; background: linear-gradient(90deg, #22c55e var(--p), #e2e8f0 var(--p)); }
+.pk6-m.gagal .pk6-bar { background: linear-gradient(90deg, #ef4444 var(--p), #e2e8f0 var(--p)); }
+.pk6-duel { display: flex; flex-direction: column; align-items: center; gap: 1cqmin; width: 100%; }
+.pk6-jungkat { display: flex; align-items: center; gap: 0.6em; padding-bottom: 0.4em; border-bottom: 0.35em solid #78716c; transform: rotate(var(--t, 0deg)); transition: transform 0.6s cubic-bezier(.3,1.6,.5,1); font-size: clamp(0.7rem, 3.6cqmin, 1.9rem); }
+.pk6-rumus { display: flex; flex-direction: column; align-items: center; gap: 0.1em; min-width: 6em; padding: 0.4em 0.8em; border-radius: 0.6em; border: 3px solid #1d4ed8; background: #eff6ff; color: #111827; font: inherit; cursor: pointer; }
+.pk6-rumus b { font-size: 1.2em; color: #1e3a8a; }
+.pk6-rumus span { font-weight: 800; font-variant-numeric: tabular-nums; }
+.pk6-sama { padding: 0.3em 0.6em; border-radius: 0.5em; border: 3px dashed #64748b; background: #fff; color: #334155; font: inherit; font-weight: 800; cursor: pointer; }
