@@ -102,9 +102,9 @@ const abjad = (a, b) => (a < b ? 'sebelum' : 'sesudah');
 // Words per level, as chips: "Tingkat 1: 1 kata · …".
 function tierBar(root) {
   const lv = root ? levels(root) : [];
-  return el('div', { class: 'pk-tingkat' },
+  return el('div', { class: 'kk-tingkat' },
     ...lv.map((c, d) => el('span', null, el('small', null, `T${d + 1}`), el('b', null, String(c)))),
-    el('span', { class: 'pk-tinggi' }, `${lv.length} tingkat`));
+    el('span', { class: 'kk-tinggi' }, `${lv.length} tingkat`));
 }
 
 // Misi Tanam Daun: the next word card waits at a gate; tap ◀ sebelum or sesudah ▶
@@ -117,7 +117,7 @@ function plantRound(wrap, ctx, { start = [], words, done, end }) {
   const box = svgBox();
   const queue = el('div', { class: 'pc-datang' });
   const tiers = el('div');
-  const gate = el('div', { class: 'pk-gerbang' });
+  const gate = el('div', { class: 'kk-gerbang' });
   const msg = el('p', { class: 'reveal info' }, 'Di setiap gerbang: kata yang menurut abjad lebih dulu belok kiri, yang lebih akhir belok kanan.');
   const draw = (fresh = null) => {
     box.innerHTML = treeSvg(root, { lit: [...path, ...(at ? [at.w] : [])], done: fresh ? [fresh] : [] });
@@ -126,9 +126,9 @@ function plantRound(wrap, ctx, { start = [], words, done, end }) {
     if (i >= words.length) { fill(gate); return; }
     const w = words[i];
     fill(gate,
-      onTap(el('button', { class: 'pk-arah', type: 'button', 'data-arah': 'l' }, el('b', null, '◀'), el('span', null, `sebelum ${at.w}`)), () => step('l')),
-      el('div', { class: 'pk-daun' }, el('small', null, `di gerbang ${at.w}`), el('b', null, w), el('span', null, ARTI[w] || '')),
-      onTap(el('button', { class: 'pk-arah', type: 'button', 'data-arah': 'r' }, el('span', null, `sesudah ${at.w}`), el('b', null, '▶')), () => step('r')));
+      onTap(el('button', { class: 'kk-arah', type: 'button', 'data-arah': 'l' }, el('b', null, '◀'), el('span', null, `sebelum ${at.w}`)), () => step('l')),
+      el('div', { class: 'kk-daun' }, el('small', null, `di gerbang ${at.w}`), el('b', null, w), el('span', null, ARTI[w] || '')),
+      onTap(el('button', { class: 'kk-arah', type: 'button', 'data-arah': 'r' }, el('span', null, `sesudah ${at.w}`), el('b', null, '▶')), () => step('r')));
   };
   function land(w, note) {
     root = insert(root, w);
@@ -170,17 +170,17 @@ function secretRound(wrap, ctx, { root, target, known = false, done }) {
   const mark = {};
   let over = false;
   const box = svgBox();
-  const count = el('div', { class: 'pk-tebak' });
+  const count = el('div', { class: 'kk-tebak' });
   const msg = el('p', { class: 'reveal info' }, known ? `Buktikan apakah ${target} ada di kamus dengan tebakan sesedikit mungkin.` : 'Ketuk satu kata. Mesin menjawab: ketemu, rahasianya lebih dulu (kiri), atau lebih akhir (kanan) menurut abjad.');
   const all = inorder(root);
   const alive = () => all.filter((w) => w > lo && w < hi && !guessed.includes(w));
   const draw = () => {
     box.innerHTML = treeSvg(root, { tap: !over, lit: guessed, done: guessed.includes(target) ? [target] : [], dim: all.filter((w) => !(w > lo && w < hi) && !guessed.includes(w)), mark });
     fill(count,
-      el('span', { class: 'pk-rahasia' }, known ? `🔎 ${target}` : guessed.includes(target) ? `🔓 ${target}` : '🂠 kata rahasia'),
+      el('span', { class: 'kk-rahasia' }, known ? `🔎 ${target}` : guessed.includes(target) ? `🔓 ${target}` : '🂠 kata rahasia'),
       el('span', null, `Tebakan: `, el('b', null, String(guessed.length))),
       el('span', null, `Batas hemat: ${height(root)}`),
-      known && !over ? onTap(el('button', { class: 'pk-tidak', type: 'button' }, '🚫 Tidak ada di kamus'), absent) : null);
+      known && !over ? onTap(el('button', { class: 'kk-tidak', type: 'button' }, '🚫 Tidak ada di kamus'), absent) : null);
   };
   function absent() {
     if (over) return;
@@ -207,7 +207,7 @@ function secretRound(wrap, ctx, { root, target, known = false, done }) {
       done(guessed.length);
     };
     box.addEventListener('pointerdown', handler);
-    fill(count, el('span', { class: 'pk-rahasia' }, `🌱 ${target}`), el('span', null, `Tebakan: `, el('b', null, String(guessed.length))));
+    fill(count, el('span', { class: 'kk-rahasia' }, `🌱 ${target}`), el('span', null, `Tebakan: `, el('b', null, String(guessed.length))));
   }
   delegate(box, '[data-w]', (g) => {
     if (over) return;
@@ -239,7 +239,7 @@ function printRound(wrap, ctx, { root, done }) {
   const want = inorder(root);
   const got = [];
   const box = svgBox();
-  const tape = el('div', { class: 'pk-pita' });
+  const tape = el('div', { class: 'kk-pita' });
   const msg = el('p', { class: 'reveal info' }, 'Aturan mesin: cetak seluruh cabang kiri, lalu kata di simpul, lalu seluruh cabang kanan.');
   const draw = () => {
     box.innerHTML = treeSvg(root, { done: got, tap: true });
@@ -305,7 +305,7 @@ function bossRound(wrap, ctx, done) {
   const steps = ['dalan', 'sega'];
   let s = 0;
   const box = svgBox();
-  const tape = el('div', { class: 'pk-pita' });
+  const tape = el('div', { class: 'kk-pita' });
   const msg = el('p', { class: 'reveal info' });
   const draw = (extra = {}) => {
     box.innerHTML = treeSvg(root, { tap: s < steps.length, ...extra });
@@ -371,7 +371,7 @@ export default {
     { id: 'giliran', icon: '🔁', label: 'Pendek lawan Tinggi', desc: 'Dua tim bergantian memilih kata berikutnya: satu tim berusaha membuat pohon terpendek, tim lain tertinggi, lalu peran ditukar', create: createTeams },
   ],
   create(root, ctx) {
-    const wrap = el('div', { class: 'act pohon-cari pk-main' });
+    const wrap = el('div', { class: 'act pohon-cari kk-main' });
     root.append(wrap);
     const full = () => build(URUTAN);
     const race = ctx.mode === 'race';
