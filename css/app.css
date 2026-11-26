@@ -6488,7 +6488,7 @@ button.at-orang { font-size: clamp(0.55rem, 3.4cqmin, 1.8rem); }
 @container (max-height: 520px) { .tk9-main .kd-peta svg { max-height: 40cqh; } }
 @container (max-aspect-ratio: 1/1) { .tk9-main .kd-peta svg { max-height: 40cqh; } .tk9-main .tk9-antre { font-size: clamp(0.5rem, 2cqmin, 1rem); } }
 @container (max-width: 1000px) and (min-height: 600px) { .tk9-main .kd-peta svg { max-height: 38cqh; } .tk9-main .kode-baris .btn { font-size: clamp(0.7rem, 3cqmin, 1.4rem); } }
-:is(.kk-main, .rh-main, .pk6-main, .mph-main, .pp8-main, .tk9-main, .kb10-main, .gk11-main, .rk13-main, .nd14-main, .tp15-main, .ka16-main, .pl17-main) .reveal { font-size: clamp(0.7rem, 3cqmin, 1.6rem); text-wrap: balance; }
+:is(.kk-main, .rh-main, .pk6-main, .mph-main, .pp8-main, .tk9-main, .kb10-main, .gk11-main, .rk13-main, .nd14-main, .tp15-main, .ka16-main, .pl17-main, .dk18-main) .reveal { font-size: clamp(0.7rem, 3cqmin, 1.6rem); text-wrap: balance; }
 @container (max-width: 1000px) and (min-height: 600px) { .tk9-main .kd-peta svg { max-height: 46cqh; } }
 
 /* sma-10 Konter Bagasi */
@@ -6778,3 +6778,73 @@ button.ka16-perintah { font-size: inherit; cursor: pointer; }
   .pl17-mati { width: 4em; height: 4em; }
 }
 .pl17-pita-wadah:empty { display: none; }
+/* sma-18 Dapur Satu Kompor (dk18-) */
+.dk18-main { gap: 0.7cqmin; }
+.dk18-aturan { display: flex; flex-wrap: wrap; gap: 0.3em 1.2em; align-items: center; justify-content: center; padding: 0.2em 0.9em; border-radius: 0.6em; background: #fef3c7; border: 2px solid #d97706; color: #78350f; font-size: clamp(0.65rem, min(2.8cqmin, 2cqw), 1.5rem); }
+.dk18-aturan span { font-weight: 800; font-variant-numeric: tabular-nums; }
+.dk18-aturan .habis { color: #b91c1c; animation: dk18-kedip 0.8s infinite alternate; }
+@keyframes dk18-kedip { to { opacity: 0.35; } }
+.dk18-dapur { display: flex; gap: 1cqmin; width: 100%; align-items: stretch; justify-content: center; }
+.dk18-papan, .dk18-kompor, .dk18-matang { display: flex; flex-direction: column; align-items: center; gap: 0.3em; min-width: 0; padding: 0.3em 0.5em 0.5em; border-radius: 0.8em; font-size: clamp(0.55rem, min(2.2cqmin, 1.6cqw), 1.2rem); }
+.dk18-papan > small, .dk18-kompor > small, .dk18-matang > small { font-weight: 800; color: #475569; }
+.dk18-papan { flex: 3 1 0; background: #f1f5f9; border: 2px dashed #94a3b8; }
+.dk18-kompor { flex: 0 0 auto; min-width: 9em; background: #1f2937; border: 3px solid #f97316; box-shadow: inset 0 -0.5em 0.8em -0.4em #f97316; }
+.dk18-kompor > small { color: #fed7aa; }
+.dk18-matang { flex: 2 1 0; background: #f0fdf4; border: 2px solid #86efac; }
+.dk18-baris { display: flex; flex-wrap: wrap; gap: 0.4em; justify-content: center; align-items: flex-start; }
+.dk18-kosong { padding: 0.6em 1em; color: #94a3b8; font-style: italic; }
+.dk18-kompor .dk18-kosong { color: #9ca3af; }
+.dk18-datang { padding: 0.3em 0.5em; border: 2px dashed #cbd5e1; border-radius: 0.5em; color: #64748b; font-weight: 700; }
+.dk18-kartu { display: flex; flex-direction: column; align-items: center; gap: 0.15em; min-width: 6.4em; max-width: 9em; padding: 0.25em 0.5em 0.3em; border: 2px solid var(--w); border-top-width: 0.5em; border-radius: 0.6em; background: #fff; color: #111827; font: inherit; font-size: clamp(0.6rem, min(2.4cqmin, 1.7cqw), 1.3rem); cursor: pointer; transition: transform 0.15s; }
+.dk18-kartu b { font-size: 1.15em; }
+.dk18-menu { font-size: 0.85em; color: #334155; line-height: 1.15; }
+.dk18-kartu small { color: #475569; font-weight: 700; font-size: 0.8em; }
+.dk18-kartu.siap:hover { transform: translateY(-0.15em); }
+.dk18-kartu.jalan { box-shadow: 0 0 0 0.2em #f97316, 0 0 1em #f97316; cursor: default; }
+.dk18-kartu.habis { box-shadow: 0 0 0 0.25em #dc2626; animation: dk18-goyang 0.6s infinite alternate; cursor: pointer; }
+@keyframes dk18-goyang { to { transform: rotate(-3deg); } }
+.dk18-kartu.selesai { cursor: default; background: #f0fdf4; }
+.dk18-kartu.selesai .dk18-keping, .dk18-kartu.selesai .dk18-menu { display: none; }
+.dk18-kartu.tunggu { background: #fffbeb; border-style: dashed; }
+.dk18-kartu.lapar { background: #fee2e2; animation: dk18-goyang 0.5s infinite alternate; }
+.dk18-keping { display: flex; flex-wrap: wrap; gap: 0.15em; justify-content: center; max-width: 7em; }
+.dk18-keping i { width: 0.7em; height: 0.7em; border-radius: 50%; border: 2px solid var(--w); background: transparent; }
+.dk18-keping i.ada { background: var(--w); }
+.dk18-pita-wadah { display: flex; flex-direction: column; align-items: center; gap: 0.3em; max-width: 100%; font-size: clamp(0.55rem, 2cqmin, 1.1rem); color: #475569; }
+.dk18-pita-wadah > small { font-weight: 800; }
+.dk18-pita { display: flex; gap: 2px; max-width: 100%; }
+.dk18-pita span { display: flex; flex-direction: column; align-items: center; width: clamp(1.1rem, min(4.6cqmin, 4.4cqw), 3rem); border: 1px solid #cbd5e1; border-radius: 0.25em; background: #f8fafc; color: #111827; }
+.dk18-pita span b { min-height: 1.5em; line-height: 1.5em; font-size: clamp(0.6rem, min(2.6cqmin, 2.2cqw), 1.4rem); }
+.dk18-pita span small { width: 100%; text-align: center; background: #fff; color: #64748b; font-size: clamp(0.45rem, 1.6cqmin, 0.9rem); border-top: 1px solid #e2e8f0; }
+.dk18-pita span.isi { border-color: transparent; }
+.dk18-main .sk-tabel { font-size: clamp(0.55rem, min(2.2cqmin, 1.6cqw), 1.2rem); }
+.dk18-tombol { display: flex; flex-wrap: wrap; gap: 1cqmin; justify-content: center; min-height: 2.4em; }
+.dk18-tombol:empty { min-height: 0; }
+.dk18-tombol .btn { font-size: clamp(0.7rem, 2.6cqmin, 1.5rem); padding: 0.35em 1em; }
+.dk18-soto .dk18-kartu { max-width: 13em; min-width: 9em; }
+.dk18-langkah { display: flex; flex-wrap: wrap; gap: 0.2em; justify-content: center; }
+.dk18-langkah i { padding: 0.05em 0.4em; border-radius: 0.4em; background: #f1f5f9; color: #475569; font-style: normal; font-size: 0.8em; }
+.dk18-langkah i.kini { background: #fde68a; color: #78350f; font-weight: 800; }
+.dk18-langkah i.beres { background: #dcfce7; color: #15803d; text-decoration: line-through; }
+.dk18-kejadian { display: flex; flex-direction: column; align-items: center; gap: 0.8cqmin; width: 100%; }
+.dk18-ulang { display: flex; flex-direction: column; gap: 0.6cqmin; width: 100%; max-width: 60em; }
+.dk18-ulang > div { display: flex; align-items: center; gap: 0.6em; font-size: clamp(0.55rem, 2.2cqmin, 1.2rem); }
+.dk18-ulang small { flex: 0 0 4.5em; font-weight: 800; color: #475569; }
+.dk18-bar { flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: 1px; }
+.dk18-bar span { min-width: 0; height: 1.7em; line-height: 1.7em; text-align: center; font-weight: 800; color: #111827; overflow: hidden; border-radius: 0.2em; }
+.dk18-bar span.cuci { background: repeating-linear-gradient(45deg, #94a3b8 0 0.25em, #e2e8f0 0.25em 0.5em); }
+.dk18-bar em { margin-left: 0.4em; font-style: normal; font-weight: 900; color: #0f172a; }
+@container (max-height: 520px) {
+  .dk18-main .misi-tujuan { display: none; }
+  .dk18-main { gap: 0.4cqmin; }
+  .dk18-kartu { min-width: 5.4em; padding: 0.15em 0.35em; }
+  .dk18-kartu .dk18-menu { display: none; }
+  .dk18-papan, .dk18-kompor, .dk18-matang { padding: 0.2em 0.35em 0.3em; }
+}
+.dk18-main .sk-cocok { max-width: 90em; }
+.dk18-main > .prompt { display: none; }
+.dk18-main .sk-kolom { gap: 0.4cqmin; }
+.dk18-main .sk-item { padding: 0.25em 0.6em; font-size: clamp(0.6rem, min(3.4cqmin, 2cqw), 1.7rem); line-height: 1.2; }
+@container (max-height: 520px) {
+  .dk18-main .sk-item { padding: 0.15em 0.5em; font-size: clamp(0.55rem, min(3.1cqmin, 1.75cqw), 1.4rem); }
+}
