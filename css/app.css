@@ -6124,6 +6124,7 @@ button.cri-cek { cursor: pointer; }
 .bm-dua { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 2cqmin; align-items: center; width: 100%; }
 .bm-peta { min-width: 0; width: 100%; }
 .bfs-angkot.bm-main .ba-peta { width: min(100%, 100cqh); }
+@container (max-height: 520px) { .bfs-angkot.bm-main .ba-peta { width: min(100%, 88cqh); } }
 .bfs-angkot.bm-main .ba-halte { font-size: clamp(0.55rem, 2cqmin, 1.1rem); }
 .bm-samping { display: flex; flex-direction: column; gap: 1cqmin; align-items: stretch; min-width: 0; font-size: clamp(0.6rem, 2.3cqmin, 1.2rem); }
 .bm-putaran { margin: 0; font-weight: 900; font-family: ui-monospace, monospace; text-align: center; overflow-wrap: anywhere; }
