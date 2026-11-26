@@ -6488,7 +6488,7 @@ button.at-orang { font-size: clamp(0.55rem, 3.4cqmin, 1.8rem); }
 @container (max-height: 520px) { .tk9-main .kd-peta svg { max-height: 40cqh; } }
 @container (max-aspect-ratio: 1/1) { .tk9-main .kd-peta svg { max-height: 40cqh; } .tk9-main .tk9-antre { font-size: clamp(0.5rem, 2cqmin, 1rem); } }
 @container (max-width: 1000px) and (min-height: 600px) { .tk9-main .kd-peta svg { max-height: 38cqh; } .tk9-main .kode-baris .btn { font-size: clamp(0.7rem, 3cqmin, 1.4rem); } }
-:is(.kk-main, .rh-main, .pk6-main, .mph-main, .pp8-main, .tk9-main, .kb10-main, .gk11-main, .rk13-main, .nd14-main, .tp15-main, .ka16-main, .pl17-main, .dk18-main) .reveal { font-size: clamp(0.7rem, 3cqmin, 1.6rem); text-wrap: balance; }
+:is(.kk-main, .rh-main, .pk6-main, .mph-main, .pp8-main, .tk9-main, .kb10-main, .gk11-main, .rk13-main, .nd14-main, .tp15-main, .ka16-main, .pl17-main, .dk18-main, .lj19-main) .reveal { font-size: clamp(0.7rem, 3cqmin, 1.6rem); text-wrap: balance; }
 @container (max-width: 1000px) and (min-height: 600px) { .tk9-main .kd-peta svg { max-height: 46cqh; } }
 
 /* sma-10 Konter Bagasi */
@@ -6847,4 +6847,116 @@ button.ka16-perintah { font-size: inherit; cursor: pointer; }
 .dk18-main .sk-item { padding: 0.25em 0.6em; font-size: clamp(0.6rem, min(3.4cqmin, 2cqw), 1.7rem); line-height: 1.2; }
 @container (max-height: 520px) {
   .dk18-main .sk-item { padding: 0.15em 0.5em; font-size: clamp(0.55rem, min(3.1cqmin, 1.75cqw), 1.4rem); }
+}
+/* sma-19 Teknisi Siaga (lj19-) */
+.lj19-main { gap: 0.7cqmin; }
+.lj19-area { display: flex; flex-direction: column; align-items: center; gap: 0.8cqmin; width: 100%; min-height: 0; }
+.lj19-area:empty { display: none; }
+.lj19-peta { display: flex; justify-content: center; width: 100%; min-height: 0; }
+.lj19-peta svg { width: 100%; max-width: 58em; max-height: 52cqh; background: #eef2ff; border-radius: 1em; touch-action: none; }
+.lj19-peta.kecil svg { max-height: 50cqh; }
+.lj19-node { cursor: pointer; }
+.lj19-node:hover rect { stroke: #2563eb; }
+.lj19-baki { display: flex; flex-wrap: wrap; gap: 0.6cqmin; justify-content: center; width: 100%; min-height: 2.4em; }
+.lj19-baki:empty { min-height: 0; }
+.lj19-kartu { max-width: 18em; padding: 0.3em 0.7em; border: 2px solid #94a3b8; border-bottom-width: 0.25em; border-radius: 0.6em; background: #fffbeb; color: #111827; font: inherit; font-weight: 700; font-size: clamp(0.6rem, min(2.6cqmin, 1.8cqw), 1.4rem); line-height: 1.2; cursor: pointer; transform: rotate(-1deg); }
+.lj19-kartu:nth-child(even) { transform: rotate(1deg); }
+.lj19-kartu.pilih { border-color: #2563eb; background: #dbeafe; box-shadow: 0 0 0 0.2em #93c5fd; transform: translateY(-0.15em); }
+.lj19-kotak-kotak { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9em), 1fr)); gap: 0.8cqmin; width: 100%; max-width: 80em; }
+.lj19-kotak-kotak.dua { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 56em; }
+.lj19-kotak { display: flex; flex-direction: column; align-items: center; gap: 0.2em; min-height: 4.2em; padding: 0.3em 0.5em; border: 3px dashed #64748b; border-radius: 0.8em; background: #f8fafc; color: #111827; font-size: clamp(0.6rem, min(2.5cqmin, 1.8cqw), 1.35rem); cursor: pointer; text-align: center; }
+.lj19-kotak:hover { border-color: #2563eb; background: #eff6ff; }
+.lj19-kotak > small { color: #475569; font-weight: 700; }
+.lj19-kotak.lab { background: #dbeafe; }
+.lj19-kotak.kantor { background: #fef3c7; }
+.lj19-isi { display: flex; flex-wrap: wrap; gap: 0.25em; justify-content: center; }
+.lj19-isi span { padding: 0.05em 0.45em; border-radius: 0.4em; background: #dcfce7; color: #166534; font-weight: 800; font-size: 0.85em; font-family: ui-monospace, Menlo, Consolas, monospace; }
+.lj19-tombol { display: flex; flex-wrap: wrap; gap: 0.8cqmin; justify-content: center; align-items: center; }
+.lj19-tombol.tegak { flex-direction: column; align-items: stretch; max-width: 46em; }
+.lj19-tombol.kiri { justify-content: flex-start; gap: 0.3em; }
+.lj19-tombol .btn, .lj19-stepper .btn, .lj19-baris .btn { font-size: clamp(0.65rem, min(2.5cqmin, 1.8cqw), 1.4rem); padding: 0.3em 0.9em; }
+.lj19-jaringan { display: flex; flex-wrap: wrap; gap: 0.2em 1em; justify-content: center; align-items: baseline; padding: 0.2em 1em; border-radius: 0.6em; background: #0f172a; color: #e2e8f0; font-size: clamp(0.6rem, min(2.6cqmin, 1.9cqw), 1.4rem); }
+.lj19-jaringan b { font-family: ui-monospace, Menlo, Consolas, monospace; color: #facc15; }
+.lj19-stepper { display: flex; flex-wrap: wrap; gap: 0.5em; justify-content: center; align-items: center; }
+.lj19-angka { min-width: 3.2em; padding: 0.1em 0.4em; border-radius: 0.4em; background: #0f172a; color: #facc15; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: clamp(1rem, 4.4cqmin, 2.6rem); text-align: center; }
+.lj19-rak { display: grid; grid-template-columns: repeat(32, 1fr); gap: 2px; width: min(100%, 48em); }
+.lj19-rak.kecil { grid-template-columns: repeat(20, 1fr); width: min(100%, 36em); }
+.lj19-rak i { aspect-ratio: 1; max-width: 100%; border-radius: 2px; background: #bfdbfe; }
+.lj19-rak i.tutup { background: #475569; }
+.lj19-rak i.router { background: #f97316; }
+.lj19-rak.kecil i { background: #e2e8f0; outline: 1px solid #cbd5e1; }
+.lj19-rak.kecil i.isi { background: #22c55e; outline-color: #15803d; }
+.lj19-telat { display: flex; flex-direction: column; align-items: center; padding: 0.3em 0.8em; border: 3px solid #f59e0b; border-radius: 0.7em; background: #fffbeb; font-size: clamp(0.6rem, 2.5cqmin, 1.4rem); }
+.lj19-telat code { font-weight: 900; color: #b45309; }
+.lj19-razia { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.8cqmin; width: 100%; max-width: 86em; }
+.lj19-kartu-pc { display: flex; flex-direction: column; gap: 0.2em; padding: 0.3em 0.45em; border: 3px solid #dc2626; border-radius: 0.7em; background: #fff; color: #111827; font-size: clamp(0.5rem, min(2.1cqmin, 1.5cqw), 1.15rem); }
+.lj19-kartu-pc.hijau { border-color: #16a34a; background: #f0fdf4; }
+.lj19-kepala { display: flex; justify-content: space-between; align-items: center; font-size: 1.2em; }
+.lj19-stiker { display: grid; place-items: center; width: 1.6em; height: 1.3em; border-radius: 0.2em; background: #dc2626; color: #fff; font-weight: 900; transform: rotate(8deg); }
+.hijau > .lj19-kepala .lj19-stiker { background: #16a34a; }
+.lj19-isian { display: flex; justify-content: space-between; gap: 0.4em; padding: 0.1em 0.45em; border: 2px solid #cbd5e1; border-radius: 0.4em; background: #fff; color: #111827; font: inherit; cursor: pointer; text-align: left; }
+.lj19-isian small { color: #64748b; white-space: nowrap; }
+.lj19-isian code { font-weight: 800; overflow: hidden; text-overflow: ellipsis; }
+.lj19-isian.baru { border-color: #16a34a; background: #dcfce7; }
+.lj19-pilih { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25em; padding: 0.15em 0.3em; border: 2px dashed #2563eb; border-radius: 0.4em; background: #eff6ff; }
+.lj19-pilih small { flex-basis: 100%; color: #1d4ed8; font-weight: 800; }
+.lj19-nilai { padding: 0.1em 0.4em; border: 2px solid #94a3b8; border-radius: 0.35em; background: #fff; color: #111827; font: inherit; font-family: ui-monospace, Menlo, Consolas, monospace; font-weight: 800; cursor: pointer; }
+.lj19-benar { align-self: flex-end; padding: 0.1em 0.6em; border: 2px solid #16a34a; border-radius: 0.4em; background: #fff; color: #166534; font: inherit; font-weight: 800; cursor: pointer; }
+.lj19-laporan { display: flex; flex-wrap: wrap; gap: 0.2em 1em; justify-content: center; align-items: baseline; font-size: clamp(0.6rem, min(2.5cqmin, 1.8cqw), 1.35rem); text-align: center; }
+.lj19-hitung { padding: 0.05em 0.6em; border-radius: 999px; background: #1e293b; color: #fff; font-weight: 800; font-size: 0.9em; white-space: nowrap; }
+.lj19-diag { display: flex; gap: 1.5cqmin; width: 100%; align-items: flex-start; }
+.lj19-diag > .lj19-peta { flex: 5 1 0; min-width: 0; }
+.lj19-kanan { flex: 6 1 0; min-width: 0; display: flex; flex-direction: column; gap: 0.6cqmin; }
+.lj19-dek { display: flex; flex-direction: column; gap: 0.4cqmin; }
+.lj19-uji { display: flex; align-items: stretch; gap: 0.4em; font-size: clamp(0.55rem, min(2.2cqmin, 1.6cqw), 1.2rem); }
+.lj19-uji > b { display: grid; place-items: center; flex: 0 0 1.7em; border-radius: 50%; align-self: center; height: 1.7em; background: #1e293b; color: #fff; }
+.lj19-muka { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 0.1em; padding: 0.2em 0.6em; border: 2px solid #cbd5e1; border-radius: 0.5em; background: #fff; color: #111827; font: inherit; text-align: left; cursor: pointer; }
+.lj19-muka span { font-weight: 800; }
+.lj19-uji.tutup .lj19-muka { background: repeating-linear-gradient(135deg, #1e3a8a 0 0.5em, #1e40af 0.5em 1em); border-color: #1e3a8a; color: #fff; }
+.lj19-uji.tutup .lj19-muka small { color: #bfdbfe; }
+.lj19-uji.ya .lj19-muka { border-color: #16a34a; background: #f0fdf4; cursor: default; }
+.lj19-uji.tidak .lj19-muka { border-color: #dc2626; background: #fef2f2; cursor: default; }
+.lj19-uji.kadang .lj19-muka { border-color: #d97706; background: #fffbeb; cursor: default; }
+.lj19-stop { flex: 0 0 auto; padding: 0 0.4em; border: 3px solid #dc2626; border-radius: 0.5em; background: #fee2e2; font: inherit; font-size: 1.3em; cursor: pointer; animation: dk18-kedip 0.9s infinite alternate; }
+.lj19-ekor { display: flex; flex-direction: column; align-items: center; gap: 0.4em; font-size: clamp(0.55rem, 2.2cqmin, 1.2rem); }
+.lj19-ekor:empty { display: none; }
+.lj19-ekor > small { font-weight: 800; color: #475569; }
+.lj19-meter { position: relative; width: min(100%, 40em); height: clamp(1.3rem, 4.4cqmin, 2.4rem); border-radius: 999px; background: #fee2e2; overflow: hidden; flex: 0 0 auto; }
+.lj19-meter i { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #f97316, #16a34a); transition: width 0.4s; }
+.lj19-meter span { position: relative; z-index: 1; display: block; text-align: center; font-weight: 900; color: #111827; line-height: clamp(1.3rem, 4.4cqmin, 2.4rem); font-size: clamp(0.6rem, 2.4cqmin, 1.3rem); }
+.lj19-wifi { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.6cqmin; width: 100%; max-width: 92em; }
+.lj19-atur { display: flex; flex-direction: column; gap: 0.2em; padding: 0.3em 0.6em; border: 2px solid #f97316; border-radius: 0.6em; background: #fff7ed; color: #111827; font-size: clamp(0.5rem, min(2cqmin, 1.45cqw), 1.1rem); }
+.lj19-atur.aman { border-color: #16a34a; background: #f0fdf4; }
+.lj19-atur > span { color: #334155; }
+.lj19-opsi { padding: 0.15em 0.5em; border: 2px solid #94a3b8; border-radius: 0.45em; background: #fff; color: #111827; font: inherit; font-weight: 700; text-align: left; cursor: pointer; }
+.lj19-opsi:hover { border-color: #2563eb; }
+.lj19-pita { position: relative; display: flex; width: min(100%, 52em); height: clamp(2.6rem, 9cqmin, 4.6rem); margin-bottom: 1.4em; border-radius: 0.5em; background: repeating-linear-gradient(90deg, #e2e8f0 0 calc(100% / 16 - 2px), #94a3b8 calc(100% / 16 - 2px) calc(100% / 16)); font-size: clamp(0.6rem, min(2.6cqmin, 1.9cqw), 1.3rem); flex: 0 0 auto; }
+.lj19-ujung { position: absolute; bottom: -1.3em; font-style: normal; font-weight: 800; font-size: 0.8em; color: #334155; }
+.lj19-ujung.kiri { left: 0; }
+.lj19-ujung.kanan { right: 0; }
+.lj19-potong { position: absolute; top: 0; bottom: 0; transform: translateX(-50%); width: 2.8em; padding: 0; border: none; background: transparent; color: #334155; font: inherit; font-size: 0.8em; font-weight: 800; cursor: pointer; display: flex; align-items: flex-end; justify-content: center; }
+.lj19-potong::before { content: ''; position: absolute; top: 0; bottom: 1.3em; left: 50%; width: 3px; transform: translateX(-50%); background: #64748b; border-radius: 2px; }
+.lj19-potong:hover::before { background: #dc2626; width: 5px; }
+.lj19-bagian { display: flex; flex-direction: column; align-items: center; justify-content: center; color: #111827; }
+.lj19-bagian.lab { background: #bfdbfe; border-radius: 0.5em 0 0 0.5em; border-right: 4px solid #dc2626; }
+.lj19-bagian.kantor { background: #fde68a; border-radius: 0 0.5em 0.5em 0; }
+.lj19-bagian small { font-family: ui-monospace, Menlo, Consolas, monospace; font-weight: 700; }
+.lj19-rentang { position: absolute; top: 100%; height: 1.2em; margin-top: 0.15em; border-radius: 0.3em; font-style: normal; font-weight: 800; font-size: 0.8em; line-height: 1.2em; text-align: center; white-space: nowrap; }
+.lj19-rentang.lama { background: #fecaca; color: #991b1b; outline: 2px dashed #dc2626; }
+.lj19-rentang.baru { background: #bbf7d0; color: #166534; }
+.lj19-baris { display: flex; flex-wrap: wrap; gap: 0.5em; align-items: center; justify-content: center; font-size: clamp(0.6rem, 2.5cqmin, 1.4rem); }
+.lj19-ok { font-weight: 900; color: #15803d; }
+@container (max-height: 520px) {
+  .lj19-main .misi-tujuan { display: none; }
+  .lj19-main { gap: 0.4cqmin; }
+  .lj19-peta svg { max-height: 44cqh; }
+  .lj19-peta.kecil svg { max-height: 56cqh; }
+  .lj19-kotak { min-height: 3em; padding: 0.15em 0.4em; }
+  .lj19-kartu-pc { padding: 0.15em 0.35em; gap: 0.1em; }
+  .lj19-muka { padding: 0.1em 0.5em; }
+  .lj19-atur { padding: 0.1em 0.4em; gap: 0.05em; font-size: clamp(0.5rem, min(1.8cqmin, 1.35cqw), 1rem); }
+  .lj19-tombol.kiri { gap: 0.2em; }
+  .lj19-wifi { gap: 0.4cqmin; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .lj19-meter { height: 1.2rem; }
+  .lj19-meter span { line-height: 1.2rem; }
 }
