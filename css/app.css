@@ -6454,3 +6454,20 @@ button.at-orang { font-size: clamp(0.55rem, 3.4cqmin, 1.8rem); }
 .mph-putar { display: grid; grid-template-columns: repeat(2, auto); gap: 0.3em; }
 @container (max-height: 520px) { .mph-jam svg { width: min(20cqh, 26cqw); } }
 .mph-main .pk-akar { font-size: clamp(0.7rem, 3.4cqmin, 1.8rem); }
+
+/* sma-08 Papan Proyek Pentas */
+.pp8-usulan { display: flex; flex-wrap: wrap; gap: 0.3em; align-items: center; justify-content: center; font-size: clamp(0.6rem, 3cqmin, 1.6rem); }
+.pp8-usulan small { font-weight: 800; color: #475569; }
+.pp8-usulan span { min-width: 1.6em; padding: 0.1em 0.35em; border-radius: 0.35em; border: 2px solid #cbd5e1; background: #fff; text-align: center; font-weight: 900; }
+.pp8-usulan span.sudah { background: #fed7aa; border-color: #ea580c; }
+.pp8-usulan span.kini { background: #fecaca; border-color: #dc2626; transform: translateY(-0.15em); }
+.pp8-kejadian { display: flex; flex-direction: column; align-items: center; padding: 0.35em 1em; border-radius: 0.6em; background: #fef3c7; border: 3px solid #d97706; box-shadow: 0 0.2em 0 #b45309; font-size: clamp(0.65rem, 3cqmin, 1.6rem); }
+.pp8-kejadian small { color: #92400e; font-weight: 800; }
+.pp8-opsi { justify-content: center; font-size: clamp(0.65rem, 3cqmin, 1.5rem); }
+.pp8-main .ps8-graf svg { max-height: 46cqh; }
+@container (max-height: 520px) { .pp8-main .ps8-graf svg { max-height: 38cqh; } }
+.pp8-main .ps8-garis { grid-auto-rows: max(1em, min(2.2em, 4.2cqh)); font-size: clamp(0.5rem, min(2.6cqmin, 3cqh), 1.35rem); }
+.pp8-main .ps8-papan + .kode-baris .btn { padding-block: 0.25em; }
+.pp8-main > .prompt { font-size: clamp(0.65rem, 2.8cqmin, 1.4rem); margin: 0; }
+.pp8-main .ps8-garis { grid-template-columns: 4.6em repeat(var(--hari), minmax(1.2em, 1fr)); min-width: 0; }
+@container (max-height: 520px) { .pp8-main .ps8-garis { grid-auto-rows: max(0.9em, min(2em, 3.7cqh)); } .pp8-jadwal .misi-tujuan { display: none; } }
