@@ -6307,3 +6307,24 @@ button.kpb-paket { cursor: pointer; }
 .kh-main .kh-surat .kh-kode { font-size: 1.1em; }
 .kh-baca { font-family: ui-monospace, monospace; font-weight: 900; padding: 0.15em 0.6em; border-radius: 0.4em; background: #dcfce7; border: 2px solid #16a34a; animation: pop 0.25s; }
 @container (max-height: 520px) { .kh-main .kh-pohon svg { max-height: 36cqh; } .kh-main .kh-kode { font-size: clamp(0.45rem, 1.8cqmin, 0.9rem); } }
+
+/* ---------- sma-03 Mesin Puskesmas: perintah yang dijalankan dengan tangan ---------- */
+.at-main .reveal { font-size: clamp(0.7rem, 2.8cqmin, 1.5rem); margin: 0; }
+.at-papan { display: flex; flex-direction: column; align-items: center; gap: 1.5cqmin; width: 100%; }
+.at-op.kini { background: #fde68a; color: #78350f; outline: 3px solid #d97706; }
+.at-op.lewat { opacity: 0.45; }
+button.at-piring, button.at-orang { font: inherit; font-weight: 800; cursor: pointer; border: 2px solid rgb(0 0 0 / 0.25); }
+button.at-piring { font-size: clamp(0.55rem, 3.4cqmin, 1.8rem); }
+button.at-orang { font-size: clamp(0.55rem, 3.4cqmin, 1.8rem); }
+.at-piring.jadi, .at-orang.jadi { opacity: 0.8; cursor: default; box-shadow: none; }
+.at-tumpuk .at-orang { min-width: 6em; text-align: center; }
+.at-pesanan { display: flex; flex-direction: column; align-items: center; gap: 0.3em; padding: 0.4em 0.8em; border-radius: 0.7em; background: #fffbeb; border: 3px dashed #d97706; font-size: clamp(0.5rem, 2.6cqmin, 1.3rem); }
+.at-pesanan small { font-weight: 800; color: #92400e; }
+.at-layar { font-family: ui-monospace, monospace; min-width: 12em; text-align: left; white-space: pre; }
+.at-kursor { animation: kedip 1s steps(1) infinite; color: #2563eb; }
+@keyframes kedip { 50% { opacity: 0; } }
+.at-tabung { cursor: pointer; padding: 0.3em; border-radius: 0.7em; border: 3px dashed transparent; }
+.at-tabung:hover { border-color: #93c5fd; }
+.at-main .at-tumpuk { min-height: 4.5em; }
+@container (max-height: 520px) { .at-main .at-program { font-size: clamp(0.45rem, 2.2cqmin, 1rem); } .at-main .at-tumpuk { min-height: 3em; } }
+.at-main .at-rumus span { margin: 0 0.12em; }

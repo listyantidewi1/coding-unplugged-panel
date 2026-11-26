@@ -3,7 +3,7 @@
 // priority queue in a puskesmas, and a queue built from two stacks.
 
 import { el, onTap, button, shake } from '../core/util.js';
-import { choice } from '../core/kit.js';
+import { misiHead, fill } from './misi-kit.js';
 import { say, pickTeams, scoreBar, finishBoard, fmtNum } from './sma-kit.js';
 
 export const WARNA = { merah: '#ef4444', biru: '#3b82f6', hijau: '#22c55e', kuning: '#eab308', putih: '#f8fafc', ungu: '#a855f7' };
@@ -80,41 +80,6 @@ const stackView = (items, label = 'Tumpukan') => el('div', { class: 'at-wadah' }
 const queueView = (items) => el('div', { class: 'at-wadah' }, el('div', { class: 'at-antre' }, el('span', { class: 'at-loket' }, '🪟 Loket'), items.length ? items.map((n, i) => el('span', { class: `at-orang ${i === 0 ? 'depan' : ''}` }, n)) : el('span', { class: 'at-kosong' }, 'kosong')), el('small', null, 'Antrean (depan ← belakang)'));
 const opsView = (ops) => el('div', { class: 'at-program' }, ops.map(([op, v], i) => el('span', { class: `at-op ${op === 'AMBIL' || op === 'LAYANI' ? 'keluar' : ''}` }, `${i + 1}. ${op}${v ? ` ${v}` : ''}`)));
 
-// Build a stack-permutation target: plates arrive in order; tap TARUH/AMBIL.
-function permRound(wrap, ctx, { done }) {
-  const input = ['merah', 'biru', 'hijau', 'kuning'];
-  const target = [];
-  { const st = []; let i = 0; while (target.length < input.length) { if (i < input.length && (!st.length || ctx.rand.int(0, 1))) st.push(input[i++]); else target.push(st.pop()); } }
-  let st = [];
-  let i = 0;
-  let out = [];
-  let finished = false;
-  const stage = el('div');
-  const msg = el('p', { class: 'reveal info' }, 'Piring datang berurutan dari dapur. TARUH piring berikutnya, atau AMBIL piring teratas.');
-  const draw = () => stage.replaceChildren(el('div', { class: 'at-meja' },
-    el('div', { class: 'at-wadah' }, el('div', { class: 'at-dapur' }, input.slice(i).map((c) => plate(c))), el('small', null, 'Dari dapur')),
-    stackView(st),
-    el('div', { class: 'at-wadah' }, el('div', { class: 'at-dapur' }, target.map((c, k) => plate(c, k < out.length ? '' : 'bayang'))), el('small', null, 'Urutan diambil yang diminta'))));
-  const reset = () => { st = []; i = 0; out = []; draw(); };
-  draw();
-  wrap.append(el('p', { class: 'prompt' }, 'Ambil piring tepat dalam urutan yang diminta.'), stage,
-    el('div', { class: 'kode-baris' },
-      button('TARUH', () => { if (finished || i >= input.length) return; st.push(input[i++]); ctx.sound.tap(); draw(); }, 'primary'),
-      button('AMBIL', () => {
-        if (finished || !st.length) return;
-        const c = st.pop();
-        if (c !== target[out.length]) { st.push(c); ctx.mistake(); shake(stage); say(msg, 'bad', `Piring teratas ${c}, padahal yang diminta ${target[out.length]}.${st.includes(target[out.length]) ? ' Piring itu sudah terkubur: ketuk Ulang.' : ''}`); return; }
-        out.push(c); ctx.sound.tap(); draw();
-        if (out.length === target.length) { finished = true; say(msg, '', 'Tepat! Yang terakhir ditaruh selalu yang pertama diambil (LIFO).'); done(); }
-      }, 'primary'),
-      button('Ulang', () => { if (!finished) reset(); })), msg);
-}
-
-function bracketTrace(s) {
-  const r = checkBrackets(s);
-  return el('div', { class: 'at-jejak' }, r.trace.map((t) => el('code', null, t)), el('b', { class: r.ok ? 'at-sah' : 'at-tidak' }, r.ok ? 'sah' : WHY[r.why]));
-}
-
 function clinicRound(wrap, ctx, { list = PASIEN, rule = 'prioritas', done, free = false }) {
   const served = [];
   const rows = [];
@@ -154,6 +119,260 @@ function clinicRound(wrap, ctx, { list = PASIEN, rule = 'prioritas', done, free 
 const table = (rows) => el('div', { class: 'at-tabel' }, el('div', { class: 'at-baris kepala' }, ['', 'Pasien', 'Mulai', 'Selesai', 'Menunggu'].map((h) => el('span', null, h))),
   rows.map((r, k) => el('div', { class: `at-baris g-${r.color}` }, el('span', null, k + 1), el('span', null, r.name), el('span', null, jam(r.start)), el('span', null, jam(r.end)), el('span', null, `${r.wait} mnt`))));
 
+// ---------- Permainan: Mesin Puskesmas ----------
+// The team is the puskesmas app under test: cards really are stacked in a
+// tube and lined up in a lane, and every command is carried out by hand.
+
+const itemView = (v, cls = '', attrs = {}) => (WARNA[v]
+  ? el('button', { type: 'button', class: `at-piring ${cls}`, style: { '--w': WARNA[v] }, ...attrs }, v)
+  : el('button', { type: 'button', class: `at-orang ${cls}`, ...attrs }, v));
+const progView = (ops, k) => el('div', { class: 'at-program' }, ops.map(([op, v], i) => el('span', { class: `at-op ${op === 'AMBIL' || op === 'LAYANI' ? 'keluar' : ''} ${i < k ? 'lewat' : i === k ? 'kini' : ''}` }, `${i + 1}. ${op}${v ? ` ${v}` : ''}`)));
+
+// Misi 1 and 2 · carry out TARUH/AMBIL (stack) or DATANG/LAYANI (queue) by tapping the cards themselves.
+function boxGame(wrap, ctx, { kind, ops, label, done, end }) {
+  const source = ops.filter(([op]) => op === 'TARUH' || op === 'DATANG').map(([, v]) => v);
+  const box = [];
+  const out = [];
+  let k = 0;
+  const stack = kind === 'tumpukan';
+  const msg = el('p', { class: 'reveal info' }, stack ? 'TARUH: ketuk benda yang disebut. AMBIL: ketuk benda yang bisa diambil dari tumpukan.' : 'DATANG: ketuk orang yang datang. LAYANI: ketuk orang yang dilayani loket.');
+  const board = el('div', { class: 'at-papan' });
+  const isIn = ([op]) => op === 'TARUH' || op === 'DATANG';
+  function tapSource(v) {
+    if (k >= ops.length) return;
+    const [op, want] = ops[k];
+    if (!isIn(ops[k])) { ctx.mistake(); say(msg, 'bad', `Perintah sekarang ${op}, bukan menaruh.`); return; }
+    if (v !== want) { ctx.mistake(); say(msg, 'bad', `Perintahnya ${op} ${want}.`); return; }
+    box.push(v); source.splice(source.indexOf(v), 1); step();
+  }
+  function tapBox(i) {
+    if (k >= ops.length) return;
+    const [op] = ops[k];
+    if (isIn(ops[k])) { ctx.mistake(); say(msg, 'bad', `Perintah sekarang ${op} ${ops[k][1]}.`); return; }
+    const want = stack ? box.length - 1 : 0;
+    if (i !== want) { ctx.mistake(); shake(board); say(msg, 'bad', stack ? 'Tumpukan hanya terbuka di atas: ambil yang paling atas.' : 'Loket melayani orang paling depan.'); return; }
+    out.push(stack ? box.pop() : box.shift()); step();
+  }
+  function step() {
+    k += 1; ctx.sound.tap();
+    if (k === ops.length) { draw(); say(msg, '', end); done(); return; }
+    say(msg, 'info', `Perintah ${k + 1}: ${ops[k].filter(Boolean).join(' ')}.`); draw();
+  }
+  function draw() {
+    const boxView = stack
+      ? el('div', { class: 'at-wadah' }, el('div', { class: 'at-tumpuk' }, box.length ? box.map((v, i) => onTap(itemView(v, i === box.length - 1 ? 'puncak' : '', { 'data-box': i }), () => tapBox(i))) : el('span', { class: 'at-kosong' }, 'kosong')), el('small', null, `${label} (atas ↑)`))
+      : el('div', { class: 'at-wadah' }, el('div', { class: 'at-antre' }, el('span', { class: 'at-loket' }, '🪟 Loket'), box.length ? box.map((v, i) => onTap(itemView(v, i === 0 ? 'depan' : '', { 'data-box': i }), () => tapBox(i))) : el('span', { class: 'at-kosong' }, 'kosong')), el('small', null, `${label} (depan ← belakang)`));
+    fill(board, progView(ops, k), el('div', { class: 'at-meja' },
+      el('div', { class: 'at-wadah' }, el('div', { class: 'at-dapur' }, source.length ? source.map((v) => onTap(itemView(v, '', { 'data-src': v }), () => tapSource(v))) : el('span', { class: 'at-kosong' }, '–')), el('small', null, stack ? 'Dari dapur' : 'Pintu masuk')),
+      boxView,
+      el('div', { class: 'at-wadah' }, el('div', { class: 'at-dapur' }, out.length ? out.map((v) => itemView(v, 'jadi')) : el('span', { class: 'at-kosong' }, '–')), el('small', null, stack ? 'Sudah diambil' : 'Sudah dilayani'))));
+  }
+  draw();
+  wrap.append(board, msg);
+}
+
+// Can `target` be taken out of a stack when `input` arrives in order?
+export function stackPossible(input, target) {
+  const st = [];
+  let i = 0;
+  for (const t of target) {
+    while (st.at(-1) !== t) { if (i >= input.length) return false; st.push(input[i++]); }
+    st.pop();
+  }
+  return true;
+}
+
+// Misi 1b · Tebak Urutan: make the requested order with TARUH/AMBIL, or declare it impossible.
+function orderRound(wrap, ctx, { input, targets, done }) {
+  let ti = 0;
+  let st = [];
+  let i = 0;
+  let out = [];
+  const msg = el('p', { class: 'reveal info' }, 'Piring datang berurutan. Susun urutan ambil yang diminta, atau nyatakan tidak mungkin.');
+  const board = el('div', { class: 'at-papan' });
+  const target = () => targets[ti];
+  const reset = () => { st = []; i = 0; out = []; };
+  function finishOne(text) {
+    ctx.sound.good(); ti += 1; reset();
+    if (ti === targets.length) { say(msg, '', `${text} Dari 24 urutan 4 piring, hanya 14 yang mungkin dengan satu tumpukan.`); draw(true); done(); return; }
+    say(msg, 'info', `${text} Pesanan berikutnya.`); draw();
+  }
+  function taruh() { if (ti >= targets.length || i >= input.length) return; st.push(input[i++]); ctx.sound.tap(); draw(); }
+  function ambil() {
+    if (ti >= targets.length || !st.length) return;
+    const c = st.at(-1);
+    const want = target()[out.length];
+    if (c !== want) { ctx.mistake(); shake(board); say(msg, 'bad', `Piring teratas ${c}, padahal yang diminta ${want}.${st.includes(want) ? ' Piring itu terkubur: tekan Ulang, atau nyatakan tidak mungkin.' : ''}`); return; }
+    out.push(st.pop()); ctx.sound.tap();
+    if (out.length === input.length) { finishOne(`${target().join('–')} mungkin!`); return; }
+    draw();
+  }
+  function never() {
+    if (ti >= targets.length) return;
+    if (stackPossible(input, target())) { ctx.mistake(); say(msg, 'bad', 'Urutan ini sebenarnya mungkin. Coba lagi.'); return; }
+    finishOne(`Benar, ${target().join('–')} tidak mungkin: piring yang diminta sudah tertindih piring lain.`);
+  }
+  function draw(over = false) {
+    const t = target() || targets.at(-1);
+    fill(board,
+      el('div', { class: 'at-pesanan' }, el('small', null, over ? 'Semua pesanan selesai' : `Pesanan ${ti + 1} dari ${targets.length}`), el('div', { class: 'at-dapur' }, t.map((c, k) => el('span', { class: `at-piring ${k < out.length ? '' : 'bayang'}`, style: { '--w': WARNA[c] } }, c)))),
+      el('div', { class: 'at-meja' },
+        el('div', { class: 'at-wadah' }, el('div', { class: 'at-dapur' }, input.slice(i).map((c) => el('span', { class: 'at-piring', style: { '--w': WARNA[c] } }, c))), el('small', null, 'Dari dapur')),
+        el('div', { class: 'at-wadah' }, el('div', { class: 'at-tumpuk' }, st.length ? st.map((c, k) => el('span', { class: `at-piring ${k === st.length - 1 ? 'puncak' : ''}`, style: { '--w': WARNA[c] } }, c)) : el('span', { class: 'at-kosong' }, 'kosong')), el('small', null, 'Tumpukan (atas ↑)'))),
+      over ? null : el('div', { class: 'kode-baris' }, button('📥 TARUH', taruh, 'primary'), button('📤 AMBIL', ambil, 'primary'), button('↺ Ulang', () => { reset(); draw(); }), button('🚫 Tidak mungkin', never)));
+  }
+  draw();
+  wrap.append(board, msg);
+}
+
+// Misi 3 · Satpam Kurung: go through the formula; push openers, match closers with the top.
+function guardRound(wrap, ctx, formulas, done) {
+  let f = 0;
+  let pos = 0;
+  let st = [];
+  let verdict = false;
+  const msg = el('p', { class: 'reveal info' }, 'Kurung buka masuk tumpukan. Kurung tutup harus cocok dengan puncak. Angka dan tanda dilewati.');
+  const board = el('div', { class: 'at-papan' });
+  const toks = () => formulas[f].split(' ');
+  const skip = () => { while (pos < toks().length && !'()[]{}'.includes(toks()[pos])) pos += 1; if (pos >= toks().length) verdict = true; };
+  function act(a) {
+    if (f >= formulas.length) return;
+    const tk = toks()[pos];
+    const top = st.at(-1);
+    let want;
+    if (verdict) want = st.length ? 'terbuka' : 'sah';
+    else if ('([{'.includes(tk)) want = 'taruh';
+    else if (!st.length) want = 'kosong';
+    else want = top === PAIR[tk] ? 'pasang' : 'pasangan';
+    if (a !== want) {
+      ctx.mistake(); shake(board);
+      say(msg, 'bad', verdict ? 'Rumus sudah habis. Lihat isi tumpukan.' : '([{'.includes(tk) ? 'Kurung buka selalu ditaruh di tumpukan.' : !st.length ? 'Tumpukannya kosong. Kurung tutup ini tidak punya pasangan.' : `Puncak tumpukan ${top}, kurung tutupnya ${tk}.`);
+      return;
+    }
+    ctx.sound.tap();
+    if (a === 'taruh') { st.push(tk); pos += 1; skip(); draw(); return; }
+    if (a === 'pasang') { st.pop(); pos += 1; skip(); draw(); return; }
+    const text = a === 'sah' ? `${formulas[f]}: sah, tumpukan kosong di akhir.` : `${formulas[f]}: ${WHY[a]}.`;
+    f += 1; pos = 0; st = []; verdict = false;
+    if (f === formulas.length) { say(msg, '', text); draw(true); done(); return; }
+    skip(); say(msg, 'info', `${text} Rumus berikutnya.`); draw();
+  }
+  function draw(over = false) {
+    const t = formulas[Math.min(f, formulas.length - 1)].split(' ');
+    fill(board,
+      el('div', { class: 'au-status at-rumus' }, t.map((x, i) => el('span', { class: over ? '' : i < pos ? 'at-lewat' : i === pos && !verdict ? 'at-kini' : '' }, x)), ' '),
+      el('div', { class: 'at-meja' }, el('div', { class: 'at-wadah at-kurung' }, el('div', { class: 'at-tumpuk' }, st.length ? st.map((c, k) => el('span', { class: `at-piring ${k === st.length - 1 ? 'puncak' : ''}` }, c)) : el('span', { class: 'at-kosong' }, 'kosong')), el('small', null, 'Tumpukan satpam (atas ↑)'))),
+      over ? null : el('div', { class: 'kpb-opsi' }, (verdict
+        ? [['sah', '✅ Sah'], ['terbuka', '🚨 Masih ada kurung terbuka']]
+        : [['taruh', '📥 Taruh di tumpukan'], ['pasang', '🔗 Pasangkan dengan puncak'], ['pasangan', '🚨 Tidak cocok'], ['kosong', '🚨 Tumpukan kosong']]).map(([a, l]) => onTap(el('button', { class: 'kpb-cap', type: 'button', 'data-a': a }, l), () => act(a)))));
+  }
+  skip(); draw();
+  wrap.append(board, msg);
+}
+
+// Misi 4 · Urungkan dan Ulangi with two visible stacks.
+const AKSI = [['ketik', 'Selamat'], ['ketik', ' pagi'], ['tebal', 'pagi'], ['URUNGKAN'], ['URUNGKAN'], ['ketik', ' siang'], ['ULANGI']];
+const aksiName = ([a, v]) => (a === 'ketik' ? `ketik "${v}"` : a === 'tebal' ? `tebalkan "${v}"` : a);
+function undoRound(wrap, ctx, done) {
+  let k = 0;
+  const un = [];
+  const re = [];
+  let pushed = false;
+  let cleared = false;
+  const msg = el('p', { class: 'reveal info' }, 'Aksi baru masuk tumpukan Urungkan. URUNGKAN memindahkan puncaknya ke tumpukan Ulangi. ULANGI memindahkannya kembali.');
+  const board = el('div', { class: 'at-papan' });
+  const text = () => {
+    let s = '';
+    let bold = null;
+    for (const [a, v] of un) { if (a === 'ketik') s += v; else bold = v; }
+    if (bold && s.includes(bold)) { const i = s.lastIndexOf(bold); return [s.slice(0, i), el('b', null, bold), s.slice(i + bold.length)]; }
+    return [s];
+  };
+  function act(a) {
+    if (k >= AKSI.length) return;
+    const cur = AKSI[k];
+    const fresh = cur[0] === 'ketik' || cur[0] === 'tebal';
+    let ok = false;
+    if (fresh && a === 'taruh' && !pushed) { un.push(cur); pushed = true; ok = true; }
+    else if (fresh && a === 'kosong' && re.length && !cleared) { re.length = 0; cleared = true; ok = true; }
+    else if (cur[0] === 'URUNGKAN' && a === 'urung' && un.length) { re.push(un.pop()); ok = true; }
+    else if (cur[0] === 'ULANGI' && a === 'ulang' && re.length) { un.push(re.pop()); ok = true; }
+    else if (cur[0] === 'ULANGI' && a === 'tidak' && !re.length) ok = true;
+    if (!ok) {
+      ctx.mistake(); shake(board);
+      say(msg, 'bad', fresh ? (pushed ? 'Aksi baru sudah masuk. Apa yang terjadi pada tumpukan Ulangi?' : 'Aksi baru masuk tumpukan Urungkan.') : cur[0] === 'URUNGKAN' ? 'URUNGKAN memindahkan puncak Urungkan ke Ulangi.' : re.length ? 'ULANGI memindahkan puncak Ulangi ke Urungkan.' : 'Tumpukan Ulangi kosong. Adakah yang bisa diulang?');
+      return;
+    }
+    ctx.sound.tap();
+    if (fresh && !(pushed && (cleared || !re.length))) { draw(); return; }
+    k += 1; pushed = false; cleared = false;
+    if (k === AKSI.length) { draw(); say(msg, '', 'Teks "Selamat siang". ULANGI tidak berbuat apa-apa karena aksi baru " siang" sudah mengosongkan tumpukan Ulangi.'); done(); return; }
+    say(msg, 'info', `Aksi ${k + 1}: ${aksiName(AKSI[k])}.`); draw();
+  }
+  const tube = (items, label) => el('div', { class: 'at-wadah' }, el('div', { class: 'at-tumpuk' }, items.length ? items.map((x, i) => el('span', { class: `at-orang ${i === items.length - 1 ? 'depan' : ''}` }, aksiName(x))) : el('span', { class: 'at-kosong' }, 'kosong')), el('small', null, label));
+  function draw() {
+    fill(board,
+      el('div', { class: 'at-program' }, AKSI.map((x, i) => el('span', { class: `at-op ${x[0] === 'URUNGKAN' || x[0] === 'ULANGI' ? 'keluar' : ''} ${i < k ? 'lewat' : i === k ? 'kini' : ''}` }, `${i + 1}. ${aksiName(x)}`))),
+      el('div', { class: 'au-status at-layar' }, '📝 ', ...text(), el('span', { class: 'at-kursor' }, '|')),
+      el('div', { class: 'at-meja' }, tube(un, 'Urungkan (atas ↑)'), tube(re, 'Ulangi (atas ↑)')),
+      k < AKSI.length ? el('div', { class: 'kpb-opsi' }, [['taruh', '📥 Taruh aksi di Urungkan'], ['urung', '↪ Urungkan → Ulangi'], ['ulang', '↩ Ulangi → Urungkan'], ['kosong', '🗑 Kosongkan Ulangi'], ['tidak', '🤷 Tidak ada yang diulang']].map(([a, l]) => onTap(el('button', { class: 'kpb-cap', type: 'button', 'data-a': a }, l), () => act(a)))) : null);
+  }
+  draw();
+  wrap.append(board, msg);
+}
+
+// Misi Bos · antrean dari dua tumpukan MASUK dan KELUAR.
+const DUA = [['DATANG', '1'], ['DATANG', '2'], ['DATANG', '3'], ['LAYANI'], ['DATANG', '4'], ['LAYANI'], ['LAYANI'], ['LAYANI']];
+function twoStackRound(wrap, ctx, done) {
+  let k = 0;
+  const masuk = [];
+  const keluar = [];
+  const out = [];
+  let poured = false;
+  const msg = el('p', { class: 'reveal info' }, 'DATANG: ketuk tumpukan MASUK. LAYANI: ambil dari puncak KELUAR. Bila KELUAR kosong, tuang dulu MASUK ke KELUAR satu per satu.');
+  const board = el('div', { class: 'at-papan' });
+  function act(a) {
+    if (k >= DUA.length) return;
+    const [op, v] = DUA[k];
+    if (op === 'DATANG') {
+      if (a !== 'masuk') { ctx.mistake(); say(msg, 'bad', 'Orang yang datang masuk ke tumpukan MASUK.'); return; }
+      masuk.push(v); k += 1; ctx.sound.tap();
+    } else if (a === 'tuang') {
+      if ((keluar.length && !poured) || !masuk.length) { ctx.mistake(); say(msg, 'bad', keluar.length ? 'KELUAR masih berisi. Tuang hanya bila KELUAR kosong.' : 'MASUK kosong.'); return; }
+      keluar.push(masuk.pop()); poured = true; ctx.sound.tap(); draw(); return;
+    } else if (a === 'keluar') {
+      if (!keluar.length) { ctx.mistake(); say(msg, 'bad', 'KELUAR kosong. Tuang dulu dari MASUK.'); return; }
+      if (poured && masuk.length) { ctx.mistake(); say(msg, 'bad', 'Tuang sampai MASUK kosong dulu, supaya yang datang paling awal ada di puncak KELUAR.'); return; }
+      out.push(keluar.pop()); k += 1; poured = false; ctx.sound.tap();
+    } else { ctx.mistake(); say(msg, 'bad', 'Puncak MASUK adalah orang yang datang paling akhir. Ambil dari KELUAR.'); return; }
+    if (k === DUA.length) { draw(); say(msg, '', `Yang dilayani: ${out.join(', ')}. Dua tumpukan bekerja seperti satu antrean: urutan dibalik dua kali.`); done(); return; }
+    say(msg, 'info', `Perintah ${k + 1}: ${DUA[k].filter(Boolean).join(' ')}.`); draw();
+  }
+  const tube = (items, label, a) => onTap(el('div', { class: 'at-wadah at-tabung', role: 'button', 'data-a': a }, el('div', { class: 'at-tumpuk' }, items.length ? items.map((x, i) => el('span', { class: `at-orang ${i === items.length - 1 ? 'depan' : ''}` }, x)) : el('span', { class: 'at-kosong' }, 'kosong')), el('small', null, label)), () => act(a));
+  function draw() {
+    const tuang = DUA[k] && DUA[k][0] === 'LAYANI' && !keluar.length && masuk.length;
+    fill(board, progView(DUA, k),
+      el('div', { class: 'at-meja' }, tube(masuk, 'MASUK (atas ↑)', 'masuk'),
+        el('div', { class: 'at-wadah' }, onTap(el('button', { class: `kpb-cap ${tuang ? 'besar' : ''}`, type: 'button', 'data-a': 'tuang' }, '⤳ Tuang 1'), () => act('tuang'))),
+        tube(keluar, 'KELUAR (atas ↑)', 'keluar'),
+        el('div', { class: 'at-wadah' }, el('div', { class: 'at-dapur' }, out.length ? out.map((x) => el('span', { class: 'at-orang jadi' }, x)) : el('span', { class: 'at-kosong' }, '–')), el('small', null, 'Sudah dilayani'))));
+  }
+  draw();
+  wrap.append(board, msg);
+}
+
+const HEAD03 = {
+  piring: ['Meja Piring', 'Kalian mesin aplikasi puskesmas yang sedang diuji. Pemanasan di dapur hajatan: jalankan perintah tumpukan piring dengan tangan.'],
+  urutan: ['Tebak Urutan', 'Piring merah, biru, hijau, kuning datang berurutan. Bisakah pesanan urutan ambil ini dibuat dengan satu tumpukan?'],
+  loket: ['Loket', 'Loket pendaftaran puskesmas memakai antrean. Jalankan perintah DATANG dan LAYANI.'],
+  salah: ['Loket Salah Pasang', 'Programnya keliru memakai tumpukan untuk loket! Jalankan perintah yang sama dan lihat siapa yang dilayani.'],
+  kurung: ['Satpam Kurung', 'Aplikasi menghitung dosis obat dari rumus. Periksa pasangan kurung dengan tumpukan sebelum rumus dipakai.'],
+  undo: ['Urungkan dan Ulangi', 'Petugas mengetik pengumuman. Jalankan aksi satu per satu dengan dua tumpukan.'],
+  triase: ['Triase', 'Satu dokter, 10 menit per pasien, mulai 08.00. Gelang merah dulu, lalu kuning, lalu hijau.'],
+  fifo: ['Triase: Antrean Biasa', 'Bandingkan: hari ini aplikasi memakai antrean biasa. Siapa datang dulu, dilayani dulu.'],
+  boss: ['Antrean dari Dua Tumpukan', 'Mesin puskesmas hanya punya dua tumpukan, MASUK dan KELUAR. Bisakah keduanya melayani pasien seperti antrean?'],
+};
+
 export default {
   id: 'sma-03-antrean-tumpukan',
   title: 'Antrean Loket dan Tumpukan Piring',
@@ -172,32 +391,26 @@ export default {
     { id: 'giliran', icon: '🔁', label: 'Tebak Isi Akhir', desc: 'Satu tim menyusun urutan perintah, tim berikutnya menebak isi akhir tumpukan atau antrean sebelum perintah dijalankan', create: createTeams },
   ],
   create(root, ctx) {
-    const wrap = el('div', { class: 'act antrean-tumpukan' });
+    const wrap = el('div', { class: 'act antrean-tumpukan at-main' });
     root.append(wrap);
-    const rumus = ctx.rand.shuffle([1, 2, 4]).slice(0, 2);
     function render() {
       wrap.replaceChildren();
       const r = ctx.round;
       let solved = false;
-      const next = () => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, 2400); } };
-      const ask = (prompt, opts, columns = 1, subject = null, onRight = next) => choice(wrap, { prompt, subject, ctx, shuffle: true, onRight, columns, options: opts.map(([l, correct]) => ({ label: String(l), correct })) });
-      const then = (fn) => () => { wrap.replaceChildren(); fn(); };
-      const bracketAsk = (k, onRight) => ask(`Rumus ${'abcde'[k]}: apakah pasangan kurungnya sah?`, [['Sah', checkBrackets(RUMUS[k]).ok], ...Object.entries(WHY).map(([w, l]) => [l, checkBrackets(RUMUS[k]).why === w])], 1, el('div', { class: 'au-status' }, RUMUS[k]), () => { wrap.append(bracketTrace(RUMUS[k])); onRight(); });
-      if (r === 0) ask('Tumpukan piring hajatan, mulai kosong. Piring apa saja yang diambil, berurutan?', [['hijau, kuning, biru', true], ['merah, biru, hijau'], ['hijau, biru, merah'], ['kuning, hijau, biru']], 1, opsView(STACK_OPS),
-        then(() => ask('Isi tumpukan di akhir, dari bawah ke atas?', [['merah, putih', true], ['putih, merah'], ['merah, biru, putih'], ['kuning, putih']], 2, el('div', null, opsView(STACK_OPS)),
-          () => { wrap.append(stackView(runOps('tumpukan', STACK_OPS).box)); next(); })));
-      else if (r === 1) ask('Antrean loket stasiun, mulai kosong. Siapa saja yang dilayani, berurutan, dan siapa yang masih mengantre?', [['Dilayani Ani, Budi, Citra; masih mengantre Dodi, Eka', true], ['Dilayani Citra, Dodi, Eka; masih mengantre Ani, Budi'], ['Dilayani Ani, Budi, Citra; masih mengantre Eka, Dodi'], ['Dilayani Citra, Budi, Ani; masih mengantre Dodi, Eka']], 1, opsView(QUEUE_OPS),
-        then(() => ask('Mengapa loket memakai antrean, bukan tumpukan?', [['Antrean adil: yang datang dulu dilayani dulu. Dengan tumpukan, yang baru datang langsung dilayani dan yang pertama bisa menunggu sangat lama', true], ['Tumpukan lebih cepat, tetapi lebih mahal'], ['Tidak ada bedanya'], ['Karena loket hanya bisa melayani satu orang']], 1, queueView(runOps('antrean', QUEUE_OPS).box))));
-      else if (r === 2) permRound(wrap, ctx, { done: next });
-      else if (r === 3) bracketAsk(rumus[0], then(() => bracketAsk(rumus[1], next)));
-      else if (r === 4) bracketAsk(0, then(() => bracketAsk(3, next)));
-      else if (r === 5) ask('Tombol urungkan. Langkah: 1 ketik "Selamat", 2 ketik " pagi", 3 tebalkan "pagi", 4 URUNGKAN, 5 URUNGKAN. Setelah langkah 5, apa teks di layar dan isi tumpukan ulangi (bawah → atas)?', [['"Selamat"; ulangi: tebalkan, ketik " pagi"', true], ['"Selamat pagi"; ulangi: tebalkan'], ['"Selamat"; ulangi: ketik " pagi", tebalkan'], ['"" (kosong); ulangi: ketik "Selamat"']], 1, null,
-        then(() => ask('Langkah 6: ketik " siang". Langkah 7: ULANGI. Apa yang terjadi?', [['Tidak terjadi apa-apa: aksi baru di langkah 6 mengosongkan tumpukan ulangi', true], ['Kata " pagi" kembali: "Selamat siang pagi"'], ['Teks menjadi tebal'], ['Kata " siang" terhapus']])));
-      else if (r === 6) clinicRound(wrap, ctx, { done: next });
-      else if (r === 7) ask('Dengan antrean biasa (FIFO): Ahmad, Sinta, Raffi, Jono, Ijah, Bayu. Berapa menit Pak Jono dan Mas Bayu menunggu, dan bagaimana rata-ratanya dibanding antrean prioritas?', [['Jono 23, Bayu 35; rata-rata keduanya sama 18,17 menit, tetapi dengan prioritas pasien gawat hanya menunggu 3 dan 5 menit', true], ['Jono 3, Bayu 5; FIFO lebih cepat'], ['Jono 23, Bayu 35; FIFO rata-ratanya jauh lebih kecil'], ['Jono 30, Bayu 50; prioritas rata-ratanya lebih kecil']], 1, table(schedule(PASIEN, 'fifo')));
-      else if (r === 8) ask('Dek Raffi (hijau) menunggu paling lama. Aturan apa yang mencegah pasien hijau menunggu tanpa batas bila pasien merah dan kuning terus berdatangan?', [['Naikkan prioritas atau periksa ulang pasien yang sudah menunggu melewati batas waktu, atau tambah tenaga untuk pasien hijau', true], ['Hapus pasien hijau dari antrean'], ['Layani pasien hijau lebih dulu dari pasien merah'], ['Tidak perlu aturan apa pun']]);
-      else ask('Tantangan: antrean dari dua tumpukan, MASUK dan KELUAR. DATANG 1, 2, 3, LAYANI, DATANG 4, LAYANI, LAYANI, LAYANI. Urutan yang dilayani?', [['1, 2, 3, 4: sama dengan antrean biasa', true], ['3, 2, 1, 4'], ['3, 4, 2, 1'], ['1, 4, 2, 3']], 1, null,
-        () => { const t = twoStacks([['DATANG', '1'], ['DATANG', '2'], ['DATANG', '3'], ['LAYANI']]); wrap.append(el('div', { class: 'at-meja' }, stackView(t.masuk, 'MASUK'), stackView(t.keluar.map(String), 'KELUAR setelah LAYANI pertama'))); next(); });
+      const next = (wait = 3600) => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, wait); } };
+      const head = (key, no) => wrap.append(misiHead(no, ...HEAD03[key], '🏥'));
+      if (r === 0) { head('piring', 1); boxGame(wrap, ctx, { kind: 'tumpukan', ops: STACK_OPS, label: 'Tumpukan piring', done: () => next(), end: 'Diambil hijau, kuning, biru; tersisa merah dan putih. Yang terakhir ditaruh, pertama diambil.' }); }
+      else if (r === 1) { head('loket', 2); boxGame(wrap, ctx, { kind: 'antrean', ops: QUEUE_OPS, label: 'Antrean loket', done: () => next(), end: 'Dilayani Ani, Budi, Citra; masih mengantre Dodi dan Eka. Yang datang dulu, dilayani dulu.' }); }
+      else if (r === 2) { head('urutan', 1); orderRound(wrap, ctx, { input: ['merah', 'biru', 'hijau', 'kuning'], targets: [['hijau', 'kuning', 'biru', 'merah'], ['hijau', 'merah', 'biru', 'kuning'], ['biru', 'hijau', 'merah', 'kuning']], done: () => next(4600) }); }
+      else if (r === 3) { head('kurung', 3); guardRound(wrap, ctx, [RUMUS[0], RUMUS[1]], () => next()); }
+      else if (r === 4) { head('undo', 4); undoRound(wrap, ctx, () => next(4600)); }
+      else if (r === 5) { head('triase', 5); clinicRound(wrap, ctx, { done: () => next(4600) }); }
+      else if (r === 6) { head('salah', 2); boxGame(wrap, ctx, { kind: 'tumpukan', ops: QUEUE_OPS.map(([op, v]) => [op, v]), label: 'Loket salah pasang', done: () => next(4600), end: 'Citra, Dodi, Eka dilayani, padahal Ani dan Budi datang paling awal dan masih menunggu. Tumpukan tidak adil untuk antrean.' }); }
+      else if (r === 7) { head('kurung', 3); guardRound(wrap, ctx, [RUMUS[2], RUMUS[3], RUMUS[4]], () => next()); }
+      else if (r === 8) {
+        head('fifo', 5);
+        clinicRound(wrap, ctx, { rule: 'fifo', done: () => { wrap.append(el('p', { class: 'reveal info' }, 'Rata-rata menunggu sama, 109 : 6 ≈ 18,17 menit. Tetapi dengan prioritas Pak Jono (merah) menunggu 3 menit, dengan antrean biasa 23 menit.')); next(6000); } });
+      } else { head('boss', 'Bos'); twoStackRound(wrap, ctx, () => next(4600)); }
     }
     render();
   },
