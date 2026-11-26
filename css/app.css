@@ -6488,7 +6488,7 @@ button.at-orang { font-size: clamp(0.55rem, 3.4cqmin, 1.8rem); }
 @container (max-height: 520px) { .tk9-main .kd-peta svg { max-height: 40cqh; } }
 @container (max-aspect-ratio: 1/1) { .tk9-main .kd-peta svg { max-height: 40cqh; } .tk9-main .tk9-antre { font-size: clamp(0.5rem, 2cqmin, 1rem); } }
 @container (max-width: 1000px) and (min-height: 600px) { .tk9-main .kd-peta svg { max-height: 38cqh; } .tk9-main .kode-baris .btn { font-size: clamp(0.7rem, 3cqmin, 1.4rem); } }
-:is(.kk-main, .rh-main, .pk6-main, .mph-main, .pp8-main, .tk9-main, .kb10-main, .gk11-main, .rk13-main) .reveal { font-size: clamp(0.7rem, 3cqmin, 1.6rem); text-wrap: balance; }
+:is(.kk-main, .rh-main, .pk6-main, .mph-main, .pp8-main, .tk9-main, .kb10-main, .gk11-main, .rk13-main, .nd14-main) .reveal { font-size: clamp(0.7rem, 3cqmin, 1.6rem); text-wrap: balance; }
 @container (max-width: 1000px) and (min-height: 600px) { .tk9-main .kd-peta svg { max-height: 46cqh; } }
 
 /* sma-10 Konter Bagasi */
@@ -6616,3 +6616,11 @@ button.at-orang { font-size: clamp(0.55rem, 3.4cqmin, 1.8rem); }
 .rk13-status.bad { color: #b91c1c; }
 .rk13-kejadian-area { display: flex; flex-direction: column; align-items: center; gap: 0.6cqmin; width: 100%; }
 @container (max-height: 520px) { .rk13-main .misi-tujuan { display: none; } .rk13-kolom { min-height: 4.6em; } .rk13-kartu small { display: none; } .rk13-main .ju-graf svg { max-height: 50cqh; } .rk13-baki, .rk13-sesi-baris { font-size: clamp(0.55rem, 3.6cqmin, 1.3rem); } .rk13-orang, .rk13-status { font-size: clamp(0.5rem, 3cqmin, 1.15rem); } .rk13-murid-besar { font-size: clamp(0.6rem, 3.2cqmin, 1.5rem); } }
+
+/* sma-14 Nyalakan Desa */
+.nd14-main { gap: 0.5cqmin; }
+.nd14-hitung { display: flex; flex-wrap: wrap; gap: 0.3em 1.2em; justify-content: center; font-size: clamp(0.6rem, 2.8cqmin, 1.4rem); font-weight: 700; color: #334155; }
+.nd14-area { display: flex; flex-direction: column; align-items: center; gap: 0.6cqmin; width: 100%; }
+.nd14-main .mb-peta svg { max-height: 52cqh; }
+.nd14-main .mb-peta.kecil svg { height: 40cqh; }
+@container (max-height: 520px) { .nd14-main .misi-tujuan { display: none; } .nd14-main .mb-peta svg { max-height: 46cqh; } .nd14-main .mb-peta.kecil svg { height: 40cqh; } }
