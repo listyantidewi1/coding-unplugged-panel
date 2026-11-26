@@ -169,7 +169,7 @@ function seats(o) {
 function objCard16(name, o, { pend = null, changed = [] } = {}) {
   const A = o.cls === 'Angkot';
   const keys = KEYS16[o.cls].filter((k) => k in o || pend === k);
-  return el('div', { class: `ka16-objek ${A ? 'angkot' : 'ojek'} ${isBad(o) ? 'mustahil' : ''}`, 'data-o': name },
+  return el('div', { class: `ka16-objek ${A ? 'is-angkot' : 'is-ojek'} ${isBad(o) ? 'mustahil' : ''}`, 'data-o': name },
     el('div', { class: 'ka16-objek-kepala' }, `${A ? '🚐' : '🏍️'} ${name} : ${o.cls}`),
     'kapasitas' in o ? seats(o) : null,
     el('div', { class: 'ka16-attrs' }, keys.length ? keys.map((k) => el('div', { class: `ka16-attr ${changed.includes(k) ? 'baru' : ''} ${pend === k ? 'tanya' : ''}` }, el('span', null, k), el('b', null, pend === k ? '?' : show(o[k])))) : el('div', { class: 'ka16-attr kosong' }, el('span', null, 'belum ada atribut'))),
