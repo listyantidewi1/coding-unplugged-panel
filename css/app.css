@@ -241,6 +241,10 @@ button:focus-visible, a:focus-visible { outline: 4px solid #f59e0b; outline-offs
   justify-content: space-evenly;
   padding: 2cqmin 3cqmin;
   gap: 2cqmin;
+  /* Content taller than the pane scrolls inside the pane instead of being cut off. */
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
 }
 .prompt { margin: 0; text-align: center; font-weight: 700; font-size: clamp(0.8rem, 5cqmin, 2.2rem); }
 .act .btn { font-size: clamp(0.8rem, 4.5cqmin, 1.6rem); min-height: max(2.2rem, 9cqmin); }
@@ -1405,8 +1409,8 @@ button.bit-sel { cursor: pointer; }
 .tk-baris.salah { outline: max(3px, 0.5cqmin) solid #ef4444; }
 .tk-baris .seg-btn { min-width: 2.2em; font-weight: 900; }
 .foto-wadah { display: flex; flex-direction: column; align-items: center; gap: 0.6cqmin; }
-.batik { width: min(52cqw, calc((100cqh - 40cqmin) * 1.6)); height: auto; border-radius: 1cqmin; border: 2px solid #94a3b8; }
-.subject .batik { width: min(40cqw, calc((100cqh - 60cqmin) * 1.6)); }
+.lm-batik { width: min(52cqw, calc((100cqh - 40cqmin) * 1.6)); height: auto; border-radius: 1cqmin; border: 2px solid #94a3b8; }
+.subject .lm-batik { width: min(40cqw, calc((100cqh - 60cqmin) * 1.6)); }
 .foto-geser { width: min(60cqw, 34rem); }
 @container (max-height: 520px) {
   .lagu-mampat .kata { font-size: clamp(0.5rem, 2.5cqmin, 1.1rem); }
@@ -6026,3 +6030,30 @@ button.cri-cek { cursor: pointer; }
 .rk-kartu-besar { display: flex; align-items: center; gap: 1.4cqmin; max-width: min(46em, 92cqw); padding: 1.2cqmin 2cqmin; border-radius: 1.6cqmin; background: #fef3c7; color: #431407; font-size: clamp(0.65rem, 2.4cqmin, 1.2rem); font-weight: 700; text-align: left; }
 .rk-kartu-besar b { font-size: 2em; color: #b45309; }
 .rk-kode code { overflow-wrap: anywhere; }
+
+/* ---------- Tata letak panel: perbaikan tumpukan dan luapan (2026-11) ---------- */
+/* Rows of "picture + controls" wrap in narrow race panes instead of spilling past the edge. */
+.house-layout, .kuota-layout, .kb-samping, .mb-samping, .mr-isi { flex-wrap: wrap; max-width: 100%; }
+.kb-kanan { max-width: 100%; overflow-x: auto; }
+.mb-tabel-wadah { max-width: 100%; }
+.mb-tabel { font-size: clamp(0.5rem, min(2.4cqmin, 1.75cqw), 1.2rem); }
+/* Python code wraps inside its box instead of running into the panel beside it. */
+.sk-kode.py code { white-space: pre-wrap; overflow-wrap: anywhere; }
+/* sda-06: a rotated diamond is ~41% taller than its box; leave room for the label under it. */
+.gate-diamond { margin-block: calc(min(8cqw, 10cqh) * 0.22 + 0.6cqmin); }
+.tp-kepala { overflow-wrap: anywhere; font-size: clamp(0.55rem, min(2.6cqmin, 1.4cqw), 1.2rem); }
+/* Long words and URLs break inside cards and keys. */
+.ht-kartu, .dtb-sel, .kj-teks, .chart-key .k { overflow-wrap: anywhere; min-width: 0; }
+.key.wide { line-height: 1.05; font-size: min(1em, 2.6cqmin); padding: 0 0.2em; }
+.kg-gelas { min-width: 2.5em; }
+.kg-gelas-baris { gap: 0.2em; }
+.chart-key { flex-wrap: wrap; gap: 0.4em 2cqw; }
+/* sma-32: the P/E/T buttons go under the task text when the pane is narrow. */
+@container (max-width: 1200px) {
+  .kj-tugas { grid-template-columns: 2.2em minmax(0, 1fr); }
+  .kj-tanda { grid-column: 2; }
+}
+/* sdl-31: map labels stay inside their cells. */
+.dtb-sel { overflow: hidden; }
+.lpy-pita { grid-template-columns: max(11cqmin, 4.8rem) repeat(var(--n), minmax(0, 1fr)); }
+.lpy-tombol { width: max(15cqmin, 9em); }
