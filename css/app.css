@@ -6053,6 +6053,21 @@ button.cri-cek { cursor: pointer; }
   .kj-tugas { grid-template-columns: 2.2em minmax(0, 1fr); }
   .kj-tanda { grid-column: 2; }
 }
+/* Audit per soal: blocks never get wider than the pane; rows wrap, wide tables scroll inside themselves. */
+.act > * { max-width: 100%; }
+.senter-row, .ck-lab, .kop-samping, .sv-dua, .sus-ekstra { flex-wrap: wrap; max-width: 100%; }
+.sus-ekstra .sus-larik { flex-wrap: wrap; }
+.sd-dua { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@container (max-width: 1200px) { .sd-dua { grid-template-columns: minmax(0, 1fr); } }
+.mr-tabel, .fa-tabel, .ik-tabel, .bk-tabel { display: block; max-width: 100%; overflow-x: auto; }
+.opt-label, .opt { overflow-wrap: anywhere; }
+.ojek-tempat { width: 4.6em; height: 4.6em; }
+.sk-kode.py code, .sk-kode code { overflow-wrap: anywhere; }
+.sk-kode li { white-space: pre-wrap; }
+.subject .sk-kode { max-width: 100%; }
+.ck-wadah { max-width: 100%; min-width: 0; }
+.ck-wadah > * { max-width: 100%; flex-wrap: wrap; }
+.hc-baris > span { overflow-wrap: anywhere; min-width: 0; }
 /* sdl-31: map labels stay inside their cells. */
 .dtb-sel { overflow: hidden; }
 .lpy-pita { grid-template-columns: max(11cqmin, 4.8rem) repeat(var(--n), minmax(0, 1fr)); }
