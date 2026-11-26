@@ -6471,3 +6471,20 @@ button.at-orang { font-size: clamp(0.55rem, 3.4cqmin, 1.8rem); }
 .pp8-main > .prompt { font-size: clamp(0.65rem, 2.8cqmin, 1.4rem); margin: 0; }
 .pp8-main .ps8-garis { grid-template-columns: 4.6em repeat(var(--hari), minmax(1.2em, 1fr)); min-width: 0; }
 @container (max-height: 520px) { .pp8-main .ps8-garis { grid-auto-rows: max(0.9em, min(2em, 3.7cqh)); } .pp8-jadwal .misi-tujuan { display: none; } }
+
+/* sma-09 Tender Kabel Desa */
+.tk9-anggaran { display: flex; align-items: center; gap: 0.5em; font-size: clamp(0.55rem, 2.6cqmin, 1.3rem); }
+.tk9-anggaran small { font-weight: 900; color: #475569; }
+.tk9-pipa { display: block; width: min(16em, 40cqw); height: 0.8em; border-radius: 0.4em; background: #e2e8f0; overflow: hidden; }
+.tk9-pipa i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #22c55e, #eab308); transition: width 0.3s; }
+.tk9-anggaran.lewat .tk9-pipa i { background: #dc2626; }
+.tk9-anggaran b { font-variant-numeric: tabular-nums; }
+.tk9-antre { display: flex; flex-wrap: wrap; gap: 0.25em; justify-content: center; font-size: clamp(0.5rem, 2.3cqmin, 1.15rem); max-width: 100%; }
+.tk9-antre span { padding: 0.1em 0.45em; border-radius: 0.35em; background: #f1f5f9; color: #475569; font-weight: 700; white-space: nowrap; }
+.tk9-antre span.kini { background: #fed7aa; color: #9a3412; outline: 2px solid #f97316; }
+.tk9-antre span.ambil { background: #dcfce7; color: #166534; }
+.tk9-antre span.tolak { background: #f1f5f9; color: #94a3b8; text-decoration: line-through; }
+.tk9-main .kd-peta svg { max-height: 50cqh; }
+@container (max-height: 520px) { .tk9-main .kd-peta svg { max-height: 40cqh; } }
+@container (max-aspect-ratio: 1/1) { .tk9-main .kd-peta svg { max-height: 40cqh; } .tk9-main .tk9-antre { font-size: clamp(0.5rem, 2cqmin, 1rem); } }
+@container (max-width: 1000px) and (min-height: 600px) { .tk9-main .kd-peta svg { max-height: 38cqh; } .tk9-main .kode-baris .btn { font-size: clamp(0.7rem, 3cqmin, 1.4rem); } }

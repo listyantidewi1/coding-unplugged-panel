@@ -5,6 +5,7 @@
 import { el, onTap, button, shake } from '../core/util.js';
 import { choice } from '../core/kit.js';
 import { say, pickTeams, scoreBar, finishBoard } from './sma-kit.js';
+import { misiHead, fill } from './misi-kit.js';
 
 export const DUSUN = { K: ['Krajan', 14, 42], N: ['Ngasem', 38, 12], S: ['Sumberejo', 40, 52], T: ['Tegalsari', 26, 86], W: ['Wonorejo', 72, 28], G: ['Gunungsari', 66, 80], P: ['Pandanwangi', 92, 54] };
 export const KABEL = [['K', 'N', 12], ['K', 'S', 7], ['K', 'T', 15], ['N', 'S', 9], ['N', 'W', 10], ['W', 'P', 5], ['S', 'W', 11], ['S', 'T', 6], ['S', 'G', 14], ['T', 'G', 8], ['W', 'G', 13], ['G', 'P', 16]];
@@ -35,7 +36,7 @@ export function pathBetween(edges, a, b) {
   const out = []; for (let x = b; x; x = prev[x]) out.unshift(x); return out;
 }
 
-export function mapSvg({ chosen = [], red = [], cut = [], cost = {}, lit = [], tap = true, nodes = new Set() } = {}) {
+export function mapSvg({ chosen = [], red = [], cut = [], cost = {}, lit = [], tap = true, nodes = new Set(), color = null, dim = new Set(), tapNode = false, mark = new Set() } = {}) {
   const P = (d) => [DUSUN[d][1] * 6, DUSUN[d][2] * 4];
   const lines = KABEL.map((e, i) => {
     const [x1, y1] = P(e[0]); const [x2, y2] = P(e[1]);
@@ -44,7 +45,7 @@ export function mapSvg({ chosen = [], red = [], cut = [], cost = {}, lit = [], t
     const mx = (x1 + x2) / 2; const my = (y1 + y2) / 2;
     return `<g ${tap ? `data-e="${i}" class="kd-kabel"` : ''}><line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="transparent" stroke-width="26"/><line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${col}" stroke-width="${on || bad || hl ? 7 : 4}" ${isCut ? 'stroke-dasharray="8 8"' : ''} stroke-linecap="round"/><circle cx="${mx}" cy="${my}" r="15" fill="#fff" stroke="${col}" stroke-width="2"/><text x="${mx}" y="${my + 5}" font-size="14" font-weight="800" text-anchor="middle" fill="#111827">${cost[i] ?? e[2]}</text></g>`;
   });
-  const dots = Object.entries(DUSUN).map(([d, [n]]) => { const [x, y] = P(d); return `<g><circle cx="${x}" cy="${y}" r="14" fill="${d === 'K' ? '#fde047' : nodes.has(d) ? '#bbf7d0' : '#e0e7ff'}" stroke="#334155" stroke-width="2.5"/><text x="${x}" y="${y + 5}" font-size="13" font-weight="900" text-anchor="middle">${d}</text><text x="${x}" y="${y + (y > 300 ? 32 : -20)}" font-size="13" font-weight="700" text-anchor="middle" fill="#334155">${n}${d === 'K' ? ' (balai desa)' : ''}</text></g>`; });
+  const dots = Object.entries(DUSUN).map(([d, [n]]) => { const [x, y] = P(d); return `<g${tapNode ? ` data-d="${d}" class="kd-kabel"` : ''}${dim.has(d) ? ' opacity="0.35"' : ''}>${tapNode ? `<circle cx="${x}" cy="${y}" r="26" fill="transparent"/>` : ''}<circle cx="${x}" cy="${y}" r="14" fill="${color ? color[d] : d === 'K' ? '#fde047' : nodes.has(d) ? '#bbf7d0' : '#e0e7ff'}" stroke="${mark.has(d) ? '#dc2626' : '#334155'}" stroke-width="${mark.has(d) ? 5 : 2.5}"/><text x="${x}" y="${y + 5}" font-size="13" font-weight="900" text-anchor="middle">${d}</text><text x="${x}" y="${y + (y > 300 ? 32 : -20)}" font-size="13" font-weight="700" text-anchor="middle" fill="#334155">${n}${d === 'K' ? ' (balai desa)' : ''}</text></g>`; });
   return `<svg viewBox="40 10 540 370" role="img" aria-label="Peta dusun">${lines.join('')}${dots.join('')}</svg>`;
 }
 
@@ -104,6 +105,315 @@ function boardRound(wrap, ctx, { rule, cost = {}, prompt, hint, done }) {
 }
 const costTable = (cost = {}) => el('div', { class: 'kd-tabel' }, KABEL.map((e, i) => el('span', null, nama(e), el('b', null, cost[i] ?? e[2]))));
 
+// ---- Tender Kabel Desa: the missions ----
+
+const WARNA9 = ['#fca5a5', '#fdba74', '#fde047', '#86efac', '#7dd3fc', '#c4b5fd', '#f9a8d4'];
+const KODE9 = Object.keys(DUSUN);
+const cname = (i) => `${KABEL[i][0]}–${KABEL[i][1]}`;
+function groupColors(edges) {
+  const u = uf();
+  for (const i of edges) u.join(KABEL[i][0], KABEL[i][1]);
+  const roots = {};
+  return Object.fromEntries(KODE9.map((d) => { const r = u.find(d); roots[r] ??= WARNA9[KODE9.indexOf(r)]; return [d, roots[r]]; }));
+}
+function budget(max = 60) {
+  const bar = el('i');
+  const num = el('b');
+  const node = el('div', { class: 'tk9-anggaran' }, el('small', null, '💰 Anggaran'), el('span', { class: 'tk9-pipa' }, bar), num);
+  return { node, set(v) { bar.style.width = `${Math.min(100, (v / max) * 100)}%`; num.textContent = `${v} / ${max} juta`; node.classList.toggle('lewat', v > max); } };
+}
+const mapBox = (cls = '') => el('div', { class: `kd-peta ${cls}` });
+const onMap = (box, sel, fn) => box.addEventListener('pointerdown', (e) => { const g = e.target.closest(sel); if (!g) return; e.preventDefault(); fn(g); });
+
+// Misi Kruskal Berwarna: cables queue up from the cheapest; take or refuse each.
+function kruskalRound(wrap, ctx, { cost = {}, done }) {
+  const order = KABEL.map((_, i) => i).sort((a, b) => (cost[a] ?? KABEL[a][2]) - (cost[b] ?? KABEL[b][2]));
+  const c = (i) => cost[i] ?? KABEL[i][2];
+  let k = 0;
+  const take = [];
+  const refused = [];
+  const box = mapBox();
+  const queue = el('div', { class: 'tk9-antre' });
+  const money = budget();
+  const ctl = el('div', { class: 'kode-baris' });
+  const msg = el('p', { class: 'reveal info' }, 'Kabel datang dari yang termurah. Dusun yang tersambung berbagi warna kelompok. Kabel di antara dua dusun sewarna membuat putaran.');
+  const draw = () => {
+    const cur = order[k];
+    box.innerHTML = mapSvg({ chosen: take, cut: refused, lit: cur != null ? [cur] : [], cost, tap: false, color: groupColors(take) });
+    fill(queue, order.map((i, j) => el('span', { class: j < k ? (take.includes(i) ? 'ambil' : 'tolak') : j === k ? 'kini' : '' }, `${cname(i)} ${c(i)}`)));
+    money.set(take.reduce((s, i) => s + c(i), 0));
+    fill(ctl, cur != null && take.length < 6 ? [
+      onTap(el('button', { class: 'btn primary', type: 'button', 'data-aksi': 'ambil' }, `✔ Ambil ${cname(cur)}`), () => judge(true)),
+      onTap(el('button', { class: 'btn', type: 'button', 'data-aksi': 'tolak' }, '✖ Tolak: putaran'), () => judge(false))] : null);
+  };
+  function judge(yes) {
+    const i = order[k];
+    const col = groupColors(take);
+    const loop = col[KABEL[i][0]] === col[KABEL[i][1]];
+    if (yes === loop) { ctx.mistake(); shake(ctl); say(msg, 'bad', loop ? `${DUSUN[KABEL[i][0]][0]} dan ${DUSUN[KABEL[i][1]][0]} sudah sewarna: kabel ini membuat putaran.` : `${DUSUN[KABEL[i][0]][0]} dan ${DUSUN[KABEL[i][1]][0]} beda warna: kabel ini menggabungkan dua kelompok. Ambil!`); return; }
+    (yes ? take : refused).push(i);
+    k++;
+    ctx.sound.tap();
+    if (take.length === 6) {
+      for (; k < order.length; k++) refused.push(order[k]);
+      draw();
+      const total = take.reduce((s, x) => s + c(x), 0);
+      say(msg, '', `Satu warna setelah kabel ke-6: ${take.map(cname).join(', ')}. Biaya ${total} juta; memasang kedua belas kabel ${KABEL.reduce((s, _, x) => s + c(x), 0)} juta. Sisa kabel pasti membuat putaran.`);
+      done(total);
+      return;
+    }
+    draw();
+  }
+  draw();
+  wrap.append(money.node, box, queue, ctl, msg);
+}
+
+// Misi Zona Sinyal (Prim): grow from Krajan; only the cheapest cable leaving the zone is accepted.
+function zoneRound(wrap, ctx, { done }) {
+  const host = el('div', { class: 'kd-papan' });
+  const money = budget();
+  const log = el('div', { class: 'tk9-antre' });
+  const picked = [];
+  wrap.append(money.node, host, log);
+  money.set(0);
+  const b = cableBoard(host, ctx, { rule: 'prim', onPick(i) { picked.push(i); money.set(picked.reduce((s, x) => s + KABEL[x][2], 0)); fill(log, picked.map((x) => el('span', { class: 'ambil' }, `${cname(x)} ${KABEL[x][2]}`))); }, onDone(total) { b.enabled = false; say(host.querySelector('.reveal'), '', `Zona sinyal menutup ketujuh dusun: ${picked.map(cname).join(', ')} = ${total} juta. Sama dengan Kruskal, urutannya saja yang beda.`); done(); } });
+  say(host.querySelector('.reveal'), 'info', 'Dusun hijau ada di zona sinyal (mulai dari Krajan). Ketuk kabel termurah yang menyeberang keluar zona.');
+}
+
+// Misi Periksa Tawaran.
+function offerRound(wrap, ctx, { kind, done }) {
+  const box = mapBox();
+  const money = budget();
+  const ctl = el('div', { class: 'kode-baris' });
+  const msg = el('p', { class: 'reveal info' });
+  const idx = (a, b) => KABEL.findIndex((e) => (e[0] === a && e[1] === b) || (e[0] === b && e[1] === a));
+  if (kind === 'kilat') {
+    let offer = [idx('K', 'N'), idx('K', 'S'), idx('N', 'S'), idx('S', 'T'), idx('T', 'G'), idx('N', 'W'), idx('W', 'P')];
+    const tot = () => offer.reduce((s, i) => s + KABEL[i][2], 0);
+    const draw = (red = []) => { box.innerHTML = mapSvg({ chosen: offer, red, tap: true }); money.set(tot()); };
+    say(msg, 'info', `Tawaran CV Kilat: 7 kabel, ${tot()} juta. Satu kabel bisa dibuang tanpa memutus dusun mana pun. Ketuk kabel yang dibuang supaya hemat sebanyak mungkin.`);
+    onMap(box, '[data-e]', (g) => {
+      const i = Number(g.dataset.e);
+      if (!offer.includes(i) || offer.length < 7) return;
+      const rest = offer.filter((x) => x !== i);
+      if (reach(rest).size < 7) { ctx.mistake(); shake(box); say(msg, 'bad', `Tanpa ${cname(i)}, ada dusun yang terputus. Cari kabel di putaran.`); return; }
+      if (i !== idx('K', 'N')) { ctx.mistake(); shake(box); say(msg, 'bad', `${cname(i)} memang di putaran Krajan–Sumberejo–Ngasem, tetapi bukan yang termahal di putaran itu.`); return; }
+      offer = rest;
+      ctx.sound.good();
+      draw();
+      say(msg, '', `Putaran K–S–N dipotong di kabel termahalnya (K–N 12): ${tot()} juta, sama dengan jaringan termurah.`);
+      done();
+    });
+    draw();
+  } else if (kind === 'irit') {
+    const offer = [idx('K', 'N'), idx('K', 'S'), idx('N', 'S'), idx('S', 'T'), idx('T', 'G'), idx('N', 'W')];
+    const want = { e: new Set([idx('K', 'N'), idx('K', 'S'), idx('N', 'S')]), d: new Set(['P']) };
+    const selE = new Set();
+    const selD = new Set();
+    const draw = (ok = false) => { box.innerHTML = mapSvg({ chosen: offer, red: [...selE], mark: selD, tapNode: !ok, tap: !ok }); money.set(offer.reduce((s, i) => s + KABEL[i][2], 0)); };
+    say(msg, 'info', 'Tawaran UD Irit: 6 kabel, 52 juta. Ada yang salah. Ketuk semua kabel yang membentuk putaran dan dusun yang terputus, lalu periksa.');
+    onMap(box, '[data-e],[data-d]', (g) => {
+      if (g.dataset.d) { const d = g.dataset.d; if (selD.has(d)) selD.delete(d); else selD.add(d); }
+      else { const i = Number(g.dataset.e); if (!offer.includes(i)) return; if (selE.has(i)) selE.delete(i); else selE.add(i); }
+      ctx.sound.tap();
+      draw();
+    });
+    fill(ctl, onTap(el('button', { class: 'btn primary', type: 'button', 'data-aksi': 'periksa' }, '🔍 Periksa'), () => {
+      const same = (a, b) => a.size === b.size && [...a].every((x) => b.has(x));
+      if (!same(selE, want.e) || !same(selD, want.d)) { ctx.mistake(); shake(box); say(msg, 'bad', !same(selD, want.d) ? 'Periksa dusun: ikuti kabel dari Krajan, dusun mana yang tidak tercapai?' : 'Periksa putaran: kabel mana yang bisa diikuti melingkar kembali ke dusun awal?'); return; }
+      ctx.sound.good();
+      fill(ctl);
+      draw(true);
+      say(msg, '', 'Ketemu: putaran K–S–N memboroskan satu kabel, dan Pandanwangi tidak tersambung. 6 kabel belum tentu pohon merentang: harus tanpa putaran dan menyambung semua.');
+      done();
+    }));
+    draw();
+  } else {
+    const picked = [];
+    const draw = () => { box.innerHTML = mapSvg({ chosen: picked, tap: true }); money.set(picked.reduce((s, i) => s + KABEL[i][2], 0)); };
+    say(msg, 'info', 'PT Ajaib menawarkan 6 kabel seharga 43 juta, tetapi merahasiakan petanya. Ketuk enam kabel termurah di peta untuk menguji tawarannya.');
+    onMap(box, '[data-e]', (g) => {
+      const i = Number(g.dataset.e);
+      if (picked.includes(i) || picked.length >= 6) return;
+      const cheaper = KABEL.map((_, x) => x).filter((x) => !picked.includes(x) && KABEL[x][2] < KABEL[i][2]);
+      if (cheaper.length) { ctx.mistake(); shake(box); say(msg, 'bad', `Masih ada kabel yang lebih murah dari ${KABEL[i][2]}: ${cheaper.map((x) => `${cname(x)} ${KABEL[x][2]}`).join(', ')}.`); return; }
+      picked.push(i);
+      ctx.sound.tap();
+      draw();
+      if (picked.length === 6) { say(msg, '', `Enam kabel termurah saja sudah ${picked.reduce((s, x) => s + KABEL[x][2], 0)} juta. Jaringan 6 kabel mana pun paling sedikit 45 juta, jadi tawaran 43 juta mustahil.`); done(); }
+    });
+    draw();
+  }
+  wrap.append(money.node, box, ctl, msg);
+}
+
+// Misi Kartu Kejadian: one cable changes cost. Safe, or swap one cable out and one in.
+function eventRound9(wrap, ctx, { events, done }) {
+  const base = kruskal().take;
+  let e = 0;
+  let phase = 'tebak';
+  let out = null;
+  const box = mapBox();
+  const card = el('div', { class: 'pp8-kejadian' });
+  const money = budget();
+  const ctl = el('div', { class: 'kode-baris' });
+  const msg = el('p', { class: 'reveal info' });
+  const draw = (net = base, red = [], lit = []) => {
+    const [i, v] = events[e];
+    box.innerHTML = mapSvg({ chosen: net, red, lit, cost: { [i]: v }, tap: phase === 'tukar' });
+    money.set(net.reduce((s, x) => s + (x === i ? v : KABEL[x][2]), 0));
+    fill(card, el('small', null, `Kartu kejadian ${e + 1} dari ${events.length}`), el('b', null, `${nama(KABEL[i])}: ${KABEL[i][2]} → ${v} juta`));
+    fill(ctl, phase === 'tebak' ? [
+      onTap(el('button', { class: 'btn primary', type: 'button', 'data-aksi': 'aman' }, '✅ Jaringan tetap'), () => guess(true)),
+      onTap(el('button', { class: 'btn', type: 'button', 'data-aksi': 'tukar' }, '🔁 Harus tukar kabel'), () => guess(false))] : null);
+  };
+  function guess(safe) {
+    const [i, v] = events[e];
+    const after = kruskal({ [i]: v }).take;
+    const same = after.length === base.length && after.every((x) => base.includes(x));
+    if (safe !== same) { ctx.mistake(); shake(ctl); say(msg, 'bad', same ? `Periksa lagi: ${base.includes(i) ? 'kabel di jaringan yang makin murah' : 'kabel di luar jaringan yang makin mahal'} tidak mengubah apa pun.` : `${base.includes(i) ? 'Kabel ini ada di jaringan dan makin mahal' : 'Kabel ini di luar jaringan dan makin murah'}: mungkin ada pengganti yang lebih murah.`); return; }
+    ctx.sound.good();
+    if (same) { say(msg, 'info', `Aman: jaringan tetap, ${after.reduce((s, x) => s + (x === i ? v : KABEL[x][2]), 0)} juta.`); return nextCard(); }
+    phase = 'tukar';
+    out = null;
+    say(msg, 'info', base.includes(i) ? `Ketuk kabel jaringan yang keluar, lalu kabel pengganti termurah yang menyambung lagi.` : 'Kabel murah baru masuk. Ketuk dulu kabel yang masuk, lalu kabel termahal di putaran yang terbentuk untuk dikeluarkan.');
+    draw();
+  }
+  onMap(box, '[data-e]', (g) => {
+    if (phase !== 'tukar') return;
+    const [i, v] = events[e];
+    const after = kruskal({ [i]: v }).take;
+    const leave = base.find((x) => !after.includes(x));
+    const enter = after.find((x) => !base.includes(x));
+    const t = Number(g.dataset.e);
+    const first = base.includes(i) ? leave : enter;
+    const second = base.includes(i) ? enter : leave;
+    if (out == null) {
+      if (t !== first) { ctx.mistake(); shake(box); say(msg, 'bad', base.includes(i) ? `Yang keluar adalah kabel yang biayanya berubah: ${cname(i)}.` : `Yang masuk adalah kabel yang kini murah: ${cname(i)}.`); return; }
+      out = t;
+      ctx.sound.tap();
+      box.innerHTML = mapSvg({ chosen: base, red: base.includes(i) ? [t] : [], lit: base.includes(i) ? [] : [t], cost: { [i]: v }, tap: true });
+      return;
+    }
+    if (t !== second) { ctx.mistake(); shake(box); say(msg, 'bad', base.includes(i) ? 'Pilih kabel termurah yang menyambung kembali kedua bagian yang terpisah.' : 'Pilih kabel termahal di putaran yang baru terbentuk.'); return; }
+    ctx.sound.good();
+    phase = 'lihat';
+    draw(after, [], [enter]);
+    say(msg, 'info', `Tukar: ${cname(leave)} keluar, ${cname(enter)} masuk. Biaya kini ${after.reduce((s, x) => s + (x === i ? v : KABEL[x][2]), 0)} juta.`);
+    nextCard();
+  });
+  function nextCard() {
+    e++;
+    if (e === events.length) { setTimeout(() => { say(msg, '', 'Aturan cepat: kabel di luar jaringan yang naik, atau kabel di jaringan yang turun, pasti aman.'); done(); }, 1800); return; }
+    setTimeout(() => { phase = 'tebak'; draw(); say(msg, 'info', 'Kartu berikutnya. Semua biaya lain kembali seperti semula.'); }, 2800);
+  }
+  draw();
+  say(msg, 'info', 'Satu kabel berubah biaya. Apakah jaringan termurah tetap sama?');
+  wrap.append(card, money.node, box, ctl, msg);
+}
+
+// Misi Tim Badai: the storm cuts N–W; add the cheapest backup, then play the storm yourself.
+function stormRound(wrap, ctx, { done }) {
+  const base = kruskal().take;
+  const cut = KABEL.findIndex((e) => e[0] === 'N' && e[1] === 'W');
+  let net = base.filter((x) => x !== cut);
+  let phase = 'cadangan';
+  let backup = null;
+  const tries = new Set();
+  const box = mapBox();
+  const money = budget();
+  const msg = el('p', { class: 'reveal info' }, 'Badai! Kabel Ngasem–Wonorejo putus. Ketuk kabel cadangan termurah yang menyambung lagi dusun yang padam.');
+  const draw = (red = [], dark = null) => {
+    const on = reach(dark ?? net);
+    box.innerHTML = mapSvg({ chosen: dark ?? net, cut: phase === 'cadangan' ? [cut] : red, tap: true, dim: new Set(KODE9.filter((d) => !on.has(d))) });
+    money.set((phase === 'cadangan' ? base : [...base, backup]).reduce((s, x) => s + KABEL[x][2], 0));
+  };
+  onMap(box, '[data-e]', (g) => {
+    const t = Number(g.dataset.e);
+    if (phase === 'cadangan') {
+      if (net.includes(t) || t === cut) return;
+      if (reach([...net, t]).size < 7) { ctx.mistake(); shake(box); say(msg, 'bad', `${cname(t)} tidak menyalakan Wonorejo dan Pandanwangi.`); return; }
+      const better = KABEL.map((_, x) => x).filter((x) => x !== cut && !net.includes(x) && reach([...net, x]).size === 7 && KABEL[x][2] < KABEL[t][2]);
+      if (better.length) { ctx.mistake(); shake(box); say(msg, 'bad', `${cname(t)} menyambung, tetapi ada yang lebih murah.`); return; }
+      backup = t;
+      phase = 'badai';
+      net = [...base, t];
+      ctx.sound.good();
+      draw();
+      say(msg, 'info', `Cadangan ${cname(t)} (${KABEL[t][2]}) dipasang di samping jaringan semula: ${[...base, t].reduce((s, x) => s + KABEL[x][2], 0)} juta. Kini kamu Tim Badai: putuskan satu kabel yang memadamkan dusun terbanyak.`);
+      return;
+    }
+    if (phase !== 'badai' || !net.includes(t)) return;
+    const left = net.filter((x) => x !== t);
+    const dark = KODE9.filter((d) => !reach(left).has(d));
+    tries.add(t);
+    ctx.sound.tap();
+    draw([t], left);
+    const most = Math.max(...net.map((x) => KODE9.filter((d) => !reach(net.filter((y) => y !== x)).has(d)).length));
+    if (dark.length < most) { say(msg, 'info', `Putus ${cname(t)}: ${dark.length ? `${dark.map((d) => DUSUN[d][0]).join(', ')} padam` : 'tidak ada yang padam, ada jalan lain'}. Coba kabel lain.`); return; }
+    phase = 'selesai';
+    say(msg, '', `Putus ${cname(t)}: ${dark.length} dusun padam (${dark.map((d) => DUSUN[d][0]).join(', ')}). Satu cadangan hanya melindungi kabel di putarannya. Makin andal, makin mahal.`);
+    done();
+  });
+  draw();
+  wrap.append(money.node, box, msg);
+}
+
+// Misi Bos Rapat Serentak (Borůvka).
+function boruvkaRound(wrap, ctx, { done }) {
+  let k = 0;
+  let take = [];
+  let phase = 1;
+  const box = mapBox();
+  const money = budget();
+  const msg = el('p', { class: 'reveal info' });
+  const touch = (d) => KABEL.map((_, i) => i).filter((i) => KABEL[i][0] === d || KABEL[i][1] === d);
+  const cheapest = (d) => touch(d).sort((a, b) => KABEL[a][2] - KABEL[b][2])[0];
+  const draw = () => {
+    const d = KODE9[k];
+    box.innerHTML = mapSvg({ chosen: take, tap: true, color: groupColors(take), lit: phase === 1 && d ? touch(d).filter((i) => !take.includes(i)) : [], mark: new Set(phase === 1 && d ? [d] : []) });
+    money.set(take.reduce((s, x) => s + KABEL[x][2], 0));
+  };
+  const ask = () => say(msg, 'info', `Babak 1: wakil ${DUSUN[KODE9[k]][0]} menunjuk kabel termurah yang menyentuh dusunnya.`);
+  onMap(box, '[data-e]', (g) => {
+    const t = Number(g.dataset.e);
+    if (phase === 1) {
+      const d = KODE9[k];
+      if (t !== cheapest(d)) { ctx.mistake(); shake(box); say(msg, 'bad', touch(d).includes(t) ? `Ada kabel lebih murah yang menyentuh ${DUSUN[d][0]}.` : `Kabel itu tidak menyentuh ${DUSUN[d][0]}.`); return; }
+      if (!take.includes(t)) take.push(t);
+      ctx.sound.tap();
+      k++;
+      if (k < KODE9.length) { draw(); ask(); return; }
+      phase = 2;
+      draw();
+      say(msg, 'info', `Babak 1 selesai serentak: ${take.length} kabel, 2 kelompok warna. Babak 2: ketuk kabel termurah yang menghubungkan kedua kelompok.`);
+      return;
+    }
+    if (phase !== 2) return;
+    const col = groupColors(take);
+    const between = KABEL.map((_, i) => i).filter((i) => col[KABEL[i][0]] !== col[KABEL[i][1]]).sort((a, b) => KABEL[a][2] - KABEL[b][2]);
+    if (t !== between[0]) { ctx.mistake(); shake(box); say(msg, 'bad', col[KABEL[t][0]] === col[KABEL[t][1]] ? 'Kabel itu di dalam satu kelompok: putaran.' : 'Ada kabel antarkelompok yang lebih murah.'); return; }
+    take.push(t);
+    phase = 3;
+    ctx.sound.good();
+    draw();
+    say(msg, '', `${cname(t)} menyatukan semuanya: ${take.reduce((s, x) => s + KABEL[x][2], 0)} juta, sama dengan Kruskal dan Prim. Rapat serentak cocok untuk banyak komputer yang bekerja bersamaan.`);
+    done();
+  });
+  draw();
+  ask();
+  wrap.append(money.node, box, msg);
+}
+
+const HEAD09 = {
+  kruskal: ['Kruskal Berwarna', 'Pasang kabel dari yang termurah. Tolak kabel yang menutup putaran.'],
+  prim: ['Zona Sinyal', 'Sinyal tumbuh dari balai desa Krajan, satu kabel termurah setiap kali.'],
+  tawaran: ['Periksa Tawaran', 'Kontraktor lain mengajukan tawaran. Bongkar kelemahannya.'],
+  kejadian: ['Kartu Kejadian', 'Harga satu kabel berubah. Apakah jaringan termurah ikut berubah?'],
+  badai: ['Tim Badai', 'Badai memutus kabel. Pasang cadangan, lalu uji jaringan sebagai Tim Badai.'],
+  boss: ['Rapat Serentak', 'Semua dusun memilih bersamaan, lalu kelompok-kelompok disatukan.'],
+};
+
 export default {
   id: 'sma-09-kabel-dusun',
   title: 'Kabel Internet Antardusun',
@@ -114,34 +424,34 @@ export default {
   source: null,
   rounds: 10,
   maxPlayers: 4,
-  goal: 'Murid membangun jaringan kabel termurah yang menyambung tujuh dusun dengan cara Kruskal dan Prim, mengenali putaran, menjelaskan mengapa n titik butuh n − 1 sisi, melihat akibat perubahan biaya, dan menimbang biaya dengan keandalan.',
+  goal: 'Murid menjadi tim teknis tender kabel desa: memasang kabel termurah dengan kartu warna kelompok (Kruskal) dan zona sinyal (Prim), membongkar tawaran kontraktor lain, menghadapi kartu kejadian yang mengubah biaya, memasang cadangan saat badai, dan menjalankan rapat serentak (Borůvka).',
   extraModes: [
     { id: 'peta', icon: '🗺️', label: 'Peta Kabel', desc: 'Pasang kabel bebas atau dengan aturan Kruskal atau Prim; ubah biaya sebuah kabel dan putuskan kabel untuk melihat dusun yang terputus', create: createMap },
     { id: 'giliran', icon: '🔁', label: 'Kabel Bergiliran', desc: 'Tim bergantian memilih satu kabel; kabel yang membuat putaran atau lebih mahal dari pilihan terbaik menambah biaya tim itu', create: createTeams },
   ],
   create(root, ctx) {
-    const wrap = el('div', { class: 'act kabel-dusun' });
+    const wrap = el('div', { class: 'act kabel-dusun tk9-main' });
     root.append(wrap);
+    const costs = ctx.rand.shuffle(Array.from({ length: 16 }, (_, i) => i + 4)).slice(0, KABEL.length);
+    const randCost = Object.fromEntries(costs.map((v, i) => [i, v]));
+    const pool = [[0, 20], [6, 3], [9, 4], [1, 17], [5, 18]];
+    const extra = ctx.rand.shuffle(pool).slice(0, 2);
     function render() {
       wrap.replaceChildren();
       const r = ctx.round;
       let solved = false;
-      const next = () => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, 2400); } };
-      const ask = (prompt, opts, columns = 1, subject = null, onRight = next) => choice(wrap, { prompt, subject, ctx, shuffle: true, onRight, columns, options: opts.map(([l, correct]) => ({ label: String(l), correct })) });
-      const then = (fn) => () => { wrap.replaceChildren(); fn(); };
-      const pic = (o) => el('div', { class: 'kd-peta kecil', html: mapSvg({ tap: false, ...o }) });
-      const mst = kruskal().take;
-      if (r === 0) ask('Jika kedua belas kabel dipasang semua, berapa biayanya, dan paling sedikit berapa kabel supaya ketujuh dusun tersambung?', [['126 juta; paling sedikit 6 kabel, karena setiap kabel menggabungkan paling banyak dua kelompok', true], ['126 juta; paling sedikit 7 kabel'], ['45 juta; paling sedikit 12 kabel'], ['126 juta; paling sedikit 3 kabel']], 2, pic({}));
-      else if (r === 1) boardRound(wrap, ctx, { rule: 'kruskal', prompt: 'Cara Kruskal: ketuk kabel termurah lebih dulu, tolak yang membuat putaran.', hint: 'Mulai dari kabel 5, lalu 6, 7, …', done: next });
-      else if (r === 2) boardRound(wrap, ctx, { rule: 'prim', prompt: 'Cara Prim: tumbuh dari balai desa Krajan.', hint: 'Pilih kabel termurah yang menyambung dusun hijau (sudah tersambung) dengan dusun yang belum.', done: next });
-      else if (r === 3) ask('Apakah cara Kruskal dan Prim memilih kabel yang sama? Mengapa pohon termurah tidak pernah punya putaran?', [['Ya, keenam kabelnya sama (45 juta); bila ada putaran, satu kabelnya bisa dibuang dan biaya berkurang', true], ['Tidak, Prim selalu lebih murah'], ['Ya, tetapi biaya Prim 52 juta'], ['Tidak; putaran membuat jaringan lebih murah']], 1, pic({ chosen: mst }));
-      else if (r === 4) ask('Jaringan yang menyambung semua dusun tanpa putaran dengan n titik selalu punya berapa sisi? Untuk 50 dusun?', [['n − 1; 49 kabel', true], ['n; 50 kabel'], ['n + 1; 51 kabel'], ['2n; 100 kabel']], 2);
-      else if (r === 5) boardRound(wrap, ctx, { rule: 'kruskal', cost: { 7: 17 }, prompt: 'Sumberejo–Tegalsari harus menyeberangi sungai: biayanya naik menjadi 17. Jalankan lagi cara Kruskal.', hint: 'Kabel termurah lebih dulu, tolak yang membuat putaran.', done: next });
-      else if (r === 6) { const cut = [4]; ask('Kembali ke jaringan semula. Jika kabel Ngasem–Wonorejo putus tertimpa pohon, dusun mana yang terputus dari balai desa?', [['Wonorejo dan Pandanwangi', true], ['Hanya Wonorejo'], ['Ngasem'], ['Tidak ada']], 2, pic({ chosen: mst.filter((i) => !cut.includes(i)), cut, nodes: reach(mst.filter((i) => !cut.includes(i))) })); }
-      else if (r === 7) ask('Desa menambah satu kabel cadangan supaya putusnya Ngasem–Wonorejo tidak memutus dusun mana pun. Kabel mana yang termurah, dan berapa biaya totalnya?', [['Sumberejo–Wonorejo (11); total 56 juta', true], ['Gunungsari–Pandanwangi (16); total 61 juta'], ['Krajan–Ngasem (12); total 57 juta'], ['Wonorejo–Gunungsari (13); total 58 juta']], 1, pic({ chosen: mst }),
-        then(() => ask('Setelah kabel cadangan dipasang, apakah semua kabel lain juga punya cadangan?', [['Tidak: hanya kabel di putaran Sumberejo–Ngasem–Wonorejo yang terlindungi. Makin andal, makin mahal', true], ['Ya, satu cadangan melindungi semua kabel'], ['Ya, karena sekarang ada 7 kabel'], ['Tidak ada kabel yang terlindungi']], 1, pic({ chosen: [...mst, 6], lit: [6] }))));
-      else if (r === 8) ask('Mengapa hasil Kruskal hanya ada satu untuk peta ini?', [['Semua biaya kabel berbeda, jadi pohon merentang minimumnya hanya satu', true], ['Karena Krajan adalah balai desa'], ['Karena ada 7 dusun'], ['Sebenarnya ada banyak hasil dengan biaya berbeda']]);
-      else ask('Tantangan (Borůvka): setiap dusun bersamaan memilih kabel termurah yang menyentuhnya. Berapa kabel terpilih dan berapa kelompok terbentuk pada putaran pertama?', [['5 kabel, 2 kelompok; lalu Ngasem–Wonorejo (10) menyambung keduanya, hasilnya sama 45 juta', true], ['7 kabel, 1 kelompok'], ['6 kabel, 1 kelompok'], ['3 kabel, 4 kelompok']], 1, pic({ chosen: boruvkaFirst() }));
+      const next = (wait = 4800) => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, wait); } };
+      const head = (key, no) => wrap.append(misiHead(no, ...HEAD09[key], '🔌'));
+      if (r === 0) { head('kruskal', 1); kruskalRound(wrap, ctx, { done: () => next(5600) }); }
+      else if (r === 1) { head('prim', 2); zoneRound(wrap, ctx, { done: () => next(5200) }); }
+      else if (r === 2) { head('tawaran', 3); offerRound(wrap, ctx, { kind: 'kilat', done: () => next(5200) }); }
+      else if (r === 3) { head('kejadian', 4); eventRound9(wrap, ctx, { events: [[7, 17], [0, 20]], done: () => next(5200) }); }
+      else if (r === 4) { head('tawaran', 3); offerRound(wrap, ctx, { kind: 'irit', done: () => next(5600) }); }
+      else if (r === 5) { head('kruskal', 1); kruskalRound(wrap, ctx, { cost: randCost, done: () => next(5600) }); }
+      else if (r === 6) { head('kejadian', 4); eventRound9(wrap, ctx, { events: [[11, 4], [3, 18], ...extra.slice(0, 1)], done: () => next(5200) }); }
+      else if (r === 7) { head('badai', 5); stormRound(wrap, ctx, { done: () => next(5600) }); }
+      else if (r === 8) { head('tawaran', 3); offerRound(wrap, ctx, { kind: 'ajaib', done: () => next(5600) }); }
+      else { head('boss', 'Bos'); boruvkaRound(wrap, ctx, { done: () => next(5600) }); }
     }
     render();
   },
