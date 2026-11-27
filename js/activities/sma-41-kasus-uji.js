@@ -4,9 +4,10 @@
 // holiday surcharge on free tickets), assert versus a table of cases, and
 // writing tests first for the member discount. Team mode hunts mutants.
 
-import { el, onTap, button } from '../core/util.js';
-import { choice } from '../core/kit.js';
-import { say, pickTeams, scoreBar, finishBoard, rowsChoose, pyCode, stepper, fmtNum } from './smp-kit.js';
+import { el, onTap, button, shake } from '../core/util.js';
+import { dnd } from '../core/kit.js';
+import { say, pickTeams, scoreBar, finishBoard, pyCode, stepper, fmtNum } from './smp-kit.js';
+import { misiHead, fill, codeView, codeFill, rowsView, fillBoard, layar, play } from './misi-kit.js';
 import { runPy, pyRepr } from './mini-py.js';
 
 // The rules, written independently of the code: expected result or null (None).
@@ -42,6 +43,228 @@ export function testTable(id, cases, { anggota = false, harapan = null } = {}) {
       return el('tr', { class: ok ? 'lulus' : 'gagal' }, el('td', null, el('code', null, call(...c.slice(0, anggota ? 4 : 3)))), el('td', null, py(want)), el('td', null, got), el('td', null, ok ? '✓ lulus' : '✗ gagal')); }));
 }
 
+// ---- Permainan: Pemburu Bug Mesin Tiket ----
+// Test cards are shot at the cunning ticket machine; expectations always come
+// from the rule board, never from the code.
+const HEAD41 = {
+  harapan: ['Kartu Harapan', 'Tulis harga yang benar menurut papan tarif untuk setiap pengunjung.', 'Mesin menunggu tanpa diuji…'],
+  pita: ['Pita Kelas Umur', 'Taruh kartu wakil di pita kelasnya, lalu hitung kombinasinya.', '"Uji semua umur satu per satu saja!"'],
+  batas: ['Jaga Perbatasan', 'Tancapkan bendera di kedua sisi setiap batas kelas.', 'Bug suka bersembunyi di perbatasan!'],
+  tembak: ['Tembak Mesin Tiket', 'Tembakkan kartu batas, cap LULUS atau GAGAL, lalu bongkar bugnya.', 'Bug pertama bersembunyi di satu umur saja!'],
+  kombi: ['Kombinasi Hari Libur', 'Uji gabungan kelas dan hari libur, lalu bongkar bug kedua.', 'Bug kedua menunggu hari libur…'],
+  rudi: ['Uji Gaya Rudi', 'Ramalkan apa yang tampil saat assert gagal.', 'assert berhenti di kegagalan pertama!'],
+  rina: ['Uji Gaya Rina', 'Ketuk kasus yang gagal di tabel Rina.', 'Menyembunyikan kegagalan kedua…'],
+  dulu: ['Uji Lebih Dulu', 'Ajukan pertanyaan yang tepat, lalu tulis empat assert sebelum kodenya ada.', 'Aturan baru: anggota setengah harga!'],
+  mutan: ['Berburu Mutan', 'Tembakkan kartu uji sampai mutan ketahuan, makin sedikit makin baik.', 'Satu karakter di mesin diam-diam diubah!'],
+  bos: ['Umur Pecahan', 'Uji umur pecahan, lalu perbaiki kondisi batasnya.', 'Petugas mengetik umur 12.5!'],
+};
+const msg41 = (t) => el('p', { class: 'reveal info' }, t);
+const papanTarif = () => el('table', { class: 'pb41-papan' }, el('tr', null, el('th', { colspan: '2' }, '🏛️ Papan tarif')), [['0–4 tahun', 'gratis'], ['5–12 tahun', 'Rp5.000'], ['13–59 tahun', 'Rp15.000'], ['13–59, kartu pelajar', 'Rp8.000'], ['60 tahun ke atas', 'Rp7.500'], ['hari libur, berbayar', '+ Rp2.000'], ['umur < 0 atau > 120', 'None']].map(([a, b]) => el('tr', null, el('td', null, a), el('td', null, b))));
+const half = (id, k, o = {}) => codeView(codeOf(id).slice(k * 8, k * 8 + 8), { labels: L16.slice(k * 8, k * 8 + 8), ...o });
+export const H41 = { harapan: SOAL1.map(([, u, p, l]) => rp(aturan(u, p, l))) };
+
+// Misi 1: expected prices from the rule board.
+function harapanRound(area, ctx, { oops, done }) {
+  const msg = msg41('Seret harga dari papan tarif ke setiap pengunjung, dari atas.');
+  area.append(el('div', { class: 'pb41-dua' }, papanTarif(), fillBoard(ctx, { oops, msg, view: rowsView(SOAL1.map(([who]) => [`${who}: `, '_'])), chips: [...H41.harapan, 'Rp17.000', 'Rp5.000', 'Rp8.000'], want: H41.harapan,
+    hints: ['Dewasa 41 tahun, hari biasa.', '38 tahun dengan kartu mahasiswa Rp8.000, ditambah Rp2.000 hari Sabtu.', 'Umur 12 masih tiket anak Rp5.000 (tarif pelajar hanya 13–59), ditambah Rp2.000 hari Minggu.', 'Lansia Rp7.500 ditambah Rp2.000 tanggal merah.', '2 tahun gratis.', 'Umur di atas 120 tidak valid: None.'],
+    done: () => { say(msg, '', 'Harapan ditulis dari papan tarif, bukan dari kode. Kalau dari kode, bug ikut tersalin ke harapan.'); done(); } })), msg);
+}
+
+// Misi 2: representatives into age bands, then combinations.
+const PITA = [['tidak valid', 'umur < 0', -5], ['gratis', '0–4', 3], ['anak', '5–12', 8], ['dewasa', '13–59', 30], ['lansia', '60–120', 70], ['tidak valid', 'umur > 120', 150]];
+function pitaRound(area, ctx, { oops, done }) {
+  const msg = msg41('Seret setiap kartu wakil ke pita kelas umurnya.'); let n = 0; const box = el('div', { class: 'pb41-kolom' });
+  const line = el('div', { class: 'pb41-pita' }, PITA.map(([nm, rg], i) => el('div', { class: `pb41-kelas k${i}`, 'data-drop': String(i) }, el('b', null, nm), el('small', null, rg), el('div', { class: 'pb41-isi' }))));
+  const tray = el('div', { class: 'pb41-baki' }, ctx.rand.shuffle(PITA.map(([, , u]) => u)).map((u) => el('div', { class: 'pb41-tag', 'data-drag': String(u) }, `umur ${u}`)));
+  const host = el('div', { class: 'pb41-kolom' }, line, tray);
+  dnd(host, (tag, band) => {
+    if (!band.classList.contains('pb41-kelas')) return; const u = +tag.dataset.drag; const want = PITA.findIndex((x) => x[2] === u);
+    if (+band.dataset.drop !== want) { oops(); shake(tag); say(msg, 'bad', `Umur ${u} masuk rentang ${PITA[want][1]}.`); return; }
+    tag.classList.add('locked'); tag.append(el('code', null, ` → ${py(aturan(u, false, false))}`)); band.querySelector('.pb41-isi').append(tag); ctx.sound.tap(); n++;
+    if (n < PITA.length) { say(msg, 'info', 'Tepat. Satu wakil mewakili seluruh pitanya.'); return; }
+    tray.remove(); say(msg, 'info', 'Masukan pelajar dan libur juga punya kelas. Lengkapi hitungannya.');
+    fill(box, fillBoard(ctx, { oops, msg, view: rowsView([['tarif(30, True, False) → ', '_'], ['tarif(30, False, True) → ', '_'], ['kombinasi kelas: 4 × 2 × 2 = ', '_'], ['semua umur 0–120: 121 × 2 × 2 = ', '_']]), chips: ['8000', '17000', '16', '484', '15000', '8', '242'], want: ['8000', '17000', '16', '484'],
+      hints: ['Dewasa dengan kartu pelajar.', 'Dewasa pada hari libur: 15000 + 2000.', '4 kelas valid, pelajar ya/tidak, libur ya/tidak.', '121 umur, dikali 2 dan 2.'], done: () => { say(msg, '', '16 uji mewakili semua kelas, jauh lebih hemat daripada 484.'); done(); } }));
+  });
+  fill(box, host);
+  area.append(box, msg);
+}
+
+// Misi 3: flags on both sides of every boundary.
+const DEKAT = [-2, -1, 0, 1, 3, 4, 5, 6, 11, 12, 13, 14, 58, 59, 60, 61, 119, 120, 121, 122];
+function batasRound(area, ctx, { oops, done }) {
+  const msg = msg41('Ketuk umur di kedua sisi setiap batas kelas. Ada 10 bendera.'); const got = new Set(); const box = el('div', { class: 'pb41-kolom' });
+  const draw = () => fill(box, el('div', { class: 'pb41-garis' }, DEKAT.map((u) => onTap(el('button', { type: 'button', class: `pb41-titik ${got.has(u) ? 'on' : ''}`, 'data-u': String(u) }, got.has(u) ? '🚩' : '', el('small', null, String(u))), () => tap(u)))), el('small', null, `Bendera: ${got.size} dari 10`));
+  function tap(u) {
+    if (got.size >= 10 || got.has(u)) return;
+    if (!BATAS.includes(u)) { oops(); say(msg, 'bad', `Umur ${u} ada di tengah kelasnya, bukan tepat di sisi batas.`); return; }
+    got.add(u); ctx.sound.tap(); draw();
+    if (got.size < 10) { say(msg, 'info', 'Tepat.'); return; }
+    say(msg, 'info', 'Sepuluh bendera! Tulis harapan di empat bendera yang paling rawan.');
+    box.append(fillBoard(ctx, { oops, msg, view: rowsView([['59 → ', '_', '   60 → ', '_'], ['120 → ', '_', '   121 → ', '_']]), chips: ['Rp15.000', 'Rp7.500', 'Rp7.500', 'None', 'Rp0'], want: ['Rp15.000', 'Rp7.500', 'Rp7.500', 'None'],
+      hints: ['59 masih dewasa.', '60 sudah lansia.', '120 masih valid dan lansia.', 'Di atas 120 tidak valid.'], done: () => { say(msg, '', 'Nilai batas: −1, 0, 4, 5, 12, 13, 59, 60, 120, 121. Bug salah tanda < dan <= hanya tertangkap di sini.'); done(); } }));
+  }
+  draw();
+  area.append(box, msg);
+}
+
+// Stamp every shot as LULUS or GAGAL; then onEnd().
+function stampBoard(ctx, { oops, msg, id, cases, onEnd }) {
+  let k = 0; const log = el('div', { class: 'pb41-log' }); const cur = el('div', { class: 'pb41-kolom' });
+  const draw = () => { const c = cases[k]; if (!c) { fill(cur); return; } const want = py(aturan(...c)); const got = hasil(id, ...c);
+    fill(cur, el('div', { class: 'pb41-tembak', 'data-ok': String(want === got) }, el('code', null, call(...c)), el('span', null, `harapan ${want}`), el('span', null, `🎰 mesin ${got}`)),
+      el('div', { class: 'pb41-tombol' }, onTap(el('button', { type: 'button', class: 'pb41-cap lulus', 'data-v': 'lulus' }, '✓ LULUS'), () => stamp(true)), onTap(el('button', { type: 'button', class: 'pb41-cap gagal', 'data-v': 'gagal' }, '✗ GAGAL'), () => stamp(false)))); };
+  function stamp(v) {
+    const c = cases[k]; if (!c) return; const ok = py(aturan(...c)) === hasil(id, ...c);
+    if (v !== ok) { oops(); say(msg, 'bad', 'Bandingkan harapan dengan hasil mesin: sama berarti LULUS, beda berarti GAGAL.'); return; }
+    log.append(el('span', { class: ok ? 'lulus' : 'gagal' }, `${call(...c)} ${ok ? '✓' : '✗'}`)); k++; ctx.sound.tap(); draw();
+    if (k < cases.length) { say(msg, 'info', 'Kartu berikutnya.'); return; }
+    onEnd();
+  }
+  draw();
+  return el('div', { class: 'pb41-kolom' }, cur, log);
+}
+
+// Misi 4: shoot the boundary cards, find line 8, fix it.
+function tembakRound(area, ctx, { oops, done }) {
+  const msg = msg41('Mesin menjawab setiap kartu batas. Cap LULUS atau GAGAL.'); const right = el('div', { class: 'pb41-kolom' }); const left = el('div', { class: 'pb41-kolom' });
+  fill(left, half('asli', 0));
+  fill(right, stampBoard(ctx, { oops, msg, id: 'asli', cases: BATAS.map((u) => [u, false, false]), onEnd: () => {
+    say(msg, 'info', 'Hanya umur 60 gagal: mesin menagih Rp15.000. Ketuk baris bugnya.');
+    fill(left, half('asli', 0, { cls: 'ketuk', onLine: (i) => {
+      if (i !== 7) { oops(); say(msg, 'bad', 'Cari baris yang memutuskan siapa lansia.'); return; }
+      ctx.sound.good(); say(msg, 'info', 'Baris 8! Pasang tanda yang memasukkan 60 ke kelas lansia.');
+      fill(left, fillBoard(ctx, { oops, msg, view: codeFill([['    elif umur ', '_', ' 60:'], '        harga = 7500'], { labels: ['8', '9'] }), chips: ['>=', '>', '<=', '=='], want: ['>='], hints: ['60 tahun ke atas, termasuk 60.'],
+        done: () => { say(msg, '', 'umur >= 60. Bug "> lawan >=" hanya tertangkap oleh bendera di batas.'); done(); } }));
+    } }));
+  } }));
+  area.append(el('div', { class: 'pb41-dua' }, left, right), msg);
+}
+
+// Misi 4b: holiday combinations on the fixed-line-8 version.
+function kombiRound(area, ctx, { oops, done }) {
+  const msg = msg41('Baris 8 sudah benar. Uji gabungan kelas dan hari libur.'); const right = el('div', { class: 'pb41-kolom' }); const left = el('div', { class: 'pb41-kolom' });
+  fill(left, half('fix8', 1));
+  fill(right, stampBoard(ctx, { oops, msg, id: 'fix8', cases: KOMBI, onEnd: () => {
+    say(msg, 'info', 'Anak 3 tahun gratis, tetapi ditagih Rp2.000 di hari libur. Ketuk baris bugnya.');
+    fill(left, half('fix8', 1, { cls: 'ketuk', onLine: (i) => {
+      if (i !== 5) { oops(); say(msg, 'bad', 'Cari baris yang memutuskan kapan tambahan hari libur dikenakan.'); return; }
+      ctx.sound.good(); say(msg, 'info', 'Baris 14! Tambahan hanya untuk tiket berbayar.');
+      fill(left, fillBoard(ctx, { oops, msg, view: codeFill([['    if libur ', '_', ':'], '        harga = harga + 2000'], { labels: ['14', '15'] }), chips: ['and harga > 0', 'or harga > 0', 'and harga == 0', 'and umur > 0'], want: ['and harga > 0'], hints: ['Tiket gratis tidak boleh ditambah: harganya harus lebih dari 0.'],
+        done: () => { say(msg, 'info', 'Ara (2 tahun) dan kakeknya (60 tahun) datang hari Minggu.');
+          fill(right, fillBoard(ctx, { oops, msg, view: rowsView([['mesin lama menagih: ', '_'], ['seharusnya: ', '_']]), chips: ['Rp19.000', 'Rp9.500', 'Rp17.000', 'Rp7.500'], want: ['Rp19.000', 'Rp9.500'],
+            hints: ['Mesin lama: Ara Rp2.000 dan kakek Rp17.000 (dianggap dewasa).', 'Ara gratis, kakek Rp7.500 + Rp2.000.'], done: () => { say(msg, '', 'Dua bug tertangkap. Kombinasi yang tidak pernah diuji adalah tempat bug bersembunyi.'); done(); } })); } }));
+    } }));
+  } }));
+  area.append(el('div', { class: 'pb41-dua' }, left, right), msg);
+}
+
+// Misi 5a: Rudi's asserts.
+const RUDI_LAB = ['17', '18', '19', '20', '21', '22'];
+function rudiRound(area, ctx, { oops, done }) {
+  const msg = msg41('Rudi menjalankan uji() pada mesin asli. Seret apa yang tampil ke layar.'); const out = layar(); const left = el('div', { class: 'pb41-kolom' }); const right = el('div', { class: 'pb41-kolom' });
+  const A = runWith('asli', RUDI); const B = runWith('fix8', RUDI);
+  fill(left, codeView(RUDI, { labels: RUDI_LAB }));
+  const opts = [['a', A.error.text], ['b', 'Semua uji lulus'], ['c', 'AssertionError'], ['d', 'GAGAL: 60 False False']];
+  const host = el('div', { class: 'pb41-kolom' }, el('div', { class: 'pb41-layar', 'data-drop': 'layar' }, el('small', null, 'Layar'), out), el('div', { class: 'pb41-baki' }, opts.map(([k, t]) => el('div', { class: 'pb41-tag', 'data-drag': k }, t))));
+  dnd(host, (tag, t) => {
+    if (t.dataset.drop !== 'layar') return;
+    if (tag.dataset.drag !== 'a') { oops(); shake(tag); say(msg, 'bad', tag.dataset.drag === 'b' ? 'Mesin asli menagih Rp15.000 untuk umur 60: assert baris 19 gagal.' : 'assert dengan pesan menampilkan pesannya, lalu program berhenti.'); return; }
+    ctx.sound.good(); play(out, [], { err: A.error.text, end: () => { say(msg, 'info', 'Program berhenti di baris 19; baris 20 tidak pernah dijalankan. Rudi memperbaiki baris 8 lalu menjalankan lagi. Ketuk baris tempat uji berhenti sekarang.'); stop2(); } });
+    host.querySelector('.pb41-baki').remove();
+  });
+  fill(right, host);
+  area.append(el('div', { class: 'pb41-dua' }, left, right), msg);
+  function stop2() {
+    fill(left, codeView(RUDI, { labels: RUDI_LAB, cls: 'ketuk', onLine: (i) => {
+      if (i !== B.error.line - 16) { oops(); say(msg, 'bad', i === 2 ? 'Baris 8 sudah diperbaiki, jadi assert umur 60 kini lulus.' : 'Uji mana yang masih memakai bug kedua?'); return; }
+      ctx.sound.good(); play(out, [], { err: B.error.text, end: () => { say(msg, '', 'Baris 20 gagal dengan AssertionError tanpa pesan: tidak jelas apa yang salah. Gaya Rudi berhenti di kegagalan pertama.'); done(); } });
+    } }));
+  }
+}
+
+// Misi 5b: Rina's table of cases.
+function rinaRound(area, ctx, { oops, done }) {
+  const msg = msg41('Rina menjalankan semua kasus pada mesin asli. Ketuk kasus yang GAGAL.'); const C = runWith('asli', RINA);
+  const failIdx = [1, 2, 3, 4].filter((k) => { const m = RINA[k].match(/\((-?\d+), (\w+), (\w+), (\d+)\)/); return String(m[4]) !== hasil('asli', +m[1], m[2] === 'True', m[3] === 'True'); });
+  const got = new Set(); const left = el('div', { class: 'pb41-kolom' }); const right = el('div', { class: 'pb41-kolom' });
+  const draw = () => fill(left, codeView(RINA.slice(0, 6), { labels: RINA.slice(0, 6).map((_, i) => `T${i + 1}`), cls: 'ketuk', hl: [...got], onLine: (i) => tap(i) }));
+  function tap(i) {
+    if (got.size >= failIdx.length || got.has(i)) return;
+    if (!failIdx.includes(i)) { oops(); say(msg, 'bad', i >= 1 && i <= 4 ? 'Kasus ini lulus: harapan sama dengan hasil mesin.' : 'Ketuk baris kasus (tuple).'); return; }
+    got.add(i); ctx.sound.tap(); draw();
+    if (got.size < failIdx.length) { say(msg, 'info', 'Tepat. Masih ada lagi.'); return; }
+    say(msg, 'info', 'Dua kasus gagal. Lengkapi baris terakhir keluaran Rina.');
+    fill(right, el('pre', { class: 'mk-layar' }, C.out.slice(0, -1).join('\n')), fillBoard(ctx, { oops, msg, view: rowsView([['', '_', ' dari ', '_', ' uji gagal']]), chips: ['2', '4', '1', '3'], want: ['2', '4'], hints: ['Hitung baris GAGAL.', 'len(kasus): ada empat tuple.'],
+      done: () => { say(msg, '', 'Gaya Rina menjalankan semua kasus dan menunjukkan masukan, hasil, dan harapan setiap kegagalan.'); done(); } }));
+  }
+  draw();
+  area.append(el('div', { class: 'pb41-dua' }, left, right), msg);
+}
+
+// Misi 6: ask first, then write asserts before the code.
+export const TANYA = [['ya1', 'Potongan dihitung sebelum atau sesudah tambahan hari libur?', true], ['ya2', 'Apakah potongan juga berlaku untuk tiket anak dan lansia?', true], ['no1', 'Apakah fungsinya boleh ditulis dengan Python?', false], ['no2', 'Tiketnya dicetak berwarna atau hitam putih?', false], ['no3', 'Berapa umur pengelola museum?', false]];
+export const DULU = ['7500', '8500', '4750', '0'];
+function duluRound(area, ctx, { oops, done }) {
+  const msg = msg41('Ketuk dua pertanyaan yang perlu diajukan sebelum menulis harapan.'); let n = 0; const box = el('div', { class: 'pb41-kolom' }); const out = layar();
+  fill(box, el('div', { class: 'pb41-tanya' }, TANYA.map(([k, t, ok]) => onTap(el('button', { type: 'button', class: 'pb41-pilih', 'data-k': k }, t), (e) => {
+    const b = e.currentTarget || e.target.closest('button'); if (n >= 2 || b.classList.contains('on')) return;
+    if (!ok) { oops(); shake(b); say(msg, 'bad', 'Jawabannya tidak mengubah angka harapan.'); return; }
+    b.classList.add('on'); ctx.sound.tap(); n++;
+    if (n < 2) { say(msg, 'info', 'Tepat. Satu lagi.'); return; }
+    say(msg, 'info', 'Pengelola: "Potongan dari harga akhir, termasuk tambahan libur, untuk semua jenis tiket." Tulis harapannya.'); setTimeout(asserts, 1600);
+  }))));
+  area.append(box, msg);
+  function asserts() {
+    fill(box, fillBoard(ctx, { oops, msg, view: codeFill(['assert tarif(41, False, False, True) == _', 'assert tarif(41, False, True, True) == _', 'assert tarif(70, False, True, True) == _', 'assert tarif(3, False, True, True) == _'].map((l) => [l.slice(0, -2), '_'])), chips: [...DULU, '9500', '17000', '3750'], want: DULU,
+      hints: ['15000 dibagi 2.', '(15000 + 2000) dibagi 2.', '(7500 + 2000) dibagi 2.', 'Tiket gratis tetap 0.'], done: () => {
+        say(msg, 'info', 'Uji dijalankan pada fungsi lama (tiga masukan)…'); fill(box, out);
+        play(out, [], { err: hasil('benar', 41, false, false, true), end: () => setTimeout(() => { const R = runWith('anggota', ['assert tarif(41, False, False, True) == 7500', 'assert tarif(41, False, True, True) == 8500', 'assert tarif(70, False, True, True) == 4750', 'assert tarif(3, False, True, True) == 0', 'assert tarif(60, False, False) == 7500', 'print("Semua uji lulus")']);
+          play(out, R.out, { end: () => { say(msg, '', 'Uji gagal dulu (fungsi belum siap), lalu lulus setelah anggota=False dan harga // 2 ditambahkan. Uji lama tetap lulus.'); done(); } }); }, 1200) });
+      } }));
+  }
+}
+
+// Misi mutan: shoot cards until the mutant shows itself.
+export const MUTAN_RONDE = 'M2';
+function mutanRound(area, ctx, { oops, done }) {
+  const msg = msg41('Satu karakter mesin diubah diam-diam. Tembakkan kartu batas sampai ada yang GAGAL.'); let shots = 0; const box = el('div', { class: 'pb41-kolom' }); const log = el('div', { class: 'pb41-log' });
+  const draw = () => fill(box, el('div', { class: 'pb41-garis' }, BATAS.map((u) => onTap(el('button', { type: 'button', class: 'pb41-titik', 'data-u': String(u) }, '🎯', el('small', null, String(u))), (e) => shoot(u, e.currentTarget || e.target.closest('button'))))), el('small', { class: 'pb41-hitung' }, `Tembakan: ${shots}`), log);
+  let caught = false;
+  function shoot(u, b) {
+    if (caught || b.disabled) return; b.disabled = true; shots++; const want = py(aturan(u, false, false)); const got = hasil(MUTAN_RONDE, u, false, false); ctx.sound.tap();
+    log.append(el('span', { class: want === got ? 'lulus' : 'gagal' }, `tarif(${u}) → ${got} ${want === got ? '✓' : `✗ (harapan ${want})`}`));
+    box.querySelector('.pb41-hitung').textContent = `Tembakan: ${shots}`;
+    if (want === got) { say(msg, 'info', 'Lulus. Mutan belum ketahuan.'); return; }
+    caught = true; say(msg, 'info', `Ketahuan dengan ${shots} tembakan! Mutan yang mana?`);
+    box.append(el('div', { class: 'pb41-tanya' }, MUTAN.filter((m) => ['M1', 'M2', 'M3'].includes(m[0])).map(([k, t]) => onTap(el('button', { type: 'button', class: 'pb41-pilih', 'data-k': k }, t), () => {
+      if (k !== MUTAN_RONDE) { oops(); say(msg, 'bad', 'Lihat umur yang gagal: batas kelas mana yang ada di sana?'); return; }
+      ctx.sound.good(); say(msg, '', 'Mutan "umur < 12" membuat anak 12 tahun membayar tarif dewasa. Hanya kartu batas 12 yang menangkapnya.'); done();
+    }))));
+  }
+  draw();
+  area.append(box, msg);
+}
+
+// Misi Bos: fractional ages.
+function bosRound(area, ctx, { oops, done }) {
+  const msg = msg41('Petugas mengetik umur pecahan. Ramalkan hasil fungsi yang sudah diperbaiki.'); const box = el('div', { class: 'pb41-kolom' });
+  const H = [4.5, 12.5, 59.5].map((u) => hasil('benar', u, false, false));
+  fill(box, half('benar', 0), fillBoard(ctx, { oops, msg, view: rowsView([['tarif(4.5, False, False) → ', '_'], ['tarif(12.5, False, False) → ', '_'], ['tarif(59.5, False, False) → ', '_']]), chips: [...H, '5000', '7500'], want: H,
+    hints: ['4.5 < 5: gratis, ikut tahun penuhnya 4.', '12.5 <= 12 salah, jadi ia jatuh ke dewasa, padahal tahun penuhnya 12!', '59.5 >= 60 salah: dewasa, ikut tahun penuhnya 59. Konsisten.'],
+    done: () => { say(msg, 'info', 'Batas 12/13 tidak konsisten. Ubah kondisi supaya pecahan ikut tahun penuhnya.'); setTimeout(fix, 1600); } }));
+  area.append(box, msg);
+  function fix() {
+    fill(box, fillBoard(ctx, { oops, msg, view: codeFill([['    if umur < 0 or umur ', '_', ' 121:'], '        return None', '    if umur < 5:', '        harga = 0', ['    elif umur ', '_', ' 13:'], '        harga = 5000']), chips: ['>=', '<', '>', '<='], want: ['>=', '<'],
+      hints: ['120.5 masih umur 120: tolak mulai 121.', '12.5 masih umur 12: anak kalau kurang dari 13.'], done: () => {
+        const F = BODY({ l2: 'umur >= 121', l6: 'umur < 13' }); const r = (u) => { const R = runPy([...F, `x = tarif(${u}, False, False)`], { limit: 2000 }); return R.error ? R.error.text : pyRepr(R.vars.x); };
+        fill(box, el('pre', { class: 'mk-layar' }, [`tarif(12.5, …) → ${r(12.5)}`, `tarif(120.5, …) → ${r(120.5)}`, `tarif("12", …) → ${r('"12"')}`].join('\n')));
+        say(msg, '', 'Pecahan kini ikut tahun penuhnya. Teks "12" tetap ditolak dengan TypeError: kasus uji untuk masukan yang salah jenis juga perlu.'); done();
+      } }));
+  }
+}
+
 export default {
   id: 'sma-41-kasus-uji',
   title: 'Kasus Uji Tiket Museum',
@@ -59,42 +282,31 @@ export default {
     { id: 'giliran', icon: '🧬', label: 'Berburu Mutan', desc: 'Satu tim memilih fungsi mutan secara diam-diam, tim lain menulis kasus uji sampai ada yang gagal', create: createTeams },
   ],
   create(root, ctx) {
-    const wrap = el('div', { class: 'act kasus-uji' });
+    const wrap = el('div', { class: 'act pb41-main' });
     root.append(wrap);
-    const rules = () => el('table', { class: 'ku-aturan' }, [['0–4 tahun', 'gratis'], ['5–12 tahun', 'Rp5.000'], ['13–59 tahun', 'Rp15.000'], ['13–59 dengan kartu pelajar/mahasiswa', 'Rp8.000'], ['60 tahun ke atas', 'Rp7.500'], ['hari libur, tiket berbayar', '+ Rp2.000'], ['umur < 0 atau > 120', 'None']].map(([a, b]) => el('tr', null, el('td', null, a), el('td', null, b))));
     function render() {
       wrap.replaceChildren();
       const r = ctx.round;
       let solved = false;
-      const next = () => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, 2400); } };
-      const then = (fn) => () => { wrap.replaceChildren(); fn(); };
-      const opts = (want, extra = []) => [...new Set([py(want), ...extra.map(py)])].slice(0, 4);
-      if (r === 0) { wrap.append(rules());
-        rowsChoose(wrap, ctx, { prompt: 'Hasil yang diharapkan, dihitung dari aturan', cls: 'ku-isi', rows: SOAL1.map(([who, u, p, l], i) => { const w = aturan(u, p, l); const alt = { 0: [17000, 15000, 13000], 1: [8000, 17000, 15000], 2: [10000, 5000, 9500], 3: [7500, 17000, 9000], 4: [2000, 5000, null], 5: [0, 7500, 9500] }[i]; return [`s${i}`, `${who} · ${call(u, p, l)}`, opts(w, alt), py(w)]; }), done: next }); }
-      else if (r === 1) rowsChoose(wrap, ctx, { prompt: 'Alasan di balik harapan', cls: 'ku-isi', rows: [['d', 'Mengapa Dimas bukan Rp10.000?', ['umur 12 masih tiket anak Rp5.000 (tarif pelajar hanya 13–59), ditambah Rp2.000 hari Minggu', 'kartu pelajar tidak berlaku hari Minggu', 'anak tidak bayar tambahan libur', 'Dimas mendapat potongan pelajar Rp3.000'], 'umur 12 masih tiket anak Rp5.000 (tarif pelajar hanya 13–59), ditambah Rp2.000 hari Minggu'], ['c', 'Mengapa harapan dihitung dari aturan, bukan dari program?', ['bila diambil dari keluaran program, uji selalu lulus karena program dibandingkan dengan dirinya sendiri', 'menjalankan program terlalu lama', 'program tidak bisa dijalankan sebelum diuji', 'aturan lebih mudah dibaca'], 'bila diambil dari keluaran program, uji selalu lulus karena program dibandingkan dengan dirinya sendiri']], done: next });
-      else if (r === 2) rowsChoose(wrap, ctx, { prompt: 'Kelas ekuivalensi: rentang · harapan tarif(wakil, False, False)', cls: 'ku-isi', info: 'tidak valid (terlalu kecil): umur < 0 · None sudah diisi.', rows: KELAS.slice(1).map(([n, rg, u]) => { const w = aturan(u, false, false); const ranges = ['0–4', '5–12', '13–59', '60–120', 'umur > 120', '0–5', '13–60', '61–120']; const right = `${rg} · ${py(w)}`; const wrong = [`${ranges[(ranges.indexOf(rg) + 1) % 5]} · ${py(w)}`, `${rg} · ${py(w === null ? 0 : w + 2000)}`, `${{ '0–4': '0–5', '13–59': '13–60', '60–120': '61–120' }[rg] ?? '5–13'} · ${py(w)}`]; return [n, `${n} (wakil ${u})`, [...new Set([right, ...wrong])], right]; }), done: next });
-      else if (r === 3) rowsChoose(wrap, ctx, { prompt: 'Kelas untuk masukan lain, dan banyak kombinasi', cls: 'ku-isi', rows: [['p', 'tarif(30, True, False)', opts(aturan(30, true, false), [15000, 10000, 5000]), py(aturan(30, true, false))], ['l', 'tarif(30, False, True)', opts(aturan(30, false, true), [15000, 10000, 2000]), py(aturan(30, false, true))], ['w', 'Mengapa satu wakil cukup?', ['semua umur dalam satu kelas diperlakukan sama oleh aturan, jadi kemungkinan besar kodenya juga', 'Python selalu benar untuk umur di tengah', 'karena menguji lebih banyak dilarang', 'karena wakil dipilih acak'], 'semua umur dalam satu kelas diperlakukan sama oleh aturan, jadi kemungkinan besar kodenya juga', '"Kemungkinan besar": anggapan ini runtuh bila batas di kode salah tulis.'], ['k', 'Kombinasi kelas valid × pelajar × libur · setiap umur 0–120', ['16 · 484', '8 · 121', '16 · 121', '6 · 484'], `${4 * 2 * 2} · ${121 * 2 * 2}`]], done: next });
-      else if (r === 4) { const right = BATAS.join(', '); const hp = BATAS.map((u) => py(aturan(u, false, false))).join(', ');
-        rowsChoose(wrap, ctx, { prompt: 'Nilai batas umur', cls: 'ku-isi', rows: [['u', 'Sepuluh nilai batas', [right, '-1, 0, 5, 6, 12, 13, 59, 60, 120, 121', '0, 4, 5, 12, 13, 59, 60, 120, 121, 122', '-5, 3, 8, 30, 70, 150, 0, 4, 5, 12'], right], ['h', 'Harapannya', [hp, 'None, 0, 0, 5000, 5000, 15000, 15000, 15000, 7500, None', 'None, 0, 5000, 5000, 15000, 15000, 7500, 7500, 7500, None', '0, 0, 0, 5000, 5000, 15000, 15000, 7500, 7500, 7500'], hp], ['b', 'Mengapa bug bersembunyi di batas?', ['"sampai" dan "ke atas" mudah tertukar menjadi < atau <=, dan salahnya hanya terlihat tepat di batas', 'nilai batas jarang dipakai pengunjung', 'Python menghitung batas dengan pecahan', 'batas selalu bernilai None'], '"sampai" dan "ke atas" mudah tertukar menjadi < atau <=, dan salahnya hanya terlihat tepat di batas']], done: next }); }
-      else if (r === 5) { const fails = UJI14.filter((c) => hasil('asli', ...c) !== py(aturan(...c))).length;
-        wrap.append(el('div', { class: 'ku-dua' }, pyCode(codeOf('asli'), { cls: 'ku-kecil' }), testTable('asli', UJI14)));
-        rowsChoose(wrap, ctx, { prompt: 'Empat belas uji soal 1–2 pada fungsi asli', cls: 'ku-isi', rows: [['n', 'Uji yang gagal', ['0', '1', '2', '14'], String(fails)], ['b', 'Apakah fungsinya benar?', ['belum tentu: uji yang lulus hanya menunjukkan benar untuk masukan yang diuji', 'ya: semua uji lulus', 'tidak: fungsi pasti salah'], 'belum tentu: uji yang lulus hanya menunjukkan benar untuk masukan yang diuji', 'Pengujian dapat menunjukkan adanya bug, tetapi tidak pernah menunjukkan bahwa bug tidak ada.']], done: next }); }
-      else if (r === 6) { const bad = BATAS.filter((u) => hasil('asli', u, false, false) !== py(aturan(u, false, false))); const u0 = bad[0];
-        wrap.append(el('div', { class: 'ku-dua' }, pyCode(codeOf('asli'), { cls: 'ku-kecil', warn: [7] }), testTable('asli', BATAS.map((u) => [u, false, false]))));
-        rowsChoose(wrap, ctx, { prompt: 'Sepuluh nilai batas pada fungsi asli', cls: 'ku-isi', rows: [['g', 'Uji yang gagal · hasil fungsi', [`tarif(${u0}, False, False) · ${hasil('asli', u0, false, false)}`, 'tarif(59, False, False) · 7500', 'tarif(120, False, False) · None', 'tarif(12, False, False) · 15000'], `tarif(${u0}, False, False) · ${hasil('asli', u0, false, false)}`], ['f', 'Baris bug · perbaikan', ['baris 8 · elif umur >= 60:', 'baris 8 · elif umur > 59.5:', 'baris 6 · elif umur < 12:', 'baris 2 · if umur < 0 or umur >= 120:'], 'baris 8 · elif umur >= 60:', 'Orang berumur tepat 60 dianggap dewasa.']], done: next }); }
-      else if (r === 7) { const rows = KOMBI.map((c, i) => { const w = py(aturan(...c)); const g = hasil('fix8', ...c); const right = `${w} · ${g} · ${w === g ? 'ya' : 'tidak'}`; return [`k${i}`, call(...c), [...new Set([right, `${w} · ${w} · ya`, `${g} · ${g} · ya`, `${w} · ${Number(w) + 2000 || 2000} · tidak`])], right]; });
-        wrap.append(pyCode(codeOf('fix8'), { cls: 'ku-kecil ku-kolom2' }));
-        rowsChoose(wrap, ctx, { prompt: 'Uji kombinasi hari libur (baris 8 sudah diperbaiki): harapan · hasil · lulus', cls: 'ku-isi', rows,
-          done: then(() => { const billed = Number(hasil('asli', 60, false, true)) + Number(hasil('asli', 2, false, true)); const should = aturan(60, false, true) + aturan(2, false, true);
-            rowsChoose(wrap, ctx, { prompt: 'Bug kedua', cls: 'ku-isi', rows: [['b', 'Baris · perbaikan', ['baris 14 · if libur and harga > 0:', 'baris 15 · harga = harga + 0', 'baris 4 · if umur <= 5:', 'baris 14 · if not libur:'], 'baris 14 · if libur and harga > 0:'], ['w', 'Mengapa tidak tertangkap di soal 1–3?', ['tidak ada uji yang menggabungkan kelas gratis dengan hari libur', 'karena Ara datang hari Rabu dan itu sudah cukup', 'karena bug kedua hanya muncul untuk lansia', 'karena assert dimatikan'], 'tidak ada uji yang menggabungkan kelas gratis dengan hari libur'], ['e', 'Ara dan kakek (60) hari Minggu: ditagih · seharusnya', [`${rp(billed)} · ${rp(should)}`, `${rp(should)} · ${rp(should)}`, 'Rp17.000 · Rp9.500', 'Rp19.000 · Rp7.500'], `${rp(billed)} · ${rp(should)}`, 'Kakek dianggap dewasa (17.000) dan Ara ditagih 2.000.']], done: next }); }) }); }
-      else if (r === 8) { const A = runWith('asli', RUDI); const B = runWith('fix8', RUDI); const C = runWith('asli', RINA);
-        wrap.append(el('div', { class: 'ku-dua' }, pyCode(RUDI, { labels: ['17', '18', '19', '20', '21', '22'], cls: 'ku-kecil' }), pyCode(RINA, { labels: Array.from({ length: 13 }, (_, i) => `T${i + 1}`), cls: 'ku-kecil' })));
-        rowsChoose(wrap, ctx, { prompt: 'Dua cara menulis uji (sebelum bug diperbaiki)', cls: 'ku-isi', rows: [['a', 'Rudi: baris terakhir yang tampil · baris 20 dijalankan?', [`${A.error.text} (baris ${(A.error.line + 1)}) · tidak`, `${A.error.text} (baris ${(A.error.line + 1)}) · ya`, 'Semua uji lulus · ya', 'AssertionError (baris 20) · ya'], `${A.error.text} (baris ${(A.error.line + 1)}) · tidak`], ['b', 'Bila baris 8 sudah diperbaiki', [`${B.error.text} di baris ${(B.error.line + 1)}, tanpa keterangan`, 'Semua uji lulus', `${A.error.text} di baris 19`, 'TypeError di baris 20'], `${B.error.text} di baris ${(B.error.line + 1)}, tanpa keterangan`],
-          ['c', 'Keluaran program Rina', [C.out.join(' / '), `${C.out[0]} / 1 dari 4 uji gagal`, 'GAGAL: 60 False False hasil 15000 harapan 7500 / GAGAL: 12 True True hasil 7000 harapan 7000 / 2 dari 4 uji gagal', '0 dari 4 uji gagal'], C.out.join(' / ')], ['d', 'Kelebihan cara Rina', ['semua uji tetap dijalankan walaupun ada yang gagal, dan setiap kegagalan menampilkan masukan, hasil, dan harapan', 'lebih pendek', 'bisa dimatikan dengan python -O', 'tidak perlu harapan'], 'semua uji tetap dijalankan walaupun ada yang gagal, dan setiap kegagalan menampilkan masukan, hasil, dan harapan']], done: next }); }
-      else { const T = runWith('benar', ['x = tarif(41, False, False, True)']); const N = ['assert tarif(41, False, False, True) == 7500', 'assert tarif(41, False, True, True) == 8500', 'assert tarif(70, False, True, True) == 4750', 'assert tarif(3, False, True, True) == 0']; const ok = runWith('anggota', [...N, 'assert tarif(60, False, False) == 7500', 'x = "lulus"']);
-        rowsChoose(wrap, ctx, { prompt: 'Uji lebih dulu: potongan setengah harga untuk anggota', cls: 'ku-isi', rows: [['q', 'Pertanyaan yang perlu diajukan ke pengelola', ['apakah potongan dihitung sebelum atau sesudah tambahan hari libur?', 'apakah fungsi boleh ditulis dengan Python?', 'berapa umur pengelola museum?', 'apakah tiket dicetak berwarna?'], 'apakah potongan dihitung sebelum atau sesudah tambahan hari libur?'], ['a', 'assert yang benar menurut jawaban pengelola', [N[2], 'assert tarif(70, False, True, True) == 5750', 'assert tarif(70, False, True, True) == 9500', 'assert tarif(3, False, True, True) == 1000'], N[2], '(7.500 + 2.000) / 2 = 4.750.'], ['t', 'Dijalankan pada fungsi lama (tiga masukan)', [T.error.text, 'AssertionError', 'semua uji lulus', 'NameError: name \'anggota\' is not defined'], T.error.text, 'Uji yang gagal di awal memang diharapkan: uji itu menjadi target.'], ['d', 'Baris 1 yang membuat uji baru lulus dan uji lama tetap lulus', ['def tarif(umur, pelajar, libur, anggota=False):', 'def tarif(umur, pelajar, libur, anggota):', 'def tarif(anggota, umur, pelajar, libur):', 'def tarif(umur, pelajar, libur=False, anggota):'], 'def tarif(umur, pelajar, libur, anggota=False):', `Dengan harga = harga // 2: ${ok.error ? ok.error.text : 'semua uji baru dan uji lama lulus'} (uji regresi).`]],
-          done: then(() => { const H = [4.5, 12.5, 59.5].map((u) => hasil('benar', u, false, false));
-            rowsChoose(wrap, ctx, { prompt: 'Tantangan: umur pecahan pada fungsi yang sudah diperbaiki', cls: 'ku-isi', rows: [['h', 'tarif(4.5, …) · tarif(12.5, …) · tarif(59.5, …)', [H.join(' · '), '0 · 5000 · 15000', '5000 · 15000 · 7500', '0 · 5000 · 7500'], H.join(' · ')], ['k', 'Konsisten di setiap batas?', ['tidak: 12.5 ikut kelas lebih tua karena umur <= 12, sedangkan di batas lain pecahan ikut tahun penuhnya', 'ya: semua pecahan dibulatkan ke atas', 'ya: semua pecahan dibulatkan ke bawah'], 'tidak: 12.5 ikut kelas lebih tua karena umur <= 12, sedangkan di batas lain pecahan ikut tahun penuhnya', 'Perbaikan: elif umur < 13: dan umur >= 121.'], ['s', 'Umur dikirim sebagai teks "12"', [hasil('benar', '"12"', false, false), 'tarif mengembalikan 5000', 'tarif mengembalikan None', "ValueError: invalid literal for int() with base 10: '12'"], hasil('benar', '"12"', false, false)]], done: next }); }) }); }
+      const next = (wait = 5200) => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, wait); } };
+      const area = el('div', { class: 'pb41-area' });
+      let foe = null;
+      const go = (k, no) => {
+        const [judul, tujuan, ulah] = HEAD41[k];
+        foe = el('div', { class: 'pb41-musuh' }, el('b', null, '🎰 Mesin Tiket Licik'), el('span', null, ulah));
+        wrap.append(el('div', { class: 'pb41-kepala' }, misiHead(no, judul, tujuan, '🎟️'), foe), area);
+      };
+      const fin = (ms) => ({ oops: () => ctx.mistake(), done: () => { foe.classList.add('beres'); foe.lastChild.textContent = 'Bug tertangkap ✓'; next(ms); } });
+      if (r === 0) { go('harapan', 1); harapanRound(area, ctx, fin(5000)); }
+      else if (r === 1) { go('pita', 2); pitaRound(area, ctx, fin(5000)); }
+      else if (r === 2) { go('batas', 3); batasRound(area, ctx, fin(5500)); }
+      else if (r === 3) { go('tembak', 4); tembakRound(area, ctx, fin(6000)); }
+      else if (r === 4) { go('kombi', 4); kombiRound(area, ctx, fin(6000)); }
+      else if (r === 5) { go('rudi', 5); rudiRound(area, ctx, fin(6000)); }
+      else if (r === 6) { go('rina', 5); rinaRound(area, ctx, fin(6000)); }
+      else if (r === 7) { go('dulu', 6); duluRound(area, ctx, fin(6000)); }
+      else if (r === 8) { go('mutan', 6); mutanRound(area, ctx, fin(6000)); }
+      else { go('bos', 'Bos'); bosRound(area, ctx, fin(7000)); }
     }
     render();
   },

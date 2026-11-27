@@ -4,8 +4,10 @@
 // bug with no error message found by halving the program with checkpoints.
 // Screens are the worksheet's fixed text; fixed programs run in mini-py.
 
-import { el, onTap, button } from '../core/util.js';
-import { say, pickTeams, scoreBar, finishBoard, rowsChoose, pyCode, stepper, fmtNum } from './smp-kit.js';
+import { el, onTap, button, shake } from '../core/util.js';
+import { dnd } from '../core/kit.js';
+import { say, pickTeams, scoreBar, finishBoard, pyCode, stepper, fmtNum } from './smp-kit.js';
+import { misiHead, fill, codeView, codeFill, rowsView, fillBoard, tileSlots, layar, play } from './misi-kit.js';
 import { runPy, pyRepr } from './mini-py.js';
 
 // Each program: code, the screen exactly as in the worksheet, lines pointed to
@@ -60,8 +62,6 @@ export const PROG = [
 export const progOf = (id) => PROG.find((p) => p.id === id);
 export const runFix = (p) => runPy(p.fix, { limit: 5000, input: p.input || [] });
 export const runOrig = (p) => runPy(p.code, { limit: 5000, input: p.input || [] });
-const lineTxt = (p) => p.tunjuk.map((i) => i + 1).join(' lalu ');
-const sebabTxt = (p) => p.sebab.map((i) => i + 1).join('–');
 
 // The bus-fee program of soal 4; `fixed` uses the correct rounding up.
 export const IURAN = (murid = 37, fixed = false) => [`murid = ${murid}`, 'guru = 3', 'harga_bus = 2400000', 'orang = murid + guru', fixed ? 'bus = (orang + 39) // 40' : 'bus = orang // 40 + 1', 'biaya_bus = bus * harga_bus', 'tiket_murid = murid * 8000', 'tiket_guru = guru * 15000', 'konsumsi = orang * 25000', 'total = biaya_bus + tiket_murid + tiket_guru + konsumsi', 'cadangan = total * 10 // 100', 'total = total + cadangan', 'subsidi = 1500000', 'ditanggung = total - subsidi', 'iuran = ditanggung // murid', 'iuran = (iuran + 999) // 1000 * 1000', 'print("Iuran per murid:", iuran)'];
@@ -98,6 +98,182 @@ export function layarView(lines, tags = []) {
 }
 const outView = (R, p) => el('pre', { class: 'pg-layar ok' }, [...(p.input ? [`${p.fix[p.fix.findIndex((x) => x.includes('input('))].match(/input\("([^"]*)"\)/)[1]}${p.input[0]}`] : []), ...R.out].map((t) => el('span', { class: 'keluaran' }, t)));
 
+// ---- Permainan: UGD Program ----
+// Every crashed program is a patient and its traceback the medical record:
+// read the symptom from the bottom, point at where Python stopped, trace the
+// cause upwards, and write the prescription. One patient shows no symptoms.
+const T42 = 'Seret kartu gejala, ketuk baris yang ditunjuk dan baris penyebab, lalu beri resep.';
+const HEAD42 = {
+  rapor: ['Baca Rekam Medis', 'Baca traceback dari bawah: gejala, baris berhenti, pemanggil, lalu resep.', 'Pasien pertama: rapor.py!'],
+  p1: ['Pasien 1: Jadwal Piket', T42, 'Hari Jumat membuat program pingsan!'],
+  p2: ['Pasien 2: Kasir Kantin', T42, '"Nasi goreng" tidak dikenali!'],
+  p3: ['Pasien 3: Stok Koperasi', T42, 'Petugas mengetik 12…'],
+  p4: ['Pasien 4: Rata-rata Kelas', T42, 'Kelas X-2 belum punya nilai!'],
+  p5: ['Pasien 5: Keterangan Tuntas', T42, 'Guru mengetik 60…'],
+  p6: ['Pasien 6: Barang Habis', T42, 'Tidak ada keluaran sama sekali!'],
+  rapat: ['Rapat Dokter', 'Kelompokkan keenam pasien menurut pola penyakitnya.', 'Pola apa yang sama?'],
+  sunyi: ['Pasien Tanpa Gejala', 'Pasang paling banyak tiga titik periksa untuk mengepung bug.', 'Iuran 143000, bendahara 71000. Tanpa pesan galat!'],
+  bos: ['Pasien yang Bandel', 'Rakit program yang meminta ulang sampai petugas mengetik angka.', 'Petugas mengetik "dua belas"!'],
+};
+const msg42 = (t) => el('p', { class: 'reveal info' }, t);
+export const JENIS = ['TypeError', 'IndexError', 'KeyError', 'ZeroDivisionError', 'NameError', 'IndentationError', 'ValueError', 'SyntaxError'];
+const RESEP0 = ['print(nama + ": " + str(nilai))', 'print(nama + ": " + int(nilai))', 'print(str(nama) + ": " + nilai)', 'print(nama, ": ", + nilai)'];
+const rowOf = (p, keys) => (p.rows || []).find((r) => keys.includes(r[0]));
+const resepOf = (p) => (p.rows ? rowOf(p, ['f'])[2] : RESEP0);
+const sebabOf = (p) => (p.rows ? rowOf(p, ['p'])[2][0] : 'teks (str) hanya bisa disambung dengan teks, bukan dengan bilangan bulat (int)');
+export const konsulOf = (p) => rowOf(p, ['k', 'd', 'b']);
+const jenisChips = (ctx, want) => ctx.rand.shuffle([want, ...ctx.rand.shuffle(JENIS.filter((j) => j !== want)).slice(0, 3)]);
+const slot42 = (k) => el('span', { class: 'ug42-slot', 'data-drop': k }, '?');
+
+// One patient: symptom card, pointed lines, cause line, prescription card.
+function patientRound(area, ctx, { oops, done }, p, { rapor = false } = {}) {
+  const msg = msg42('Baca dari bawah: seret kartu gejala (jenis galat) ke papan pasien.');
+  let step = 'jenis'; const got = []; const cause = [];
+  const bed = el('div', { class: 'ug42-ranjang', 'data-id': p.id, 'data-langkah': step }); const scr = el('div', { class: 'ug42-kolom' });
+  const jSlot = slot42('jenis'); const rSlot = slot42('resep');
+  const tray = el('div', { class: 'ug42-baki' }); const extra = el('div', { class: 'ug42-kolom' });
+  const host = el('div', { class: 'ug42-kolom' }, el('div', { class: 'ug42-papan' }, el('span', null, '🤒 Gejala'), jSlot, el('span', null, '💊 Resep'), rSlot), tray);
+  const tags = () => ['jenis', ...(got.length >= p.tunjuk.length ? ['lokasi'] : [])];
+  const panah = (i) => [got.includes(i) ? el('span', { class: 'ug42-panah merah' }, '◀ ditunjuk') : null, cause.includes(i) ? el('span', { class: 'ug42-panah biru' }, '◀ penyebab') : null];
+  const draw = () => {
+    bed.dataset.langkah = step; const tapNow = step === 'lokasi' || step === 'sebab';
+    fill(bed, el('div', { class: 'ug42-pasien' }, el('b', null, `🛏️ ${p.name}`), p.ket ? el('span', null, `(${p.ket})`) : null),
+      codeView(p.code, { cls: tapNow ? 'ketuk' : '', hl: got, warn: cause, after: panah, onLine: tapNow ? tap : null }));
+    if (step !== 'sembuh') fill(scr, layarView(p.layar, step === 'jenis' ? [] : tags()));
+  };
+  const chips = (list) => fill(tray, list.map(([k, t]) => el('div', { class: 'ug42-kartu', 'data-drag': k }, t)));
+  dnd(host, (card, s) => {
+    if (!s.classList.contains('ug42-slot') || s.classList.contains('isi')) return;
+    if (s.dataset.drop !== step) { say(msg, 'info', step === 'jenis' ? 'Kartu ini untuk papan Gejala.' : 'Kartu ini untuk papan Resep.'); return; }
+    if (step === 'jenis') {
+      if (card.dataset.drag !== p.jenis) { oops(); shake(card); say(msg, 'bad', 'Baca baris paling bawah traceback: di sana tertulis jenis galatnya.'); return; }
+      fill(jSlot, p.jenis); jSlot.classList.add('isi'); fill(tray); ctx.sound.tap(); step = 'lokasi'; draw();
+      say(msg, 'info', rapor ? 'Ketuk baris yang ditunjuk traceback, mulai dari baris File paling atas: pemanggil dulu, lalu tempat Python berhenti.' : p.tunjuk.length > 1 ? 'Ketuk baris yang ditunjuk traceback, mulai dari baris File paling atas.' : 'Ketuk baris yang ditunjuk traceback (lihat "line …").');
+      return;
+    }
+    const k = card.dataset.drag;
+    if (k !== 'r0') { oops(); shake(card); say(msg, 'bad', `Resep ini tidak menyembuhkan. Ingat penyebabnya: ${sebabOf(p)}.`); return; }
+    fill(rSlot, resepOf(p)[0]); rSlot.classList.add('isi'); tray.remove(); ctx.sound.good(); step = 'sembuh'; draw();
+    fill(scr, el('small', null, 'Setelah diobati:'), outView(runFix(p), p));
+    const ks = konsulOf(p);
+    if (!ks) { say(msg, '', `Pasien sembuh. Penyebabnya: ${sebabOf(p)}.`); done(); return; }
+    say(msg, 'info', `Pasien sembuh. Pertanyaan dokter konsulen: ${ks[1]}`);
+    fill(extra, el('div', { class: 'ug42-tanya' }, ks[2].map((t, i) => onTap(el('button', { type: 'button', class: 'ug42-pilih', 'data-k': String(i) }, t), (e) => {
+      const b = e.currentTarget || e.target.closest('button'); if (extra.dataset.beres) return;
+      if (i !== 0) { oops(); shake(b); say(msg, 'bad', 'Belum tepat. Lihat lagi keluaran sebelum dan sesudah diobati.'); return; }
+      extra.dataset.beres = '1'; b.classList.add('on'); ctx.sound.good(); say(msg, '', ks[2][0]); done();
+    }))));
+  });
+  function tap(i) {
+    if (step === 'lokasi') {
+      const want = p.tunjuk[got.length];
+      if (i !== want) { oops(); say(msg, 'bad', got.length === 0 && p.tunjuk.length > 1 ? `Baris ${i + 1} bukan. Baca baris "File …, line …" yang paling atas.` : `Baris ${i + 1} bukan. Cari "line …" pada baris File berikutnya.`); return; }
+      got.push(i); ctx.sound.tap();
+      if (got.length < p.tunjuk.length) { draw(); say(msg, 'info', 'Tepat. Sekarang baris File berikutnya.'); return; }
+      if (rapor) {
+        step = 'nilai'; draw(); say(msg, 'info', 'Python berhenti di baris 4, di dalam cetak, yang dipanggil baris 7. Isi nilai variabel saat galat terjadi.');
+        fill(extra, fillBoard(ctx, { oops, msg, view: rowsView([['nama = ', '_'], ['nilai = ', '_']]), chips: ['"Ayu"', '85', '"85"', '"Bima"', '78'], want: ['"Ayu"', '85'],
+          hints: ['Galat terjadi pada putaran pertama for: kunci pertama dictionary.', 'Nilai Ayu adalah bilangan bulat, tanpa tanda petik.'],
+          done: () => { fill(extra); step = 'resep'; draw(); say(msg, 'info', 'nilai adalah int, sedangkan nama + ": " adalah teks. Seret resep untuk baris 4.'); chips(ctx.rand.shuffle(resepOf(p).map((t, j) => [`r${j}`, t]))); } }));
+        return;
+      }
+      step = 'sebab'; draw(); say(msg, 'info', `Python berhenti di baris ${p.tunjuk.map((x) => x + 1).join(' lalu ')}. Sekarang telusuri ke atas: ketuk baris penyebab, yaitu baris yang harus diobati.`);
+      return;
+    }
+    if (!p.sebab.includes(i)) { oops(); say(msg, 'bad', p.tunjuk.includes(i) ? `Baris ${i + 1} adalah tempat Python berhenti. Dari mana nilai yang salah berasal?` : `Baris ${i + 1} bukan penyebabnya. Telusuri nilai yang dipakai di baris yang ditunjuk.`); return; }
+    cause.push(...p.sebab); ctx.sound.good(); step = 'resep'; draw();
+    say(msg, 'info', `Penyebabnya baris ${p.sebab.map((x) => x + 1).join('–')}. Seret kartu resep yang menyembuhkan.`);
+    chips(ctx.rand.shuffle(resepOf(p).map((t, j) => [`r${j}`, t])));
+  }
+  chips(jenisChips(ctx, p.jenis).map((j) => [j, j]));
+  draw();
+  area.append(el('div', { class: 'ug42-dua' }, bed, el('div', { class: 'ug42-kolom' }, scr, host, extra)), msg);
+}
+
+// Misi 4: three questions, tap every patient that fits.
+export const RAPAT = [['Ketahuan sebelum satu baris pun berjalan', ['p6'], 'Program 6 tidak mencetak apa pun, bahkan baris 2: Python memeriksa tata tulis seluruh berkas dulu.'],
+  ['Hanya sakit untuk data tertentu', ['p2', 'p4', 'p5'], 'Program 2, 4, 5 sehat untuk data lain: "nasi goreng", kelas yang punya nilai, nilai 80.'],
+  ['Baris yang ditunjuk berbeda dengan baris yang diobati', ['p1', 'p2', 'p3', 'p4', 'p5'], 'Lima dari enam! Baris yang ditunjuk adalah tempat Python berhenti; penyebabnya sering di atasnya.']];
+function rapatRound(area, ctx, { oops, done }) {
+  const msg = msg42('Ketuk setiap pasien yang cocok dengan pertanyaan rapat.'); let q = 0; const on = new Set(); const box = el('div', { class: 'ug42-kolom' });
+  const draw = () => fill(box, el('div', { class: 'ug42-soal' }, `Rapat ${q + 1} dari 3: ${RAPAT[q][0]}`), el('div', { class: 'ug42-pasien-pasien', 'data-papan': String(q) }, PROG.slice(1).map((p, n) => onTap(el('button', { type: 'button', class: `ug42-pk ${on.has(p.id) ? 'on' : ''}`, 'data-k': p.id },
+    el('b', null, `🛏️ Pasien ${n + 1}`), el('span', null, p.judul.replace(/^Program \d: /, '')), el('code', null, p.jenis), el('small', null, `ditunjuk ${p.tunjuk.map((x) => x + 1).join(', ')} · penyebab ${p.sebab.map((x) => x + 1).join('–')}`)), () => tap(p.id)))));
+  function tap(id) {
+    if (q >= RAPAT.length || on.has(id)) return; const want = RAPAT[q][1];
+    if (!want.includes(id)) { oops(); say(msg, 'bad', 'Pasien ini tidak cocok. Ingat lagi gejala dan penyebabnya.'); return; }
+    on.add(id); ctx.sound.tap();
+    if (on.size < want.length) { draw(); say(msg, 'info', 'Tepat. Masih ada?'); return; }
+    const fact = RAPAT[q][2];
+    if (q + 1 < RAPAT.length) { q++; on.clear(); draw(); say(msg, 'info', fact); return; }
+    draw(); q++; say(msg, '', `${fact} Pelajarannya: telusuri ke atas mencari asal nilai yang salah.`); done();
+  }
+  draw();
+  area.append(box, msg);
+}
+
+// Misi 5: a patient with no error message. Checkpoints narrow the suspects.
+const PAGES42 = [[0, 8], [9, 16]];
+function sunyiRound(area, ctx, { oops, done }) {
+  const msg = msg42('Ketuk baris untuk memasang titik periksa, lalu pilih variabel yang diperiksa. Paling banyak 3 titik.'); const L = IURAN();
+  let page = 0; let sel = null; let cps = []; let sus = Array.from({ length: 16 }, (_, i) => i);
+  const left = el('div', { class: 'ug42-kolom' }); const log = el('div', { class: 'ug42-log' }); const pick = el('div', { class: 'ug42-kolom' }); const right = el('div', { class: 'ug42-kolom' }, el('small', null, '📍 Titik periksa · program | bendahara'), log, pick);
+  const disp = () => { const [a, b] = PAGES42[page]; const out = []; for (let i = a; i <= b; i++) { if (i === 9) out.push([9, 'total = (biaya_bus + tiket_murid', '10'], [9, '         + tiket_guru + konsumsi)', '']); else out.push([i, L[i], String(i + 1)]); } return out; };
+  const draw = () => {
+    const D = disp(); const cv = codeView(D.map((d) => d[1]), { labels: D.map((d) => d[2]), cls: 'ketuk', hl: D.map((d, j) => (d[0] === sel ? j : -1)).filter((j) => j >= 0), after: (j) => (cps.some((c) => c.L === D[j][0]) && D[j][2] ? el('span', { class: 'ug42-panah biru' }, '📍') : null), onLine: (j) => tapLine(D[j][0]) });
+    cv.querySelectorAll('.mk-baris').forEach((r, j) => { r.dataset.real = String(D[j][0]); if (!sus.includes(D[j][0])) r.classList.add('redup'); });
+    fill(left, el('div', { class: 'ug42-pasien' }, el('b', null, '🛏️ iuran.py'), el('span', null, '(37 murid, 3 guru)')), cv,
+      el('div', { class: 'ug42-tombol' }, PAGES42.map(([a, b], k) => onTap(el('button', { type: 'button', class: `ug42-hal ${k === page ? 'on' : ''}`, 'data-hal': String(k) }, `baris ${a + 1}–${b + 1}`), () => { page = k; draw(); }))));
+  };
+  function tapLine(i) {
+    if (sus.length === 1 || i > 15) return;
+    sel = i; ctx.sound.tap(); draw();
+    fill(pick, el('small', null, `Periksa setelah baris ${i + 1}:`), el('div', { class: 'ug42-tombol', 'data-l': String(i) }, varsUpTo(i).slice(-5).map((v) => onTap(el('button', { type: 'button', class: 'ug42-pilih ug42-var', 'data-v': v }, v), () => check(i, v)))));
+    say(msg, 'info', 'Pilih variabel yang nilainya ingin dibandingkan dengan catatan bendahara.');
+  }
+  function check(i, v) {
+    if (sel !== i || sus.length === 1) return;
+    const a = nilaiSetelah(i, v); const b = nilaiSetelah(i, v, { fixed: true }); const ok = a === b;
+    cps.push({ L: i, v, ok }); sel = null; fill(pick); sus = curiga(cps);
+    log.append(el('span', { class: `ug42-cp ${ok ? 'cocok' : 'beda'}` }, `setelah ${i + 1}: ${v} = ${fmtNum(a)} | ${fmtNum(b)} ${ok ? '✓' : '✗'}`)); ctx.sound.tap();
+    if (sus.length === 1) { draw(); found(); return; }
+    if (cps.length >= 3) { oops(); cps = []; sus = Array.from({ length: 16 }, (_, k) => k); fill(log); draw(); say(msg, 'bad', 'Tiga titik periksa habis, bug belum terkepung. Mulai lagi: periksa variabel yang bergantung pada bagian yang dicurigai.'); return; }
+    draw(); say(msg, 'info', ok ? `Cocok: baris yang menentukan ${v} sehat. Tersangka tinggal ${sus.length} baris.` : `Beda! Bug ada di baris yang menentukan ${v}. Tersangka tinggal ${sus.length} baris.`);
+  }
+  function found() {
+    say(msg, 'info', `Bug terkepung dengan ${cps.length} titik periksa: baris 5. orang // 40 + 1 selalu menambah satu bus. Tulis resepnya.`);
+    fill(pick, fillBoard(ctx, { oops, msg, view: codeFill([['bus = (orang + ', '_', ') // 40']], { labels: ['5'] }), chips: ['39', '40', '1', '0'], want: ['39'], hints: ['Pembulatan ke atas: tambahkan 39 sebelum dibagi 40, jadi 40 orang tetap 1 bus dan 41 orang menjadi 2.'],
+      done: () => { const R = runPy(IURAN(37, true), { limit: 2000 }); say(msg, 'info', `${R.out[0]}. Sama dengan bendahara! Mengapa tahun lalu tidak ketahuan?`);
+        fill(pick, el('pre', { class: 'mk-layar' }, R.out[0]), fillBoard(ctx, { oops, msg, view: rowsView([['40 orang: 40 // 40 + 1 = ', '_', ' bus'], ['35 orang: 35 // 40 + 1 = ', '_', ' bus']]), chips: ['2', '1', '0'], want: ['2', '1'], hints: ['40 // 40 = 1, ditambah 1.', '35 // 40 = 0, ditambah 1: kebetulan benar.'],
+          done: () => { say(msg, '', 'Bug hanya muncul untuk 40, 80, 120 orang. Membagi dua: 4 titik periksa cukup untuk 16 baris, sekitar 10 untuk 1.000 baris.'); done(); } })); } }));
+  }
+  draw();
+  area.append(el('div', { class: 'ug42-dua' }, left, right), msg);
+}
+
+// Misi Bos: keep asking until the clerk types a whole number.
+const BANDEL_KODE = ['stok = 40', 'while True:', '    try:', '        masuk = int(input("Barang masuk: "))', '        break', '    except ValueError:', '        print("Ketik angka bulat!")', 'print("Stok sekarang:", stok + masuk)'];
+export const BANDEL = ['stok = 40', 'while True:', ['try', 1], ['masuk', 2], ['break', 2], ['exc', 1], ['cetak', 2], 'print("Stok sekarang:", stok + masuk)'];
+function bosRound(area, ctx, { oops, done }) {
+  const msg = msg42('Program 3 sudah memakai int(input(...)). Petugas mengetik "dua belas". Seret gejalanya.');
+  const left = el('div', { class: 'ug42-kolom' }); const scr = layar(); const jSlot = slot42('jenis'); const tray = el('div', { class: 'ug42-baki' }, jenisChips(ctx, 'ValueError').map((j) => el('div', { class: 'ug42-kartu', 'data-drag': j }, j)));
+  fill(left, el('div', { class: 'ug42-pasien' }, el('b', null, '🛏️ program3.py'), el('span', null, '(sudah diobati)')), codeView(PROG[3].fix));
+  scr.textContent = 'Barang masuk: dua belas';
+  const host = el('div', { class: 'ug42-kolom' }, el('div', { class: 'ug42-papan' }, el('span', null, '🤒 Gejala'), jSlot), tray);
+  dnd(host, (card, s) => {
+    if (s.dataset.drop !== 'jenis' || s.classList.contains('isi')) return;
+    if (card.dataset.drag !== 'ValueError') { oops(); shake(card); say(msg, 'bad', 'Jenis datanya sudah benar (teks ke int), tetapi isi teksnya bukan angka.'); return; }
+    fill(jSlot, 'ValueError'); jSlot.classList.add('isi'); tray.remove(); ctx.sound.good();
+    scr.append(el('b', { class: 'mk-galat' }, "\nValueError: invalid literal for int() with base 10: 'dua belas'"));
+    say(msg, 'info', 'Rakit program yang meminta ulang: while True, try, break, dan except ValueError.');
+    fill(left, tileSlots(ctx, { oops, msg, build: BANDEL, tiles: [['try', 'try:'], ['masuk', 'masuk = int(input("Barang masuk: "))'], ['break', 'break'], ['exc', 'except ValueError:'], ['cetak', 'print("Ketik angka bulat!")'],
+      ['semua', 'except:', 'except tanpa nama galat menangkap semua galat, termasuk salah ketik, sehingga bug lain tersembunyi.'], ['lanjut', 'continue', 'continue mengulang dari atas; di sini kita perlu keluar dari perulangan.']],
+      onFull: () => { say(msg, 'info', 'Petugas mengetik "dua belas", "12,5", lalu "12"…');
+        const R = runPy(BANDEL_KODE, { limit: 5000, input: ['dua belas', '12,5', '12'] });
+        play(scr, ['dua belas', '12,5', '12'].flatMap((x, i) => [`Barang masuk: ${x}`, R.out[i]]), { gap: 420, end: () => { say(msg, '', 'Pasien bandel sembuh: dua kali diminta ulang, lalu Stok sekarang: 52. Tangkap hanya galat yang kamu duga (ValueError).'); done(); } }); } }));
+  });
+  area.append(el('div', { class: 'ug42-dua' }, left, el('div', { class: 'ug42-kolom' }, scr, host)), msg);
+}
+
 export default {
   id: 'sma-42-pesan-galat',
   title: 'Membaca Pesan Galat',
@@ -114,87 +290,30 @@ export default {
     { id: 'giliran', icon: '🧯', label: 'Bank Program Bergalat', desc: 'Satu tim memilih program, tim lain menebak jenis galat, baris yang ditunjuk, dan baris penyebabnya sebelum traceback dibuka', create: createTeams },
   ],
   create(root, ctx) {
-    const wrap = el('div', { class: 'act pesan-galat' });
+    const wrap = el('div', { class: 'act ug42-main' });
     root.append(wrap);
     function render() {
       wrap.replaceChildren();
       const r = ctx.round;
       let solved = false;
-      const next = () => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, 2400); } };
-      const then = (fn) => () => { wrap.replaceChildren(); fn(); };
-      if (r === 0) {
-        const p = PROG[0];
-        wrap.append(el('div', { class: 'pg-dua' }, pyCode(p.code, { cls: 'pg-kecil' }), layarView(p.layar, ['jenis'])));
-        rowsChoose(wrap, ctx, { prompt: 'Bagian-bagian traceback rapor.py (dibaca dari bawah)', cls: 'pg-isi', rows: [
-          ['j', 'Jenis galat · artinya', ['TypeError · teks (str) hanya bisa disambung dengan teks, bukan dengan bilangan bulat (int)', 'TypeError · data siswa terlalu sedikit', 'SyntaxError · tanda + salah tulis', 'NameError · nama nilai belum dibuat'], 'TypeError · teks (str) hanya bisa disambung dengan teks, bukan dengan bilangan bulat (int)'],
-          ['b', 'Python berhenti di', ['baris 4, di dalam fungsi cetak', 'baris 7, di dalam fungsi cetak', 'baris 4, di program utama', 'baris 1, di dalam fungsi cetak'], 'baris 4, di dalam fungsi cetak'],
-          ['c', 'Baris program utama (<module>) yang memanggil fungsi itu', ['1', '6', '7', '4'], '7'],
-          ['n', 'Isi nama dan nilai saat galat terjadi', ['"Ayu" dan 85 (bilangan bulat)', '"Bima" dan 78', '"Ayu" dan "85"', '"siswa" dan 2'], '"Ayu" dan 85 (bilangan bulat)'],
-          ['f', 'Perbaikan baris 4', ['print(nama + ": " + str(nilai))', 'print(nama + ": " + int(nilai))', 'print(str(nama) + ": " + nilai)', 'print(nama, ": ", + nilai)'], 'print(nama + ": " + str(nilai))']],
-        done: () => { wrap.querySelector('.pg-layar')?.replaceWith(layarView(p.layar, ['jenis', 'lokasi'])); wrap.append(el('p', { class: 'pg-ket' }, 'Setelah diperbaiki:'), outView(runFix(p), p)); next(); } });
-      }
-      else if (r >= 1 && r <= 6) programRound(wrap, ctx, PROG[r], next);
-      else if (r === 7) rowsChoose(wrap, ctx, { prompt: 'Pola galat pada keenam program', cls: 'pg-isi', rows: [
-        ['a', 'Ditemukan sebelum satu baris pun dijalankan', ['program 6', 'program 1', 'program 3', 'program 5'], 'program 6'],
-        ['bk', 'Buktinya', ['tidak ada keluaran sama sekali, bahkan dari baris 2', 'pesannya paling pendek', 'nomor barisnya paling besar', 'tidak ada kata Error'], 'tidak ada keluaran sama sekali, bahkan dari baris 2'],
-        ['b', 'Hanya muncul untuk data tertentu', ['program 2, 4, dan 5', 'program 1 dan 3', 'semua program', 'program 6 saja'], 'program 2, 4, dan 5'],
-        ['c', 'Baris yang ditunjuk berbeda dengan baris yang diperbaiki', ['program 1 sampai 5', 'program 6 saja', 'tidak ada', 'program 4 saja'], 'program 1 sampai 5'],
-        ['l', 'Pelajarannya', ['baris yang ditunjuk adalah tempat Python berhenti; telusuri ke atas mencari asal nilai yang salah', 'selalu perbaiki baris yang ditunjuk', 'pesan galat sering keliru', 'galat sintaks paling berbahaya']],
-      ].map(([k, t, o, a]) => [k, t, o, a ?? o[0]]), done: next });
-      else if (r === 8) {
-        const L = IURAN(); const val = (l, v) => nilaiSetelah(l, v);
-        wrap.append(el('div', { class: 'pg-dua' }, pyCode(L, { cls: 'pg-kecil' }), catatanView()));
-        rowsChoose(wrap, ctx, { prompt: 'Program mencetak 143000, bendahara mendapat 71000. Cari bugnya dengan titik periksa', cls: 'pg-isi', rows: [
-          ['a', `Dodi: print(konsumsi) setelah baris 9 = ${val(8, 'konsumsi')}, sama dengan catatan. Mengapa belum tentu bug di baris 10–16?`, ['konsumsi tidak bergantung pada bus; bus dan biaya_bus dari baris sebelumnya belum diperiksa', 'konsumsi seharusnya 925000', 'print mengubah nilai konsumsi', 'titik periksa hanya boleh di baris terakhir'], 'konsumsi tidak bergantung pada bus; bus dan biaya_bus dari baris sebelumnya belum diperiksa'],
-          ['k1', `Titik 1: setelah baris 10, total = ${val(9, 'total')}`, ['tidak sesuai (catatan 3.741.000) → bug di baris 1–10', 'sesuai → bug di baris 11–16', 'tidak sesuai → bug di baris 11–16', 'sesuai → bug di baris 1–10'], 'tidak sesuai (catatan 3.741.000) → bug di baris 1–10'],
-          ['k2', `Titik 2: setelah baris 5, orang = ${val(4, 'orang')} dan bus = ${val(4, 'bus')}`, ['bus tidak sesuai (catatan 1) → bug di baris 1–5', 'semua sesuai → bug di baris 6–10', 'orang tidak sesuai → bug di baris 1–4', 'bus sesuai → bug di baris 6–10'], 'bus tidak sesuai (catatan 1) → bug di baris 1–5'],
-          ['k3', `Titik 3: setelah baris 4, orang = ${val(3, 'orang')}`, ['sesuai → bug di baris 5', 'tidak sesuai → bug di baris 1–4', 'sesuai → bug di baris 1–3', 'tidak sesuai → bug di baris 5']]].map(([k, t, o, a]) => [k, t, o, a ?? o[0]]), done: next });
-      }
-      else {
-        const R = runPy(IURAN(37, true), { limit: 2000 });
-        rowsChoose(wrap, ctx, { prompt: 'Bug baris 5', cls: 'pg-isi', rows: [
-          ['c', 'Mengapa baris 5 salah · perbaikan', ['orang // 40 + 1 selalu menambah satu bus · bus = (orang + 39) // 40', 'pembagian harus memakai / · bus = orang / 40', 'harga bus salah · harga_bus = 1200000', 'bus harus dikali 2 · bus = orang // 20'], 'orang // 40 + 1 selalu menambah satu bus · bus = (orang + 39) // 40'],
-          ['h', 'Keluaran setelah diperbaiki', [R.out[0], 'Iuran per murid: 70678', 'Iuran per murid: 143000', 'Iuran per murid: 72000'], R.out[0]],
-          ['d', `Tahun lalu 32 murid dan 3 guru: 35 // 40 + 1 = ${runPy(['x = 35 // 40 + 1']).vars.x}`, ['1 bus, kebetulan benar', '2 bus, tetapi tidak ada yang sadar', '0 bus', '1 bus karena rumusnya benar untuk semua jumlah'], '1 bus, kebetulan benar'],
-          ['k', 'Bug ini muncul bila banyak orang', ['tepat kelipatan 40 (40, 80, 120, …)', 'lebih dari 40', 'ganjil', 'kurang dari 40'], 'tepat kelipatan 40 (40, 80, 120, …)'],
-          ['e', 'Titik periksa paling banyak · 16 baris · 1.000 baris', ['4 · sekitar 10 (2¹⁰ = 1.024)', '16 · 1.000', '8 · 500', '2 · 3'], '4 · sekitar 10 (2¹⁰ = 1.024)']],
-        done: then(() => rowsChoose(wrap, ctx, { prompt: 'Tantangan: program 3 sudah memakai int(input(...)), petugas mengetik "dua belas"', cls: 'pg-isi', rows: [
-          ['v', 'Yang terjadi', ["ValueError: invalid literal for int() with base 10: 'dua belas'", "TypeError: unsupported operand type(s) for +: 'int' and 'str'", 'Stok sekarang: 52', "NameError: name 'dua' is not defined"], "ValueError: invalid literal for int() with base 10: 'dua belas'"],
-          ['w', 'Agar program meminta ulang', ['while True: lalu try: masuk = int(input(...)) dan break, except ValueError: cetak pesan', 'if masuk == "dua belas": masuk = 12', 'try: tanpa except', 'hapus int dari baris 2'], 'while True: lalu try: masuk = int(input(...)) dan break, except ValueError: cetak pesan'],
-          ['x', 'Mengapa jangan except: tanpa nama galat?', ['menangkap semua galat, termasuk NameError karena salah ketik, sehingga bug lain tersembunyi', 'Python menolak except tanpa nama', 'programnya menjadi lebih lambat', 'except tanpa nama hanya menangkap SyntaxError'], 'menangkap semua galat, termasuk NameError karena salah ketik, sehingga bug lain tersembunyi']], done: next })) });
-      }
+      const next = (wait = 5200) => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, wait); } };
+      const area = el('div', { class: 'ug42-area' });
+      let foe = null;
+      const go = (k, no) => {
+        const [judul, tujuan, ulah] = HEAD42[k];
+        foe = el('div', { class: 'ug42-musuh' }, el('b', null, '🚑 Gelombang Pasien'), el('span', null, ulah));
+        wrap.append(el('div', { class: 'ug42-kepala' }, misiHead(no, judul, tujuan, '🩺'), foe), area);
+      };
+      const fin = (ms) => ({ oops: () => ctx.mistake(), done: () => { foe.classList.add('beres'); foe.lastChild.textContent = 'Pasien sembuh ✓'; next(ms); } });
+      if (r === 0) { go('rapor', 1); patientRound(area, ctx, fin(5500), PROG[0], { rapor: true }); }
+      else if (r <= 6) { go(PROG[r].id, r <= 3 ? 2 : 3); patientRound(area, ctx, fin(6000), PROG[r]); }
+      else if (r === 7) { go('rapat', 4); rapatRound(area, ctx, fin(6000)); }
+      else if (r === 8) { go('sunyi', 5); sunyiRound(area, ctx, fin(6500)); }
+      else { go('bos', 'Bos'); bosRound(area, ctx, fin(7000)); }
     }
     render();
   },
 };
-
-// One failing program: tap the line(s) the traceback points to, then the cause, then explain and fix.
-function programRound(wrap, ctx, p, next) {
-  const msg = el('p', { class: 'reveal info' });
-  let step = 0; let k = 0; const got = [];
-  const draw = () => {
-    const tags = ['jenis', ...(step >= 1 ? ['lokasi'] : [])];
-    const ask = step === 0 ? (p.tunjuk.length > 1 ? `Ketuk baris yang ditunjuk traceback, mulai dari pemanggilan paling awal (${k} dari ${p.tunjuk.length})` : 'Ketuk baris yang ditunjuk traceback') : 'Ketuk baris penyebab: baris yang harus diperbaiki';
-    const code = pyCode(p.code, { cls: 'pg-kecil', hl: got, warn: step >= 2 ? p.sebab : [], onLine: step < 2 ? tap : null });
-    wrap.replaceChildren(el('p', { class: 'prompt' }, `${p.judul}${p.ket ? ` (${p.ket})` : ''}`), el('div', { class: `pg-dua ${step < 2 ? 'pg-tap' : ''}`, 'data-langkah': `${step}-${k}` }, code, layarView(p.layar, tags)), ...(step < 2 ? [el('p', { class: 'pg-tanya' }, ask)] : []), msg);
-  };
-  function tap(i) {
-    if (step === 0) {
-      if (i !== p.tunjuk[k]) { ctx.mistake(); say(msg, 'bad', k === 0 && p.tunjuk.length > 1 ? `Baris ${i + 1} bukan. Baca baris "File …, line …" yang paling atas.` : `Baris ${i + 1} bukan. Cari "line …" pada baris File terakhir.`); return; }
-      got.push(i); k++; ctx.sound.tap();
-      if (k >= p.tunjuk.length) { step = 1; say(msg, '', `Tepat: Python berhenti di baris ${lineTxt(p)}.`); }
-      draw(); return;
-    }
-    if (!p.sebab.includes(i)) { ctx.mistake(); say(msg, 'bad', p.tunjuk.includes(i) && !p.sebab.includes(i) ? `Baris ${i + 1} adalah tempat Python berhenti. Dari mana nilai yang salah berasal?` : `Baris ${i + 1} bukan penyebabnya. Telusuri nilai yang dipakai di baris yang ditunjuk.`); return; }
-    step = 2; ctx.sound.good(); say(msg, '', `Tepat: penyebabnya di baris ${sebabTxt(p)}.`); draw();
-    const rows = p.rows.map(([key, t, o]) => [key, t, o, o[0]]);
-    rowsChoose(wrap, ctx, { prompt: `${p.jenis}: penjelasan dan perbaikan`, cls: 'pg-isi', rows, done: () => { const R = runFix(p); wrap.append(el('p', { class: 'pg-ket' }, 'Program yang sudah diperbaiki dijalankan:'), outView(R, p)); next(); } });
-  }
-  draw();
-}
-
-const CATATAN = [['Banyak orang', 40], ['Banyak bus', 1], ['Biaya bus', 2400000], ['Tiket murid dan tiket guru', '296.000 dan 45.000'], ['Konsumsi', 1000000], ['Total sebelum cadangan', 3741000], ['Cadangan', 374100], ['Total sesudah cadangan', 4115100], ['Ditanggung murid', 2615100], ['Iuran sebelum dibulatkan', 70678], ['Iuran', 71000]];
-const catatanView = () => el('table', { class: 'pg-tabel' }, el('tr', null, el('th', null, 'Catatan bendahara'), el('th', null, 'Nilai')), CATATAN.map(([a, b]) => el('tr', null, el('td', null, a), el('td', null, typeof b === 'number' ? fmtNum(b) : b))));
 
 // Checkpoints on the bus-fee program: tap a line, pick a variable, compare with the treasurer.
 function createCheck(root, ctx) {
