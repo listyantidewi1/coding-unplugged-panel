@@ -4,8 +4,8 @@
 // a secret average passed around a circle, and what a protocol cannot protect.
 
 import { el, onTap, button, shake } from '../core/util.js';
-import { choice } from '../core/kit.js';
 import { say, pickTeams, scoreBar, finishBoard } from './sma-kit.js';
+import { misiHead } from './misi-kit.js';
 
 export const ANGGOTA = ['Bu Rina', 'Pak Joko', 'Bu Sari', 'Pak Bowo', 'Bu Tini', 'Pak Darto'];
 export const winner = (nums, m = 6) => nums.reduce((s, x) => s + x, 0) % m;
@@ -34,96 +34,403 @@ export const LIMITS = [['Pemenang ditentukan oleh angka anggota yang mengirim pa
 const envelopes = (nums, open = true, names = ANGGOTA) => el('div', { class: 'aw-amplop-amplop' }, nums.map((x, i) => el('div', { class: `aw-amplop ${open ? 'buka' : ''}` }, el('span', { class: 'aw-ikon' }, open ? '📄' : '✉️'), el('b', null, open ? x : '🔒'), el('small', null, `${i}. ${names[i]}`))));
 const sumLine = (nums, m = 6) => el('div', { class: 'aw-hitung' }, `${nums.join(' + ')} = ${nums.reduce((s, x) => s + x, 0)} · sisa bagi ${m} = ${winner(nums, m)}`);
 
-function conspiracyRound(wrap, ctx, { done }) {
-  const filled = { 0: 5 };
-  const host = el('div', { class: 'aw-tabel' });
-  const msg = el('p', { class: 'reveal info' }, 'Lima anggota menulis 1, 1, 1, 1, 1. Untuk setiap angka Bu Sari, ketuk pemenangnya.');
-  let cur = 1;
-  const draw = () => {
-    host.replaceChildren(el('div', { class: 'aw-baris kepala' }, el('b', null, 'Angka Bu Sari'), ...[0, 1, 2, 3, 4, 5].map((x) => el('b', null, x))),
-      el('div', { class: 'aw-baris' }, el('span', null, 'Jumlah'), ...[0, 1, 2, 3, 4, 5].map((x) => el('span', null, x in filled ? 5 + x : x === cur ? '?' : ''))),
-      el('div', { class: 'aw-baris' }, el('span', null, 'Sisa bagi 6'), ...[0, 1, 2, 3, 4, 5].map((x) => el('span', null, x in filled ? (5 + x) % 6 : ''))),
-      el('div', { class: 'aw-baris' }, el('span', null, 'Pemenang'), ...[0, 1, 2, 3, 4, 5].map((x) => el('span', { class: x in filled ? 'isi' : x === cur ? 'kini' : '' }, x in filled ? ANGGOTA[filled[x]] : ''))),
-      cur <= 5 ? el('div', { class: 'seg' }, ANGGOTA.map((a, i) => onTap(el('button', { class: 'seg-btn', type: 'button' }, a), () => {
-        const w = (5 + cur) % 6;
-        if (i !== w) { ctx.mistake(); shake(host); say(msg, 'bad', `5 + ${cur} = ${5 + cur}, sisa bagi 6 = ${w}.`); return; }
-        filled[cur] = w; cur++; ctx.sound.tap(); draw();
-        if (cur > 5) { say(msg, '', 'Setiap anggota muncul tepat sekali.'); done(); }
-      }))) : el('span'));
+// The arisan table: six chairs around a cloth, a pot in the middle, and a
+// pointer that walks chair by chair to count the remainder.
+function meja({ onSeat = null } = {}) {
+  const seats = ANGGOTA.map((nm, i) => {
+    const a = ((-90 + i * 60) * Math.PI) / 180;
+    const node = el(onSeat ? 'button' : 'div', { class: 'aj22-kursi', type: onSeat ? 'button' : null, 'data-i': i, style: { left: `${50 + 38 * Math.cos(a)}%`, top: `${50 + 36 * Math.sin(a)}%` } }, el('small', null, `${i}. ${nm}`), el('span', { class: 'aj22-isi' }));
+    return onSeat ? onTap(node, () => onSeat(i)) : node;
+  });
+  const pusat = el('div', { class: 'aj22-pusat' }, '💰');
+  const node = el('div', { class: 'aj22-meja' }, el('div', { class: 'aj22-taplak' }), pusat, ...seats);
+  let timer = null;
+  const api = {
+    node, seats,
+    set(i, content, cls = '') { const s = seats[i].querySelector('.aj22-isi'); s.textContent = content; s.className = `aj22-isi ${cls}`; },
+    center(t) { pusat.textContent = t; },
+    mark(i, cls) { seats.forEach((s, k) => s.classList.toggle(cls, k === i)); },
+    clear(cls) { seats.forEach((s) => s.classList.remove(cls)); },
+    // Count 1, 2, …, sum around the table starting from chair 0; land on sum mod 6.
+    spin(sum, cb) {
+      clearInterval(timer); let k = 0; api.clear('menang'); api.mark(0, 'tunjuk'); pusat.textContent = '0';
+      timer = setInterval(() => {
+        if (!node.isConnected) { clearInterval(timer); return; }
+        if (k >= sum) { clearInterval(timer); api.clear('tunjuk'); api.mark(sum % 6, 'menang'); pusat.textContent = `${sum} → sisa ${sum % 6}`; cb?.(sum % 6); return; }
+        k++; api.mark(k % 6, 'tunjuk'); pusat.textContent = String(k);
+      }, Math.max(45, Math.min(120, 1500 / Math.max(sum, 1))));
+    },
   };
-  wrap.append(el('p', { class: 'prompt' }, 'Persekongkolan supaya Pak Darto menang.'), host, msg);
-  draw();
+  return api;
 }
 
-function matchRound(wrap, ctx, { done }) {
-  const right = ctx.rand.shuffle(RULES.map((p) => p[1]));
+const nomorPad = (label, onPick, extra = {}) => el('div', { class: 'aj22-tombol' }, el('small', null, label), ...[0, 1, 2, 3, 4, 5].map((x) => onTap(el('button', { class: 'aj22-nomor', type: 'button', 'data-x': x, ...extra }, x), () => onPick(x))));
+
+// Mission 1: the last speaker chooses the winner.
+function lastRound(host, ctx, { done }) {
+  const said = [3, 1, 4, 0, 2]; const goals = [5, 2]; let g = 0; let busy = false;
+  const m = meja();
+  said.forEach((x, i) => m.set(i, String(x), 'angka'));
+  const msg = el('p', { class: 'reveal info' });
+  const ready = () => { busy = false; m.set(5, '?', 'angka tanya'); m.mark(goals[g], 'sasaran'); say(msg, 'info', g === 0 ? 'Lima angka sudah disebut. Pak Darto bicara terakhir. Ketuk angka Pak Darto supaya dirinya sendiri menang (kursi bertanda 🎯).' : 'Sekarang Pak Darto ingin Bu Sari yang menang. Angka berapa?'); };
+  const pad = nomorPad('Angka Pak Darto:', (x) => {
+    if (busy || g >= goals.length) return; busy = true;
+    m.set(5, String(x), 'angka'); ctx.sound.tap();
+    m.spin(10 + x, (w) => {
+      if (w !== goals[g]) { ctx.mistake(); shake(m.node); say(msg, 'bad', `3 + 1 + 4 + 0 + 2 + ${x} = ${10 + x}, sisa bagi 6 = ${w}: ${ANGGOTA[w]} yang menang. Coba angka lain.`); setTimeout(() => { if (g < goals.length) ready(); }, 1600); return; }
+      ctx.sound.good(); g++;
+      if (g < goals.length) { say(msg, 'info', `Jumlah ${10 + x}, sisa ${w}: Pak Darto menang.`); setTimeout(ready, 1800); }
+      else { busy = true; m.clear('sasaran'); say(msg, '', 'Dengan 1 Pak Darto menang, dengan 4 Bu Sari menang. Celahnya: orang yang bicara terakhir sudah tahu semua angka lain, jadi ia bisa memilih pemenang.'); done(); }
+    });
+  });
+  host.append(m.node, pad, msg); ready();
+}
+
+// Mission 2: sealed envelopes opened together.
+function envelopeRound(host, ctx, { done }) {
+  const sets = [[4, 5, 2, 0, 3, 5], [5, 5, 5, 5, 5, 5]]; let s = 0; let opened = false; let busy = false;
+  const m = meja({ onSeat: (i) => tapSeat(i) });
+  const bar = el('div', { class: 'aj22-tombol' });
+  const msg = el('p', { class: 'reveal info' });
+  const sum = () => sets[s].reduce((a, b) => a + b, 0);
+  const seal = () => {
+    opened = false; busy = false; ANGGOTA.forEach((_, i) => m.set(i, '✉️', 'amplop')); m.center('💰'); m.clear('menang');
+    bar.replaceChildren(button('📬 Buka bersama', open, 'primary'));
+    say(msg, 'info', s === 0 ? 'Enam amplop sudah terkumpul dan terkunci di tengah meja. Bukalah bersama-sama.' : 'Bulan berikutnya semua anggota diam-diam menulis 5. Buka amplopnya.');
+  };
+  function open() {
+    if (opened) return; opened = true; ctx.sound.tap();
+    sets[s].forEach((x, i) => m.set(i, String(x), 'angka buka')); bar.replaceChildren(); m.center(`Σ ${sum()}`);
+    say(msg, 'info', `Jumlahnya ${sum()}. Siapa pemenangnya (sisa bagi 6)? Ketuk kursinya.`);
+  }
+  function tapSeat(i) {
+    if (!opened || busy) return;
+    const w = sum() % 6;
+    if (i !== w) { ctx.mistake(); shake(m.node); say(msg, 'bad', `Hitung lagi: ${sum()} dibagi 6, berapa sisanya? Pemenangnya kursi bernomor sisa itu.`); return; }
+    busy = true; ctx.sound.tap();
+    m.spin(sum(), () => {
+      ctx.sound.good(); s++;
+      if (s < sets.length) { say(msg, 'info', `19 dibagi 6 sisa 1: ${ANGGOTA[w]} menang!`); setTimeout(seal, 2400); }
+      else { say(msg, '', '30 dibagi 6 sisa 0: Bu Rina. Semua angka dikunci dulu, baru dibuka bersama, jadi tidak ada yang bisa memilih angkanya setelah melihat angka orang lain.'); done(); }
+    });
+  }
+  host.append(m.node, bar, msg); seal();
+}
+
+// Mission 3: five cheaters write 1; Bu Sari rolls honestly.
+function conspiracyRound(host, ctx, { done }) {
+  const m = meja();
+  [0, 1, 3, 4, 5].forEach((i) => m.set(i, '1', 'angka'));
+  m.set(2, '🎲', 'angka tanya');
+  const filled = {}; let busy = false; let fin = false;
+  const table = el('div', { class: 'aj22-tabel' });
+  const verdict = el('div', { class: 'aj22-putus' });
+  const msg = el('p', { class: 'reveal info' }, 'Lima anggota bersekongkol menulis 1 supaya Pak Darto menang. Bu Sari jujur dan mengocok dadu 0–5. Coba setiap kemungkinan angka Bu Sari.');
+  const drawT = () => table.replaceChildren(el('div', { class: 'aj22-tb kepala' }, el('b', null, 'Bu Sari'), el('b', null, 'Jumlah'), el('b', null, 'Pemenang')),
+    ...[0, 1, 2, 3, 4, 5].map((v) => el('div', { class: `aj22-tb ${v in filled ? 'isi' : ''} ${filled[v] === 5 ? 'darto' : ''}` }, el('span', null, v), el('span', null, v in filled ? 5 + v : ''), el('span', null, v in filled ? ANGGOTA[filled[v]] : ''))));
+  const pad = nomorPad('Angka Bu Sari:', (v) => {
+    if (busy || v in filled) return; busy = true; ctx.sound.tap();
+    m.set(2, String(v), 'angka');
+    m.spin(5 + v, (w) => {
+      busy = false; filled[v] = w; pad.querySelector(`[data-x="${v}"]`).classList.add('on'); drawT();
+      if (Object.keys(filled).length === 6) ask();
+    });
+  });
+  function ask() {
+    say(msg, 'info', 'Setiap anggota menang tepat sekali. Jadi, berapa peluang Pak Darto menang?');
+    verdict.replaceChildren(...['1/6', '1/2', '5/6', '1'].map((p) => button(p, () => {
+      if (fin) return;
+      if (p !== '1/6') { ctx.mistake(); shake(verdict); say(msg, 'bad', 'Lihat tabel: Pak Darto muncul di berapa baris dari enam?'); return; }
+      fin = true; ctx.sound.good(); verdict.replaceChildren();
+      say(msg, '', 'Peluangnya tetap 1/6, sama seperti tanpa persekongkolan. Selama satu anggota jujur memilih acak, para pencurang tidak bisa mengatur pemenang.'); done();
+    }, 'aj22-putus-btn')));
+  }
+  host.append(el('div', { class: 'aj22-dua' }, m.node, el('div', { class: 'aj22-sisi' }, pad, table)), verdict, msg);
+  drawT();
+}
+
+// Mission 4: catch the cheater from clue cards.
+export const TRIK = [{ id: 'tolak', nama: 'Tolak Buka' }, { id: 'dua', nama: 'Dua Angka' }, { id: 'intip', nama: 'Intip Amplop' }, { id: 'tukar', nama: 'Tukar Amplop' }];
+export function clues(id, X, Y) {
+  return {
+    tolak: [`Lima amplop sudah dibuka; tinggal amplop ${X}.`, `${X} berkata, "Amplop saya ketinggalan di rumah, ulang saja undiannya."`, `Dari lima angka yang terbuka, ${X} sudah tahu dirinya akan kalah.`],
+    dua: [`Di kertas ${X} tertulis "2 atau 4".`, `${X} minta amplopnya dibuka paling akhir.`, `${X} berkata, "Maksud saya 4," dan ${X} menang.`],
+    intip: [`Amplop ${Y} tipis, dan meja arisan dekat jendela yang terang.`, `${X} menulis angkanya paling lambat sambil memandangi amplop ${Y}.`, `Angka ${X} "pas sekali" membuat ${X} menang.`],
+    tukar: [`${X} keluar sebentar mengambil minum, amplopnya ikut di saku.`, `Segel amplop ${X} berbeda dari amplop lain.`, `Saat amplop ${X} dibuka, angkanya tepat membuat ${X} menang.`],
+  }[id];
+}
+function catchRound(host, ctx, { cheat, done }) {
+  const X = ANGGOTA[cheat.x]; const Y = ANGGOTA[cheat.y];
+  const texts = clues(cheat.id, X, Y);
+  const shown = new Set(); let sus = null; let trik = null; let fin = false;
+  const m = meja({ onSeat: (i) => { if (fin) return; if (!shown.size) { say(msg, 'bad', 'Buka minimal satu kartu petunjuk dulu.'); return; } sus = i; m.mark(i, 'curiga'); ctx.sound.tap(); check(); } });
+  ANGGOTA.forEach((_, i) => m.set(i, '✉️', 'amplop'));
+  const cards = el('div', { class: 'aj22-petunjuk' });
+  const tricks = el('div', { class: 'aj22-tombol' });
+  const msg = el('p', { class: 'reveal info' }, 'Bulan ini ada yang curang. Buka kartu petunjuk, lalu ketuk kursi pencurang dan kartu triknya. Makin sedikit petunjuk, makin hebat.');
+  const drawCards = () => cards.replaceChildren(...texts.map((t, i) => shown.has(i) ? el('div', { class: 'aj22-kartu buka' }, el('small', null, `Petunjuk ${i + 1}`), t)
+    : onTap(el('button', { class: 'aj22-kartu', type: 'button', 'data-c': i }, el('small', null, `Petunjuk ${i + 1}`), '❓ ketuk untuk membuka'), () => { if (fin) return; shown.add(i); ctx.sound.tap(); drawCards(); })));
+  const drawTricks = () => tricks.replaceChildren(el('small', null, 'Trik:'), ...TRIK.map((t) => onTap(el('button', { class: `aj22-trik ${trik === t.id ? 'on' : ''}`, type: 'button', 'data-t': t.id }, t.nama), () => { if (fin) return; if (!shown.size) { say(msg, 'bad', 'Buka minimal satu kartu petunjuk dulu.'); return; } trik = t.id; ctx.sound.tap(); drawTricks(); check(); })));
+  function check() {
+    if (sus == null || trik == null) { say(msg, 'info', sus == null ? 'Sekarang ketuk kursi pencurangnya.' : 'Sekarang ketuk kartu triknya.'); return; }
+    if (sus !== cheat.x || trik !== cheat.id) {
+      ctx.mistake(); shake(host); say(msg, 'bad', sus !== cheat.x ? `${ANGGOTA[sus]} bukan pencurangnya. Baca petunjuknya lagi.` : `Pencurangnya benar, tetapi triknya bukan ${TRIK.find((t) => t.id === trik).nama}.`);
+      sus = null; trik = null; m.clear('curiga'); drawTricks(); return;
+    }
+    fin = true; ctx.sound.good(); m.set(cheat.x, '🕵️', 'tangkap');
+    say(msg, '', `Tertangkap: ${X} memakai trik ${TRIK.find((t) => t.id === trik).nama}, dengan ${shown.size} petunjuk.`);
+    done();
+  }
+  host.append(el('div', { class: 'aj22-dua' }, m.node, cards), tricks, msg);
+  drawCards(); drawTricks();
+}
+
+// Tap a left item, then the matching right item.
+function pairRound(host, ctx, { left, right, tag = 'abcde', bad, end, done }) {
+  const order = ctx.rand.shuffle(right.map((_, i) => i));
   const ok = new Set(); let sel = null;
-  const box = el('div', { class: 'aw-cocok' });
-  const msg = el('p', { class: 'reveal info' }, 'Ketuk kejadian, lalu aturan tambahan yang menutup celahnya.');
-  const draw = () => box.replaceChildren(el('div', { class: 'aw-kol' }, RULES.map(([l], i) => onTap(el('button', { class: `aw-item ${ok.has(i) ? 'cocok' : sel === i ? 'pilih' : ''}`, type: 'button' }, `${'abcd'[i]}. ${l}`), () => { if (!ok.has(i)) { sel = i; draw(); } }))),
-    el('div', { class: 'aw-kol' }, right.map((r) => { const i = RULES.findIndex((p) => p[1] === r); return onTap(el('button', { class: `aw-item ${ok.has(i) ? 'cocok' : ''}`, type: 'button' }, r), () => {
+  const box = el('div', { class: 'aw-cocok aj22-cocok' });
+  const msg = el('p', { class: 'reveal info' }, 'Ketuk kartu di kiri, lalu pasangannya di kanan.');
+  const draw = () => box.replaceChildren(el('div', { class: 'aw-kol' }, left.map((l, i) => onTap(el('button', { class: `aw-item ${ok.has(i) ? 'cocok' : sel === i ? 'pilih' : ''}`, type: 'button', 'data-l': i }, `${tag[i]}. ${l}`), () => { if (!ok.has(i)) { sel = i; draw(); } }))),
+    el('div', { class: 'aw-kol' }, order.map((i) => onTap(el('button', { class: `aw-item ${ok.has(i) ? 'cocok' : ''}`, type: 'button', 'data-r': i }, right[i]), () => {
       if (sel === null || ok.has(i)) return;
-      if (sel !== i) { ctx.mistake(); shake(box); say(msg, 'bad', 'Aturan itu tidak menutup celah kejadian ini.'); return; }
+      if (sel !== i) { ctx.mistake(); shake(box); say(msg, 'bad', bad); return; }
       ok.add(i); sel = null; ctx.sound.tap(); draw();
-      if (ok.size === RULES.length) { say(msg, '', 'Semua celah tertutup.'); done(); }
-    }); })));
-  wrap.append(el('p', { class: 'prompt' }, 'Menutup celah: pasangkan kejadian dengan aturan tambahannya.'), box, msg);
+      if (ok.size === left.length) { say(msg, '', end); done(); }
+    }))));
+  host.append(box, msg);
   draw();
 }
 
-// Try numbers in the hash machine until one matches.
-function guessHash(wrap, ctx, { target, done }) {
-  const tried = [];
-  const box = el('div', { class: 'aw-mesin' });
-  const msg = el('p', { class: 'reveal info' }, `Bu Tini mengirim sidik ${target}. Masukkan angka ke mesin sidik sampai cocok.`);
-  const draw = () => box.replaceChildren(el('div', { class: 'seg' }, [0, 1, 2, 3, 4, 5].map((x) => onTap(el('button', { class: `seg-btn ${tried.includes(x) ? 'on' : ''}`, type: 'button' }, `sidik("${x}")`), () => {
-    if (tried.includes(x)) return; tried.push(x); ctx.sound.tap(); draw();
-    if (sidik(String(x)) === target) { say(msg, '', `sidik("${x}") = ${target}. Bu Tini memilih ${x}, ditemukan setelah ${tried.length} percobaan.`); done(); } else say(msg, 'info', `sidik("${x}") = ${sidik(String(x))}, bukan ${target}.`);
-  }))), el('div', { class: 'aw-sidik' }, tried.map((x) => el('code', { class: sidik(String(x)) === target ? 'cocok' : '' }, `${x} → ${sidik(String(x))}`))));
-  wrap.append(el('p', { class: 'prompt' }, 'Amplop digital: tebak angka Bu Tini dari sidiknya.'), box, msg);
+// Tap a card, then the bin it belongs to.
+function sortRound(host, ctx, { cards, bins, intro, wrong, end, done }) {
+  const left = ctx.rand.shuffle(cards.map((_, i) => i)); const placed = {}; let sel = null;
+  const tray = el('div', { class: 'aj22-baki' });
+  const box = el('div', { class: 'aj22-wadah' });
+  const msg = el('p', { class: 'reveal info' }, intro);
+  const draw = () => {
+    tray.replaceChildren(...left.filter((i) => !(i in placed)).map((i) => onTap(el('button', { class: `aj22-kartu-sifat ${sel === i ? 'pilih' : ''}`, type: 'button', 'data-k': i }, cards[i][0]), () => { sel = i; ctx.sound.tap(); draw(); })));
+    box.replaceChildren(...bins.map(([id, label]) => onTap(el('div', { class: 'aj22-kotak', role: 'button', tabindex: 0, 'data-b': id }, el('b', null, label), el('div', { class: 'aj22-kotak-isi' }, ...Object.entries(placed).filter(([, b]) => b === id).map(([i]) => el('span', null, cards[i][2] || cards[i][0])))), () => {
+      if (sel == null) { say(msg, 'info', 'Ketuk kartunya dulu, lalu kotaknya.'); return; }
+      if (cards[sel][1] !== id) { ctx.mistake(); shake(box); say(msg, 'bad', wrong(cards[sel])); return; }
+      placed[sel] = id; sel = null; ctx.sound.tap(); draw();
+      if (Object.keys(placed).length === cards.length) { say(msg, '', end); done(); }
+    })));
+  };
+  host.append(tray, box, msg);
   draw();
+}
+
+export const SIFAT = [['🙈 Intip Amplop', 'sembunyi', 'Intip Amplop'], ['🔢 Dua Angka', 'ikat', 'Dua Angka'], ['🔄 Tukar Amplop', 'ikat', 'Tukar Amplop'], ['🙅 Tolak Buka', 'bukan', 'Tolak Buka']];
+const KOTAK_SIFAT = [['sembunyi', 'Melanggar sifat MENYEMBUNYIKAN'], ['ikat', 'Melanggar sifat MENGIKAT'], ['bukan', 'Bukan keduanya: membatalkan']];
+
+// Mission 5: the hash machine, without and with salt, then checking openings.
+function hashRound(host, ctx, { done }) {
+  const salted = sidik(SALTED);
+  const step = el('div', { class: 'aj22-langkah' });
+  host.append(step);
+  const machine = (target, label, onTry) => {
+    const tried = [];
+    const log = el('div', { class: 'aj22-log' });
+    const msg = el('p', { class: 'reveal info' }, label);
+    const pad = nomorPad('Masukkan ke mesin:', (x) => {
+      if (tried.includes(x)) return; tried.push(x); ctx.sound.tap(); pad.querySelector(`[data-x="${x}"]`).classList.add('on');
+      const h = sidik(String(x));
+      log.append(el('code', { class: h === target ? 'cocok' : '' }, `sidik("${x}") = ${h}`));
+      onTry(x, h, tried, msg);
+    });
+    step.replaceChildren(el('div', { class: 'aj22-mesin' }, el('b', null, '⚙️ Mesin Sidik'), el('span', null, `Sidik yang dikirim: ${target}`)), pad, log, msg);
+  };
+  machine('E04B', 'Bu Tini mengirim sidik E04B sebagai amplop digitalnya. Tim Rudi mencoba angka 0–5 di mesin sidik.', (x, h, tried, msg) => {
+    if (h !== 'E04B') { say(msg, 'info', `${h} bukan E04B. Coba lagi.`); return; }
+    say(msg, 'info', `Ketemu dalam ${tried.length} percobaan: angka Bu Tini 2. Tanpa garam hanya ada enam kemungkinan.`);
+    setTimeout(() => machine(salted, `Bulan depan Bu Tini menambahkan garam: ia mengirim sidik dari "angka-kata-kata-angka", yaitu ${salted}. Coba lagi semua angka 0–5.`, (x2, h2, tried2, msg2) => {
+      if (tried2.length < 6) { say(msg2, 'info', `${h2} bukan ${salted}.`); return; }
+      say(msg2, 'info', 'Keenam angka tidak ada yang cocok. Tanpa tahu garamnya, Tim Rudi tidak bisa menebak.');
+      setTimeout(() => { step.replaceChildren(); verifyRound(step, ctx, { done }); }, 2600);
+    }), 2600);
+  });
 }
 
 // Check two openings against the hashes sent earlier.
-function verifyRound(wrap, ctx, { done }) {
+function verifyRound(host, ctx, { done }) {
   const cases = [['Bu Tini', sidik(SALTED), SALTED, true], ['Pak Bowo', sidik('3-meja-biru-hujan-42'), '5-meja-biru-hujan-42', false]];
-  const res = {};
-  const box = el('div', { class: 'aw-buka' });
-  const msg = el('p', { class: 'reveal info' }, 'Masukkan teks pembukaan ke mesin sidik, bandingkan dengan sidik yang dikirim sebelumnya, lalu putuskan.');
-  const shown = {};
-  const draw = () => box.replaceChildren(...cases.map(([who, sent, text, honest], i) => el('div', { class: `aw-kasus ${i in res ? 'beres' : ''}` }, el('b', null, who), el('span', null, `Sidik terkirim: ${sent}`), el('span', null, `Pembukaan: ${text}`),
-    shown[i] ? el('code', { class: sidik(text) === sent ? 'cocok' : 'beda' }, `sidik = ${sidik(text)}`) : onTap(el('button', { class: 'seg-btn', type: 'button' }, '⚙️ Hitung sidik'), () => { shown[i] = true; ctx.sound.tap(); draw(); }),
-    i in res ? el('small', null, honest ? '✓ Jujur: angkanya tidak diganti' : '✗ Mengganti angka: sidiknya tidak cocok') : el('div', { class: 'seg' }, [[true, 'Jujur'], [false, 'Mengganti angka']].map(([v, l]) => onTap(el('button', { class: 'seg-btn', type: 'button' }, l), () => {
+  const res = {}; const shown = {};
+  const box = el('div', { class: 'aw-buka aj22-buka' });
+  const msg = el('p', { class: 'reveal info' }, 'Saat undian dibuka, setiap anggota mengumumkan teks pembukaannya. Hitung sidiknya, bandingkan, lalu beri cap.');
+  const draw = () => box.replaceChildren(...cases.map(([who, sent, text, honest], i) => el('div', { class: `aw-kasus ${i in res ? 'beres' : ''}`, 'data-c': i }, el('b', null, who), el('span', null, `Sidik terkirim: ${sent}`), el('span', null, `Pembukaan: ${text}`),
+    shown[i] ? el('code', { class: sidik(text) === sent ? 'cocok' : 'beda' }, `sidik = ${sidik(text)}`) : onTap(el('button', { class: 'seg-btn aj22-hitung', type: 'button' }, '⚙️ Hitung sidik'), () => { shown[i] = true; ctx.sound.tap(); draw(); }),
+    i in res ? el('span', { class: `aj22-cap ${honest ? 'sah' : 'palsu'}` }, honest ? 'SAH' : 'DIGANTI') : el('div', { class: 'seg' }, [[true, '✅ Sah'], [false, '❌ Angkanya diganti']].map(([v, l]) => onTap(el('button', { class: 'seg-btn aj22-vonis', type: 'button', 'data-v': v }, l), () => {
       if (!shown[i]) { say(msg, 'bad', 'Hitung sidiknya dulu.'); shake(box); return; }
       if (v !== honest) { ctx.mistake(); shake(box); say(msg, 'bad', 'Bandingkan kedua sidik sekali lagi.'); return; }
       res[i] = v; ctx.sound.tap(); draw();
-      if (Object.keys(res).length === cases.length) { say(msg, '', 'Sidik yang sama berarti teksnya sama; hampir mustahil menemukan teks lain dengan sidik yang sama.'); done(); }
+      if (Object.keys(res).length === cases.length) { say(msg, '', 'Sidik yang sama berarti teksnya sama; mencari teks lain dengan sidik yang sama hampir mustahil. Amplop digital ini menyembunyikan (garam) dan mengikat (sidik).'); done(); }
     }))))));
-  wrap.append(el('p', { class: 'prompt' }, 'Pembukaan amplop digital: siapa yang jujur?'), box, msg);
+  host.append(box, msg);
   draw();
 }
 
-function ringSvg(papers, hide = []) {
-  const P = [[400, 70], [640, 200], [550, 400], [250, 400], [160, 200]];
-  const arrows = P.map(([x1, y1], i) => { const [x2, y2] = P[(i + 1) % 5]; const mx = (x1 + x2) / 2; const my = (y1 + y2) / 2; const t = papers[i]; return `<line x1="${x1 + (x2 - x1) * 0.2}" y1="${y1 + (y2 - y1) * 0.2}" x2="${x1 + (x2 - x1) * 0.8}" y2="${y1 + (y2 - y1) * 0.8}" stroke="#94a3b8" stroke-width="4" marker-end="url(#aw-panah)"/><rect x="${mx - 78}" y="${my - 20}" width="156" height="40" rx="8" fill="${t == null ? '#fff' : '#fef9c3'}" stroke="#ca8a04" stroke-width="2"/><text x="${mx}" y="${my + 8}" font-size="22" font-weight="800" text-anchor="middle" fill="#0f172a">${t == null ? '?' : hide.includes(i) ? '▒▒▒' : num(t)}</text>`; });
-  const people = P.map(([x, y], i) => `<circle cx="${x}" cy="${y}" r="42" fill="#e0f2fe" stroke="#0369a1" stroke-width="3"/><text x="${x}" y="${y + 8}" font-size="24" font-weight="900" text-anchor="middle" fill="#0c4a6e">${SAKU[i][0]}</text>`);
-  return `<svg viewBox="80 10 640 450" role="img" aria-label="Lingkaran kertas"><defs><marker id="aw-panah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="#64748b"/></marker></defs>${arrows.join('')}${people.join('')}</svg>`;
+// The ring of five friends; papers lie between neighbours.
+function lingkar({ onPerson = null } = {}) {
+  const pos = SAKU.map((_, i) => { const a = ((-90 + i * 72) * Math.PI) / 180; return [50 + 36 * Math.cos(a), 50 + 37 * Math.sin(a)]; });
+  const people = SAKU.map(([nm], i) => { const b = el(onPerson ? 'button' : 'div', { class: 'aj22-orang', type: onPerson ? 'button' : null, 'data-i': i, style: { left: `${pos[i][0]}%`, top: `${pos[i][1]}%` } }, el('b', null, nm), el('small', null, '')); return onPerson ? onTap(b, () => onPerson(i)) : b; });
+  const papers = pos.map(([x1, y1], i) => { const [x2, y2] = pos[(i + 1) % 5]; return el('span', { class: 'aj22-kertas kosong', style: { left: `${(x1 + x2) / 2}%`, top: `${(y1 + y2) / 2}%` }, 'data-i': i }); });
+  const pusat = el('div', { class: 'aj22-pusat' });
+  const node = el('div', { class: 'aj22-lingkar' }, el('div', { class: 'aj22-taplak bulat' }), pusat, ...papers, ...people);
+  return {
+    node, people, papers,
+    paper(i, text, cls = '') { papers[i].textContent = text == null ? '' : `${SAKU[i][0][0]}→${SAKU[(i + 1) % 5][0][0]} ${text}`; papers[i].className = `aj22-kertas ${text == null ? 'kosong' : ''} ${cls}`; },
+    note(i, t) { people[i].querySelector('small').textContent = t; },
+    mark(i, cls, on = true) { people[i].classList.toggle(cls, on); },
+    center(t) { pusat.textContent = t; },
+  };
 }
-const ringBox = (papers, hide) => { const b = el('div', { class: 'aw-lingkar' }); b.innerHTML = ringSvg(papers, hide); return b; };
 
-function limitsRound(wrap, ctx, { done }) {
-  const ans = {};
-  const box = el('div', { class: 'aw-batas' });
-  const msg = el('p', { class: 'reveal info' }, 'Bisakah protokol undian mencegah kejadian ini?');
-  const draw = () => box.replaceChildren(...LIMITS.map(([t, yes, fix], i) => el('div', { class: `aw-batas-baris ${i in ans ? (yes ? 'ya' : 'tidak') : ''}` }, el('span', null, `${'abcde'[i]}. ${t}`),
-    i in ans ? el('small', null, `${yes ? 'Ya' : 'Tidak'} · ${fix}`) : el('div', { class: 'seg' }, [[true, 'Ya'], [false, 'Tidak']].map(([v, l]) => onTap(el('button', { class: 'seg-btn', type: 'button' }, l), () => {
-      if (v !== yes) { ctx.mistake(); shake(box); say(msg, 'bad', yes ? 'Inilah celah yang ditutup amplop terkunci.' : 'Protokol undian hanya mengatur cara memilih pemenang.'); return; }
-      ans[i] = v; ctx.sound.tap(); draw();
-      if (Object.keys(ans).length === LIMITS.length) { say(msg, '', 'Protokol membuat undian adil, tetapi penipuan, OTP, bukti transfer, dan privasi butuh perlindungan lain.'); done(); }
-    }))))));
-  wrap.append(el('p', { class: 'prompt' }, 'Batas perlindungan protokol.'), box, msg);
-  draw();
+// Mission 6: pass the paper around the circle.
+function ringRound(host, ctx, { done }) {
+  const P = ring(); let at = 0; let stage = 0;
+  const L = lingkar({ onPerson: (i) => give(i) });
+  SAKU.forEach((_, i) => L.paper(i, null));
+  const bar = el('div', { class: 'aj22-tombol' });
+  const msg = el('p', { class: 'reveal info' });
+  L.mark(0, 'pegang'); L.note(0, '✏️');
+  say(msg, 'info', `Lima sahabat ingin tahu rata-rata uang saku tanpa membuka uang saku masing-masing. Ani menulis angka acak ${num(RAND)} ditambah uang sakunya. Ketuk orang yang menerima kertas berikutnya.`);
+  function give(i) {
+    if (stage) return;
+    const to = (at + 1) % 5;
+    if (i !== to) { ctx.mistake(); shake(L.node); say(msg, 'bad', `Kertas berjalan searah lingkaran: dari ${SAKU[at][0]} ke ${SAKU[to][0]}.`); return; }
+    L.paper(at, num(P[at]), 'baru'); L.mark(at, 'pegang', false); L.mark(i, 'pegang'); ctx.sound.tap();
+    at = i;
+    if (i === 0) {
+      stage = 1; say(msg, 'info', `Kertas kembali ke Ani: ${num(P[4])}. Apa yang dilakukan Ani?`);
+      bar.replaceChildren(button(`− ${num(RAND)} (angka acak)`, () => calc('kurang')), button('÷ 5', () => calc('bagi')));
+    } else say(msg, 'info', `${SAKU[i][0]} menambahkan uang sakunya. Ketuk penerima berikutnya.`);
+  }
+  let total = null;
+  function calc(op) {
+    if (op === 'bagi' && total == null) { ctx.mistake(); shake(bar); say(msg, 'bad', `${num(P[4])} masih mengandung angka acak Ani. Kurangi dulu.`); return; }
+    ctx.sound.tap();
+    if (op === 'kurang') { if (total != null) return; total = P[4] - RAND; L.center(`Jumlah ${rp(total)}`); say(msg, 'info', `${num(P[4])} − ${num(RAND)} = ${num(total)}: jumlah uang saku kelima sahabat. Sekarang rata-ratanya.`); return; }
+    bar.replaceChildren(); L.center(`Rata-rata ${rp(total / 5)}`);
+    say(msg, '', `Jumlah ${rp(total)}, rata-rata ${rp(total / 5)}. Setiap orang hanya melihat angka besar yang tercampur angka acak Ani, jadi tidak ada yang tahu uang saku orang lain.`); done();
+  }
+  host.append(L.node, bar, msg);
 }
+
+// Mission 6b: two friends compare papers; a tiny random number leaks.
+function leakRound(host, ctx, { done }) {
+  let P = ring(); const pick = new Set(); let stage = 0; let busy = false;
+  const L = lingkar({ onPerson: (i) => tap(i) });
+  const bar = el('div', { class: 'aj22-tombol' });
+  const msg = el('p', { class: 'reveal info' }, 'Semua kertas sudah berpindah. Dua orang diam-diam saling menunjukkan kertas yang mereka tulis dan terima. Ketuk dua orang yang bersekongkol: bisakah mereka membongkar uang saku seseorang?');
+  const drawP = () => SAKU.forEach((_, i) => L.paper(i, num(P[i])));
+  drawP();
+  function tap(i) {
+    if (stage || busy) return;
+    if (pick.has(i)) { pick.delete(i); L.mark(i, 'sekongkol', false); return; }
+    pick.add(i); L.mark(i, 'sekongkol'); ctx.sound.tap();
+    if (pick.size < 2) return;
+    const [a, b] = [...pick].sort((x, y) => x - y);
+    const gap = (b - a + 5) % 5;
+    if (gap === 1 || gap === 4) {
+      busy = true; say(msg, 'info', `${SAKU[a][0]} dan ${SAKU[b][0]} duduk bersebelahan: kertas mereka tidak membongkar siapa pun. Coba pasangan lain.`);
+      setTimeout(() => { pick.forEach((k) => L.mark(k, 'sekongkol', false)); pick.clear(); busy = false; }, 1800); return;
+    }
+    const [s, mid] = gap === 2 ? [a, (a + 1) % 5] : [b, (b + 1) % 5];
+    const e = (mid + 1) % 5;
+    stage = 1; ctx.sound.good(); L.note(mid, rp(SAKU[mid][1])); L.mark(mid, 'bocor');
+    L.paper(s, num(P[s]), 'sorot'); L.paper(mid, num(P[mid]), 'sorot');
+    say(msg, 'info', `${SAKU[s][0]} menulis ${num(P[s])} dan ${SAKU[e][0]} menerima ${num(P[mid])}. Selisihnya ${rp(P[mid] - P[s])}: uang saku ${SAKU[mid][0]} terbongkar! Sekarang lihat bila Ani memilih angka acak kecil.`);
+    bar.replaceChildren(...[[RAND, num(RAND)], [10, '10']].map(([v, l]) => button(`Angka acak ${l}`, () => small(v))));
+  }
+  function small(v) {
+    if (stage !== 1) return;
+    if (v !== 10) { say(msg, 'info', 'Itu angka acak yang sekarang. Coba angka acak yang kecil.'); return; }
+    stage = 2; ctx.sound.tap(); P = ring(10); drawP(); L.paper(0, num(P[0]), 'sorot'); bar.replaceChildren();
+    say(msg, '', `Dengan angka acak 10, Budi menerima ${num(P[0])} dan langsung menebak uang saku Ani sekitar ${rp(50000)}. Angka acak harus besar dan tidak tertebak, dan cara melingkar ini rapuh bila dua orang bersekongkol.`); done();
+  }
+  host.append(L.node, bar, msg);
+}
+
+// Boss: split into three shares, keep one, give two to the next two friends.
+const BAGI = [[18000, 9000, 23000], [30000, 25000, 20000], [12000, 21000, 7000], [26000, 14000, 20000], [45000, 35000, 20000]];
+const N15 = 15;
+function rank(rows) {
+  const m = rows.map((r) => r.slice()); let r = 0;
+  for (let c = 0; c < N15 && r < m.length; c++) {
+    const p = m.findIndex((row, j) => j >= r && Math.abs(row[c]) > 1e-9); if (p < 0) continue;
+    [m[r], m[p]] = [m[p], m[r]];
+    for (let j = 0; j < m.length; j++) if (j !== r && Math.abs(m[j][c]) > 1e-9) { const f = m[j][c] / m[r][c]; for (let cc = 0; cc < N15; cc++) m[j][cc] -= f * m[r][cc]; }
+    r++;
+  }
+  return r;
+}
+// Which friends' pocket money can coalition S compute? Shares go i → i, i+1, i+2.
+export function bocor(S) {
+  const idx = (i, k) => i * 3 + k; const holder = (i, k) => (i + k) % 5;
+  const unit = (v) => { const a = Array(N15).fill(0); a[v] = 1; return a; };
+  const known = [];
+  for (let i = 0; i < 5; i++) for (let k = 0; k < 3; k++) if (S.includes(i) || S.includes(holder(i, k))) known.push(unit(idx(i, k)));
+  for (let h = 0; h < 5; h++) { const a = Array(N15).fill(0); for (let i = 0; i < 5; i++) for (let k = 0; k < 3; k++) if (holder(i, k) === h) a[idx(i, k)] = 1; known.push(a); }
+  const r0 = rank(known);
+  return [0, 1, 2, 3, 4].filter((t) => !S.includes(t) && rank([...known, [0, 1, 2, 3, 4].flatMap((i) => [0, 1, 2].map(() => (i === t ? 1 : 0)))]) === r0);
+}
+function bossRound(host, ctx, { done }) {
+  const L = lingkar({ onPerson: (i) => tapPerson(i) });
+  const chips = el('div', { class: 'aj22-tombol' });
+  const bar = el('div', { class: 'aj22-tombol' });
+  const msg = el('p', { class: 'reveal info' });
+  const at = [null, null, null]; let sel = null; let stage = 0; const coal = new Set();
+  const want = [0, 1, 2];
+  const drawChips = () => chips.replaceChildren(el('small', null, `Uang saku Ani ${rp(50000)} dipecah:`), ...BAGI[0].map((v, k) => onTap(el('button', { class: `aj22-trik ${sel === k ? 'on' : ''} ${at[k] != null ? 'pakai' : ''}`, type: 'button', 'data-k': k, disabled: at[k] != null }, `${rp(v)}${at[k] != null ? ` → ${SAKU[at[k]][0]}` : ''}`), () => { if (stage) return; sel = k; ctx.sound.tap(); drawChips(); })));
+  say(msg, 'info', 'Cara lebih kuat: setiap orang memecah uang sakunya menjadi 3 bagian, menyimpan 1, dan memberikan 2 bagian kepada dua orang berikutnya searah lingkaran. Ketuk bagian Ani, lalu orang yang memegangnya.');
+  function tapPerson(i) {
+    if (stage === 0) {
+      if (sel == null) { say(msg, 'info', 'Ketuk dulu salah satu bagian uang saku Ani.'); return; }
+      if (!want.includes(i)) { ctx.mistake(); shake(L.node); say(msg, 'bad', `Aturannya: Ani menyimpan satu bagian dan memberi dua bagian kepada Budi dan Citra (dua orang berikutnya).`); return; }
+      if (at.includes(i)) { ctx.mistake(); shake(L.node); say(msg, 'bad', `${SAKU[i][0]} sudah memegang satu bagian Ani. Setiap orang hanya boleh menerima satu bagian.`); return; }
+      at[sel] = i; sel = null; ctx.sound.tap(); drawChips();
+      if (at.every((x) => x != null)) {
+        stage = 1;
+        const held = [0, 1, 2, 3, 4].map((h) => BAGI.reduce((s, parts, j) => s + parts.reduce((t, v, k) => t + ((j === 0 ? at[k] : (j + k) % 5) === h ? v : 0), 0), 0));
+        held.forEach((v, h) => L.note(h, `📢 ${rp(v)}`));
+        say(msg, 'info', 'Yang lain melakukan hal yang sama. Setiap orang mengumumkan jumlah bagian yang ia pegang. Jumlahkan pengumumannya.');
+        bar.replaceChildren(button('Σ Jumlahkan pengumuman', () => {
+          if (stage !== 1) return; stage = 2; bar.replaceChildren(); ctx.sound.good();
+          L.center(`${rp(held.reduce((a, b) => a + b, 0))} ÷ 5 = ${rp(65000)}`);
+          say(msg, 'info', `Jumlahnya tetap ${rp(325000)}, rata-rata ${rp(65000)}. Sekarang uji keamanannya: ketuk anggota persekongkolan (boleh 1 sampai 4 orang). Berapa orang yang dibutuhkan untuk membongkar uang saku seseorang?`);
+        }, 'primary'));
+      }
+      return;
+    }
+    if (stage !== 2) return;
+    if (coal.has(i)) coal.delete(i); else coal.add(i);
+    ctx.sound.tap(); SAKU.forEach((_, k) => { L.mark(k, 'sekongkol', coal.has(k)); L.mark(k, 'bocor', false); });
+    const S = [...coal];
+    if (!S.length) return;
+    const leak = bocor(S);
+    if (!leak.length) { say(msg, 'info', `${S.length} orang bersekongkol (${S.map((k) => SAKU[k][0]).join(', ')}): tidak ada uang saku yang terbongkar.${S.length < 4 ? ' Tambah anggotanya.' : ''}`); return; }
+    leak.forEach((k) => L.mark(k, 'bocor'));
+    stage = 3;
+    say(msg, '', `Baru ${S.length} orang bersekongkol yang bisa membongkar uang saku ${leak.map((k) => SAKU[k][0]).join(', ')}: ${rp(325000)} dikurangi uang saku mereka sendiri. Dengan pembagian rahasia, persekongkolan 1 sampai 3 orang tidak membongkar siapa pun.`);
+    done();
+  }
+  host.append(L.node, chips, bar, msg);
+  drawChips();
+}
+
+const HEAD22 = {
+  akhir: ['Undian Curang', 'Pak Darto bicara paling akhir. Bisakah ia memilih pemenang?'],
+  amplop: ['Undian Amplop', 'Kunci semua angka di amplop, buka bersama, hitung pemenangnya.'],
+  sekongkol: ['Persekongkolan', 'Lima orang bersekongkol, satu orang jujur. Siapa yang menang?'],
+  tangkap: ['Tangkap Pencurang', 'Buka petunjuk, tunjuk pencurang dan triknya.'],
+  celah: ['Tutup Celahnya', 'Pasangkan kejadian dengan aturan penutup, lalu pilah sifatnya.'],
+  sidik: ['Sidik Digital', 'Mesin sidik sebagai amplop digital: tanpa garam dan dengan garam.'],
+  lingkar: ['Rata-rata Rahasia', 'Jalankan kertas melingkar, lalu hitung rata-ratanya.'],
+  bocor: ['Kertas yang Bocor', 'Dua orang bersekongkol. Siapa yang terbongkar?'],
+  ancam: ['Kartu Ancaman', 'Mana yang dicegah protokol undian, mana yang butuh perlindungan lain?'],
+  boss: ['Pembagian Rahasia', 'Pecah uang saku jadi tiga bagian. Berapa orang yang dibutuhkan untuk membongkarnya?'],
+};
 
 export default {
   id: 'sma-22-arisan-jujur',
@@ -144,41 +451,50 @@ export default {
     { id: 'giliran', icon: '🕵️', label: 'Tim Pencurang', desc: 'Satu tim diam-diam memakai satu celah; tim lain menebak celah dan aturan penutupnya', create: createTeams },
   ],
   create(root, ctx) {
-    const wrap = el('div', { class: 'act arisan-jujur' });
+    const wrap = el('div', { class: 'act arisan-jujur aj22-main' });
     root.append(wrap);
+    const x = ctx.rand.int(0, 5);
+    const cheat = { id: ctx.rand.pick(TRIK).id, x, y: (x + ctx.rand.int(1, 5)) % 6 };
     function render() {
       wrap.replaceChildren();
       const r = ctx.round;
       let solved = false;
-      const next = () => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, 2400); } };
-      const ask = (prompt, opts, columns = 1, subject = null, onRight = next) => choice(wrap, { prompt, subject, ctx, shuffle: true, onRight, columns, options: opts.map(([l, correct]) => ({ label: String(l), correct })) });
-      const then = (fn) => () => { wrap.replaceChildren(); fn(); };
-      const said = el('div', { class: 'aw-hitung' }, 'Bu Rina 3 · Pak Joko 1 · Bu Sari 4 · Pak Bowo 0 · Bu Tini 2 · Pak Darto ?');
-      const papers = ring();
-      if (r === 0) ask('Cara Pak Darto: angka berapa yang harus ia sebut terakhir supaya dirinya sendiri (nomor 5) menang?', [0, 1, 2, 3, 4, 5].map((x) => [x, x === 1]), 6, said,
-        then(() => ask('Dan supaya Bu Sari (nomor 2) yang menang?', [0, 1, 2, 3, 4, 5].map((x) => [x, x === 4]), 6, said,
-          then(() => ask('Apa kelemahan cara Pak Darto?', [['Orang yang menyebut angka terakhir bisa memilih pemenang, karena ia sudah tahu semua angka lain', true], ['Sisa bagi 6 tidak adil untuk nomor 0'], ['Angka 0–5 terlalu sedikit'], ['Tidak ada kelemahan; semua menyebut angka']])))));
-      else if (r === 1) ask('Isi amplop 4, 5, 2, 0, 3, 5. Siapa pemenangnya?', ANGGOTA.map((a, i) => [a, i === winner([4, 5, 2, 0, 3, 5])]), 3, envelopes([4, 5, 2, 0, 3, 5]),
-        then(() => ask('Jika semua anggota menulis 5, siapa pemenangnya?', ANGGOTA.map((a, i) => [a, i === winner([5, 5, 5, 5, 5, 5])]), 3, envelopes([5, 5, 5, 5, 5, 5]))));
-      else if (r === 2) conspiracyRound(wrap, ctx, { done: then(() => ask('Berapa peluang Pak Darto menang, dan apa kesimpulannya?', [['1/6, sama seperti tanpa persekongkolan; persekongkolan tidak berguna selama satu anggota jujur memilih acak', true], ['5/6, karena lima orang menulis 1'], ['1/2; persekongkolan setengah berhasil'], ['1; Pak Darto pasti menang']], 1, null,
-        then(() => ask('Mengapa semua amplop harus terkumpul sebelum ada yang dibuka?', [['Supaya tidak ada yang bisa memilih angka setelah melihat angka orang lain', true], ['Supaya lebih cepat'], ['Supaya amplop tidak hilang'], ['Supaya ketua bisa memeriksa isinya lebih dulu']])))) });
-      else if (r === 3) matchRound(wrap, ctx, { done: next });
-      else if (r === 4) ask('Amplop yang baik itu menyembunyikan dan mengikat. Kejadian mana yang melanggar sifat menyembunyikan, dan mana yang melanggar sifat mengikat?', [['Menyembunyikan: amplop tipis (c). Mengikat: menukar amplop (d), juga "2 atau 4" (b)', true], ['Menyembunyikan: menukar amplop (d). Mengikat: amplop tipis (c)'], ['Keduanya: menolak membuka (a)'], ['Menyembunyikan: "2 atau 4" (b). Mengikat: amplop tipis (c)']]);
-      else if (r === 5) guessHash(wrap, ctx, { target: 'E04B', done: then(() => ask('Mengapa sidik tanpa garam bermasalah, dan mengapa garam memperbaikinya?', [['Hanya ada enam kemungkinan, jadi siapa pun bisa mencoba semuanya; garam acak yang panjang membuat kemungkinannya terlalu banyak untuk dicoba', true], ['Mesin sidiknya rusak; garam memperbaikinya'], ['Sidik terlalu pendek; garam memperpanjang sidik'], ['Tidak bermasalah; garam hanya hiasan']], 1, el('table', { class: 'aw-tabel-sidik' }, el('tr', null, el('th', null, 'Teks'), ...[0, 1, 2, 3, 4, 5].map((x) => el('th', null, x))), el('tr', null, el('td', null, 'Sidik'), ...SIDIK.map((s) => el('td', null, s)))))) });
-      else if (r === 6) verifyRound(wrap, ctx, { done: next });
-      else if (r === 7) {
-        const k = [1, 2, 3, 4];
-        const paper = (i) => (i >= k.length ? ask('Ani mengurangi angka acaknya dari kertas terakhir. Berapa jumlah dan rata-rata uang saku?', [['Jumlah Rp325.000, rata-rata Rp65.000', true], ['Jumlah Rp1.559.567, rata-rata Rp311.913'], ['Jumlah Rp325.000, rata-rata Rp81.250'], ['Jumlah Rp275.000, rata-rata Rp55.000']], 1, ringBox(papers))
-          : ask(`Kertas ${SAKU[k[i]][0]} → ${SAKU[(k[i] + 1) % 5][0]}: berapa angkanya? (${SAKU[k[i]][0]} menambahkan uang sakunya ${rp(SAKU[k[i]][1])}.)`, [papers[k[i]], papers[k[i]] - 10000, papers[k[i]] + 10000, papers[k[i] - 1] - SAKU[k[i]][1]].map((x, j) => [x, j === 0]).sort((u, v) => u[0] - v[0]).map(([x, c]) => [num(x), c]), 4, ringBox(papers.map((p, j) => (j <= k[i] - 1 ? p : null))), then(() => paper(i + 1))));
-        paper(0);
-      } else if (r === 8) ask('Citra hanya melihat 1.359.567. Apa yang bisa ia ketahui tentang uang saku Ani atau Budi?', [['Tidak ada: angka itu tercampur angka acak Ani yang tidak ia ketahui', true], ['Uang saku Budi: 1.359.567 − 1.284.567'], ['Uang saku Ani dan Budi sama-sama Rp62.500'], ['Rata-rata kelompok']], 1, ringBox(papers, [0, 2, 3, 4]),
-        then(() => ask('Budi dan Dodi diam-diam saling menunjukkan kertas yang mereka pegang. Uang saku siapa yang bisa mereka hitung?', [['Citra: 1.399.567 − 1.359.567 = Rp40.000', true], ['Ani: 1.284.567 − 1.234.567'], ['Eka: 1.559.567 − 1.459.567'], ['Tidak ada']], 1, ringBox(papers, [4]),
-          then(() => ask('Apa yang terjadi jika Ani memilih angka acak kecil, misalnya 10?', [['Budi menerima 50.010 dan bisa menebak uang saku Ani sekitar Rp50.000; angka acak harus besar dan tak tertebak', true], ['Tidak ada bedanya'], ['Rata-ratanya menjadi salah'], ['Eka tidak bisa menambahkan uang sakunya']])))));
-      else limitsRound(wrap, ctx, { done: then(() => ask('Tantangan: bagaimana supaya dua orang yang bersekongkol tidak bisa membongkar uang saku orang di antara mereka?', [['Setiap orang memecah uang sakunya menjadi beberapa bagian acak yang jumlahnya tetap, menyimpan satu, dan membagikan sisanya ke orang berbeda; tiap orang mengumumkan jumlah bagian yang ia pegang', true], ['Duduk berjauhan supaya tidak bisa saling melihat'], ['Ani memakai angka acak dua kali'], ['Semua menulis uang saku di amplop terkunci lalu dibuka bersama']])) });
+      const next = (wait = 5200) => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, wait); } };
+      const area = el('div', { class: 'aj22-area' });
+      const go = (k, no) => { wrap.append(misiHead(no, ...HEAD22[k], '✉️'), area); };
+      if (r === 0) { go('akhir', 1); lastRound(area, ctx, { done: () => next(6000) }); }
+      else if (r === 1) { go('amplop', 2); envelopeRound(area, ctx, { done: () => next(6000) }); }
+      else if (r === 2) { go('sekongkol', 3); conspiracyRound(area, ctx, { done: () => next(6000) }); }
+      else if (r === 3) { go('tangkap', 4); catchRound(area, ctx, { cheat, done: () => next(5000) }); }
+      else if (r === 4) {
+        go('celah', 4);
+        pairRound(area, ctx, { left: RULES.map((x) => x[0]), right: RULES.map((x) => x[1]), bad: 'Aturan itu tidak menutup celah kejadian ini.', end: 'Semua celah tertutup.', done: () => setTimeout(() => {
+          area.replaceChildren();
+          sortRound(area, ctx, { cards: SIFAT, bins: KOTAK_SIFAT, intro: 'Amplop yang baik menyembunyikan (isinya tidak terlihat) dan mengikat (isinya tidak bisa diganti). Trik mana melanggar sifat yang mana? Ketuk trik, lalu kotaknya.', wrong: (c) => (c[1] === 'bukan' ? 'Menolak membuka tidak mengintip dan tidak mengganti angka: itu membatalkan undian.' : c[1] === 'sembunyi' ? 'Mengintip berarti isi amplop terlihat sebelum waktunya.' : 'Trik ini mengganti atau memilih angka setelah amplop dikunci.'), end: 'Intip Amplop melanggar sifat menyembunyikan; Dua Angka dan Tukar Amplop melanggar sifat mengikat; Tolak Buka adalah pembatalan, ditangani aturan "tidak dibuka dianggap 0".', done: () => next(6500) });
+        }, 2200) });
+      } else if (r === 5) { go('sidik', 5); hashRound(area, ctx, { done: () => next(6500) }); }
+      else if (r === 6) { go('lingkar', 6); ringRound(area, ctx, { done: () => next(6500) }); }
+      else if (r === 7) { go('bocor', 6); leakRound(area, ctx, { done: () => next(7000) }); }
+      else if (r === 8) {
+        go('ancam', 7);
+        sortRound(area, ctx, { cards: LIMITS.map(([t, yes]) => [t, yes ? 'ya' : 'tidak']), bins: [['ya', '🛡️ Dicegah protokol undian'], ['tidak', '🧰 Butuh perlindungan lain']], intro: 'Ketuk kartu ancaman, lalu kotaknya. Protokol undian hanya mengatur cara memilih pemenang.', wrong: (c) => (c[1] === 'ya' ? 'Inilah celah yang ditutup amplop terkunci.' : 'Protokol undian tidak bisa mencegah ini.'), end: 'Hanya kartu pemilih angka terakhir yang dicegah protokol. Sekarang pasangkan yang lain dengan perlindungannya.', done: () => setTimeout(() => {
+          area.replaceChildren();
+          const rest = LIMITS.filter((l) => !l[1]);
+          pairRound(area, ctx, { left: rest.map((l) => l[0]), right: rest.map((l) => l[2]), tag: 'bcde', bad: 'Perlindungan itu untuk ancaman lain.', end: 'Protokol membuat undian adil, tetapi penipuan, OTP, bukti transfer, dan privasi butuh perlindungan lain.', done: () => next(6500) });
+        }, 2600) });
+      } else { go('boss', 'Bos'); bossRound(area, ctx, { done: () => next(8000) }); }
     }
     render();
   },
 };
+
+function ringSvg(papers, hide = []) {
+  const P = [[400, 70], [640, 200], [550, 400], [250, 400], [160, 200]];
+  const arrows = P.map(([x1, y1], i) => { const [x2, y2] = P[(i + 1) % 5]; const mx = (x1 + x2) / 2; const my = (y1 + y2) / 2; const t = papers[i]; return `<line x1="${x1 + (x2 - x1) * 0.2}" y1="${y1 + (y2 - y1) * 0.2}" x2="${x1 + (x2 - x1) * 0.8}" y2="${y1 + (y2 - y1) * 0.8}" stroke="#94a3b8" stroke-width="4" marker-end="url(#aw-panah)"/><rect x="${mx - 78}" y="${my - 20}" width="156" height="40" rx="8" fill="${t == null ? '#fff' : '#fef9c3'}" stroke="#ca8a04" stroke-width="2"/><text x="${mx}" y="${my + 8}" font-size="22" font-weight="800" text-anchor="middle" fill="#0f172a">${t == null ? '?' : hide.includes(i) ? '▒▒▒' : num(t)}</text>`; });
+  const people = P.map(([x, y], i) => `<circle cx="${x}" cy="${y}" r="42" fill="#e0f2fe" stroke="#0369a1" stroke-width="3"/><text x="${x}" y="${y + 8}" font-size="24" font-weight="900" text-anchor="middle" fill="#0c4a6e">${SAKU[i][0]}</text>`);
+  return `<svg viewBox="80 10 640 450" role="img" aria-label="Lingkaran kertas"><defs><marker id="aw-panah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="#64748b"/></marker></defs>${arrows.join('')}${people.join('')}</svg>`;
+}
+const ringBox = (papers, hide) => { const b = el('div', { class: 'aw-lingkar' }); b.innerHTML = ringSvg(papers, hide); return b; };
 
 function createDraw(root, ctx) {
   const wrap = el('div', { class: 'act arisan-jujur' });
