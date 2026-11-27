@@ -2,10 +2,13 @@
 // One big order table full of repeats is split into pelanggan, produk and pesanan
 // with primary and foreign keys; queries run as cards (SARING, PILIH, GABUNG,
 // KELOMPOKKAN, URUTKAN) and as SQL in a small interpreter inside the browser.
+// The main mode is a game against the Pengacau Data: tap rows, drag columns,
+// keys, query cards and SQL tiles; nothing is typed.
 
 import { el, onTap, button, shake } from '../core/util.js';
-import { choice } from '../core/kit.js';
+import { dnd } from '../core/kit.js';
 import { say, pickTeams, scoreBar, finishBoard, fmtNum } from './sma-kit.js';
+import { misiHead, fill } from './misi-kit.js';
 import { makeDb, SqlError } from './sql-mini.js';
 
 // [no, tanggal, pelanggan, kontak, produk, harga, jumlah, total]
@@ -55,59 +58,397 @@ const ANOM_OPTS = [['ubah', 'pembaruan'], ['sisip', 'penyisipan'], ['hapus', 'pe
 const money = (v) => (typeof v === 'number' && v >= 1000 ? fmtNum(v) : String(v ?? 'NULL'));
 
 // --- view pieces ---
-function tableView(cols, rows, { cap = null, fmt = false, cls = '', hl = null, onRow = null, rowCls = null } = {}) {
+function tableView(cols, rows, { cap = null, fmt = false, cls = '', hl = null, onRow = null, rowCls = null, rowAttr = null } = {}) {
   return el('div', { class: `sq-tabel-wadah ${cls}` }, cap ? el('b', { class: 'sq-cap' }, cap) : null, el('table', { class: 'sq-tabel' }, el('tr', null, cols.map((c) => el('th', null, c))), rows.length ? rows.map((r, i) => {
-    const tr = el('tr', { class: `${hl && hl(r, i) ? 'hl' : ''} ${rowCls ? rowCls(r, i) : ''}` }, r.map((v) => el('td', { class: typeof v === 'number' ? 'n' : '' }, fmt ? money(v) : String(v ?? 'NULL'))));
+    const tr = el('tr', { class: `${hl && hl(r, i) ? 'hl' : ''} ${rowCls ? rowCls(r, i) : ''}`, ...(rowAttr ? rowAttr(r, i) : {}) }, r.map((v) => el('td', { class: typeof v === 'number' ? 'n' : '' }, fmt ? money(v) : String(v ?? 'NULL'))));
     return onRow ? onTap(tr, () => onRow(r, i, tr)) : tr;
   }) : el('tr', null, el('td', { colspan: cols.length, class: 'kosong' }, '(tidak ada baris)'))));
 }
 const resultView = (r, opts = {}) => (r.kind === 'rows' ? tableView(r.cols, r.rows, opts) : el('p', { class: 'sq-info' }, `✓ ${r.text}`));
 const BIG_COLS = ['No.', 'Tanggal', 'Pelanggan', 'Kontak', 'Produk', 'Harga', 'Jumlah', 'Total'];
 
-// Pipeline of card steps with the table after each card.
-function pipeline(q, { upto = Infinity } = {}) {
-  const db = makeDb(SCHEMA);
-  return el('div', { class: 'sq-alur' }, q[2].slice(0, upto).map(([card, text, sql], i) => { const r = db.run(sql)[0]; return el('div', { class: 'sq-langkah' }, el('div', { class: 'sq-kartu-baris' }, card ? el('span', { class: `sq-kartu k-${card}` }, card) : el('span', { class: 'sq-kartu k-TABEL' }, 'TABEL'), el('span', null, text)), resultView(r, { cls: i === q[2].length - 1 ? 'akhir' : '' })); }));
-}
 function cardText(q) { return q[2].map(([c, t]) => (c ? `${c} ${t}` : t)).join(' → '); }
 
-function pickRows(wrap, ctx, { prompt, rows, opts, why, done, info, cls = '' }) {
-  const res = {};
-  const msg = el('p', { class: 'reveal info' }, info);
-  const box = el('div', { class: `sq-baris-baris ${cls}` });
-  const draw = () => box.replaceChildren(...rows.map(([k, t, a]) => el('div', { class: `sq-baris ${k in res ? 'beres' : ''}` }, el('span', null, t), k in res ? el('b', null, opts.find((o) => o[0] === a)[1]) : el('div', { class: 'seg' }, opts.map(([v, l]) => onTap(el('button', { class: 'seg-btn', type: 'button' }, l), () => {
-    if (v !== a) { ctx.mistake(); say(msg, 'bad', why(k, a, false)); return; }
-    res[k] = v; ctx.sound.tap(); say(msg, '', why(k, a, true)); draw();
-    if (Object.keys(res).length === rows.length) setTimeout(done, 1600);
-  }))))));
-  draw();
-  wrap.append(el('p', { class: 'prompt' }, prompt), box, msg);
+// ---------- Permainan: Basis Data Antikacau ----------
+// Every round is a mission against the Pengacau Data, who throws one chaos card.
+const HEAD34 = {
+  rina: ['Selidiki Tabel Besar', 'Hitung salinan Bu Rina, lalu temukan tiga baris yang bertentangan.', 'Catatan Nadia penuh salinan, dan ada yang tidak cocok!'],
+  uang: ['Uang yang Hilang', 'Hitung uang yang seharusnya diterima, lalu beri nama setiap anomali.', 'Kas toko kurang Rp10.000!'],
+  pecah: ['Pecah Tiga Tabel', 'Setiap fakta cukup disimpan di satu tabel.', 'Tabel besar terlalu kacau untuk ditambal.'],
+  kunci: ['Pasang Kunci', 'Kunci primer di setiap tabel, kunci asing di tabel pesanan.', 'Ada pelanggan bernama sama? Nama tidak bisa jadi kunci!'],
+  k12: ['Kueri Kartu K1 dan K2', 'Susun kartu; tabel antara muncul setelah setiap kartu.', 'Kartu kueri diacak dengan kartu jebakan.'],
+  k34: ['Kueri Kartu K3 dan K4', 'Gabungkan tabel bila kolomnya ada di tabel lain.', 'Kolom yang dicari tersebar di dua tabel.'],
+  k5: ['Kueri Kartu K5', 'Siapa pelanggan dengan belanja terbesar?', 'Pertanyaannya diganti di tengah jalan!'],
+  sql: ['Terjemahkan ke SQL', 'Rakit SQL dari ubin, satu klausa per baris.', 'Ubin SQL palsu diselipkan.'],
+  sabot: ['Kueri Disabotase', 'Temukan bagian yang salah, lalu perbaiki dengan ubin.', 'Satu baris kueri dihapus diam-diam!'],
+  bos: ['Pelanggan Setia', 'Atasi harga lilin naik, lalu cari pelanggan yang belanja di atas Rp100.000.', 'Harga lilin naik menjadi Rp18.000!'],
+};
+const msg34 = (t) => el('p', { class: 'reveal info' }, t);
+
+export const MONEY_CHIPS = ['45.000', '50.000', '90.000', '100.000', '565.000', '575.000', '585.000'];
+export const MONEY_WANT = ['50.000', '100.000', '575.000'];
+export const ANOM_CARDS = [['ubah', 'pembaruan'], ['ubah', 'pembaruan'], ['sisip', 'penyisipan'], ['hapus', 'penghapusan']];
+// [key, card, target table, column name there]
+export const SPLIT34 = [['tanggal', 'Tanggal', 'pesanan', 'tanggal'], ['nama', 'Nama pelanggan', 'pelanggan', 'nama'], ['kontak', 'Kontak', 'pelanggan', 'kontak'], ['produk', 'Nama produk', 'produk', 'nama_produk'], ['harga', 'Harga sekarang', 'produk', 'harga'], ['hsat', 'Harga saat dipesan', 'pesanan', 'harga_satuan'], ['jumlah', 'Jumlah', 'pesanan', 'jumlah'], ['total', 'Total', 'buang', '']];
+const SPLIT_HINT = { pelanggan: 'Kolom ini menerangkan orangnya, jadi cukup ditulis sekali untuk setiap pelanggan.', produk: 'Kolom ini menerangkan barangnya, jadi cukup ditulis sekali untuk setiap produk.', pesanan: 'Kolom ini bisa berbeda di setiap pesanan.', buang: 'Total bisa dihitung dari jumlah × harga saat dipesan. Bila disimpan juga, keduanya bisa tidak cocok lagi.' };
+export const KEY_CHIPS = ['id_pelanggan', 'id_pelanggan', 'id_produk', 'id_produk', 'id_pesanan', 'nama', 'tanggal'];
+const KEY_TABLES = [['pelanggan', ['pk', 'nama', 'kontak']], ['produk', ['pk', 'nama_produk', 'harga']], ['pesanan', ['pk', 'tanggal', 'fk1', 'fk2', 'jumlah', 'harga_satuan']]];
+export const PRICE_CHIPS = ['45000', '50000', '90000', '100000'];
+
+const aggName = (c) => (c.fn === 'COUNT' ? 'banyak' : c.fn === 'SUBTOTAL' ? 'total' : `total_${c.of}`);
+const usesCols = (c) => (c.k === 'SARING' || c.k === 'URUTKAN' ? [c.col] : c.k === 'PILIH' ? c.cols : c.k === 'GABUNG' ? [`id_${c.table}`] : c.k === 'KELOMPOKKAN' ? [c.col, ...(c.fn === 'SUM' ? [c.of] : c.fn === 'SUBTOTAL' ? ['jumlah', 'harga_satuan'] : [])] : []);
+const lit = (v) => (typeof v === 'number' ? String(v) : `'${v}'`);
+export const cardLabel = (c) => (c.k === 'SARING' ? `${c.col} ${c.op} ${lit(c.val)}` : c.k === 'PILIH' ? c.cols.join(', ') : c.k === 'GABUNG' ? `${c.table} lewat id_${c.table}` : c.k === 'KELOMPOKKAN' ? `per ${c.col}, ${c.fn === 'COUNT' ? 'COUNT(*)' : c.fn === 'SUBTOTAL' ? 'SUM(jumlah × harga_satuan)' : `SUM(${c.of})`}` : `${c.col} ${c.desc ? 'besar → kecil' : 'kecil → besar'}`);
+function availCols(from, placed) {
+  let cols = [...SCHEMA[from].cols];
+  for (const c of placed) {
+    if (c.k === 'GABUNG') cols = [...new Set([...cols, ...SCHEMA[c.table].cols])];
+    else if (c.k === 'PILIH') cols = [...c.cols];
+    else if (c.k === 'KELOMPOKKAN') cols = [c.col, aggName(c)];
+  }
+  return cols;
 }
 
-function badRowsRound(wrap, ctx, { done }) {
-  const found = new Set(); let fin = false;
-  const msg = el('p', { class: 'reveal info' }, 'Ketuk tiga baris yang bertentangan dengan baris lain atau dengan aturan harga (harga tas naik menjadi Rp50.000 mulai 15/10).');
-  const box = el('div');
-  const draw = () => box.replaceChildren(tableView(BIG_COLS, BIG, { fmt: true, cls: 'besar', rowCls: (r) => (found.has(r[0]) ? 'temu' : ''), onRow: (r) => {
-    if (fin || found.has(r[0])) return;
-    if (!BAD_ROWS[r[0]]) { ctx.mistake(); say(msg, 'bad', `Baris ${r[0]} tidak bertentangan. Bandingkan kontak setiap nama, dan harga tas sesuai tanggalnya.`); return; }
-    found.add(r[0]); ctx.sound.good(); say(msg, '', `Baris ${r[0]}: ${BAD_ROWS[r[0]]}`); draw();
-    if (found.size === 3) { fin = true; setTimeout(done, 1800); }
-  } }));
-  draw();
-  wrap.append(el('p', { class: 'prompt' }, 'Tabel besar catatan Nadia: temukan tiga baris yang bermasalah'), box, msg);
+// Card queries for the game: the needed cards in one valid order plus trap cards with a hint.
+export const CQ = {
+  K1: { from: 'produk', title: 'K1 · Produk di bawah Rp20.000', need: ['s', 'p'], win: 'K1: gantungan kunci batik (Rp8.000) dan lilin aromaterapi (Rp15.000).', cards: {
+    s: { k: 'SARING', col: 'harga', op: '<', val: 20000 },
+    p: { k: 'PILIH', cols: ['nama_produk', 'harga'] },
+    x1: { k: 'SARING', col: 'harga', op: '>', val: 20000, hint: 'Tanda > menyisakan produk yang lebih mahal dari Rp20.000.' },
+    x2: { k: 'URUTKAN', col: 'harga', desc: false, hint: 'Mengurutkan tidak membuang produk yang mahal; semua produk tetap ada.' } } },
+  K2: { from: 'pesanan', title: 'K2 · Pesanan Bu Sari (C04)', need: ['s', 'p'], win: 'K2: pesanan 4, 8, dan 11.', cards: {
+    s: { k: 'SARING', col: 'id_pelanggan', op: '=', val: 'C04' },
+    p: { k: 'PILIH', cols: ['id_pesanan', 'tanggal', 'jumlah'] },
+    x1: { k: 'SARING', col: 'id_pelanggan', op: '=', val: 'C01', hint: 'C01 adalah Bu Rina. Bu Sari C04.' },
+    x2: { k: 'GABUNG', table: 'produk', hint: 'Pertanyaan ini tidak butuh nama produk; cukup tabel pesanan.' } } },
+  K3: { from: 'pesanan', title: 'K3 · Pesanan tas anyaman pandan', need: ['g', 's', 'p'], view: ['id_pesanan', 'pesanan.id_produk', 'nama_produk', 'jumlah', 'harga_satuan'], win: 'K3: pesanan 4, 6, 9, dan 11.', cards: {
+    g: { k: 'GABUNG', table: 'produk' },
+    s: { k: 'SARING', col: 'nama_produk', op: '=', val: 'Tas anyaman pandan' },
+    p: { k: 'PILIH', cols: ['id_pesanan', 'jumlah', 'harga_satuan'] },
+    x1: { k: 'GABUNG', table: 'pelanggan', hint: 'Nama produk ada di tabel produk, bukan di tabel pelanggan.' },
+    x2: { k: 'SARING', col: 'id_produk', op: '=', val: 'P01', hint: 'P01 adalah gantungan kunci batik; tas anyaman pandan P02.' } } },
+  K4: { from: 'pesanan', title: 'K4 · Banyak terjual per produk', need: ['k'], win: 'K4: P01 10, P02 5, P03 3, P04 5.', cards: {
+    k: { k: 'KELOMPOKKAN', col: 'id_produk', fn: 'SUM', of: 'jumlah' },
+    x1: { k: 'KELOMPOKKAN', col: 'id_produk', fn: 'COUNT', hint: 'COUNT menghitung banyak pesanan, bukan banyak barang yang terjual.' },
+    x2: { k: 'KELOMPOKKAN', col: 'id_pelanggan', fn: 'SUM', of: 'jumlah', hint: 'Yang ditanya per produk, bukan per pelanggan.' },
+    x3: { k: 'SARING', col: 'jumlah', op: '>', val: 1, hint: 'Pesanan berisi 1 barang juga terjual; jangan dibuang.' } } },
+  K5: { from: 'pesanan', title: 'K5 · Total belanja per pelanggan', need: ['g', 'k', 'u'], view: ['id_pesanan', 'nama', 'jumlah', 'harga_satuan'], win: 'K5: Bu Sari 185.000, Pak Darto 170.000, Dimas 106.000, Bu Rina 99.000, Pak Joko 15.000.', cards: {
+    g: { k: 'GABUNG', table: 'pelanggan' },
+    k: { k: 'KELOMPOKKAN', col: 'nama', fn: 'SUBTOTAL' },
+    u: { k: 'URUTKAN', col: 'total', desc: true },
+    x1: { k: 'URUTKAN', col: 'total', desc: false, hint: 'Yang diminta dari yang terbesar: besar → kecil.' },
+    x2: { k: 'KELOMPOKKAN', col: 'nama', fn: 'SUM', of: 'jumlah', hint: 'SUM(jumlah) menghitung banyak barang, bukan rupiah.' },
+    x3: { k: 'GABUNG', table: 'produk', hint: 'Nama pelanggan ada di tabel pelanggan.' } } },
+};
+
+export const COUNT_SQL = 'SELECT nama, COUNT(*) AS banyak\nFROM pesanan\nJOIN pelanggan ON pesanan.id_pelanggan\n  = pelanggan.id_pelanggan\nGROUP BY nama\nORDER BY nama;';
+export const COUNT_WANT = ['3', '3', '3', '2', '1'];
+export const COUNT_CHIPS = ['1', '2', '3', '3', '3', '4'];
+// SQL tiles: [id, text, hint for a trap]; `slots` lists the wanted tile per line, strings are fixed lines.
+export const SQLT = {
+  K2: { slots: ['sel', 'from', 'where'], tiles: [['sel', 'SELECT id_pesanan, tanggal, jumlah'], ['from', 'FROM pesanan'], ['where', "WHERE id_pelanggan = 'C04';"], ['x1', 'FROM pelanggan', 'Kolom id_pesanan, tanggal, dan jumlah ada di tabel pesanan.'], ['x2', 'WHERE id_pelanggan = C04;', "Teks di SQL diapit petik tunggal: 'C04'. Tanpa petik, C04 dibaca sebagai nama kolom."], ['x3', 'ORDER BY id_pelanggan;', 'ORDER BY hanya mengurutkan; pesanan pelanggan lain tetap ada.']] },
+  K4: { slots: ['sel', 'from', 'grp'], tiles: [['sel', 'SELECT id_produk, SUM(jumlah)'], ['from', 'FROM pesanan'], ['grp', 'GROUP BY id_produk;'], ['x1', 'SELECT id_produk, jumlah', 'Tanpa SUM, jumlah di setiap kelompok tidak dijumlahkan.'], ['x2', 'WHERE SUM(jumlah) > 0', 'SUM tidak bisa dipakai di WHERE; WHERE menyaring baris satu per satu.'], ['x3', 'GROUP BY jumlah;', 'Kelompokkan per produk, bukan per jumlah.']] },
+  fix: { slots: ['SELECT nama_produk, SUM(jumlah)', 'FROM pesanan', 'join', 'GROUP BY nama_produk;'], tiles: [['join', 'JOIN produk ON pesanan.id_produk\n  = produk.id_produk'], ['x1', 'JOIN pelanggan ON pesanan.id_pelanggan\n  = pelanggan.id_pelanggan', 'nama_produk ada di tabel produk, bukan di tabel pelanggan.'], ['x2', 'FROM produk', 'Satu kueri hanya punya satu FROM; tabel kedua masuk lewat JOIN … ON.']] },
+  ubah: { free: true, slots: [{ label: '🆕 Produk baru: pembatas buku Rp5.000, belum ada yang memesan' }, 'ins', 'val', { label: '❌ Pesanan 3 (Pak Joko, lilin) dibatalkan' }, 'del', 'whr'], tiles: [['ins', 'INSERT INTO produk'], ['val', "VALUES ('P05', 'Pembatas buku', 5000);"], ['del', 'DELETE FROM pesanan'], ['whr', 'WHERE id_pesanan = 3;'], ['x1', 'DELETE FROM pelanggan', 'Yang batal pesanannya, bukan pelanggannya. Pak Joko tetap pelanggan toko.'], ['x2', 'INSERT INTO pesanan', 'Belum ada yang memesan pembatas buku; yang baru adalah produknya.'], ['x3', "WHERE id_pelanggan = 'C02';", 'Hapus pesanan nomor 3 saja, bukan semua milik C02.']] },
+  harga: { slots: ['upd', 'set', 'whr'], tiles: [['upd', 'UPDATE produk'], ['set', 'SET harga = 18000'], ['whr', "WHERE id_produk = 'P04';"], ['x1', 'UPDATE pesanan', 'Harga sekarang disimpan di tabel produk. Pesanan lama tetap memakai harga pada harinya.'], ['x2', 'SET harga_satuan = 18000', 'harga_satuan ada di tabel pesanan: harga pada hari pesanan.'], ['x3', "WHERE id_produk = 'P01';", 'P01 adalah gantungan kunci batik; lilin aromaterapi P04.']] },
+  setia: { slots: ['sel', 'from', 'join', 'grp', 'hav', 'ord'], tiles: [['sel', 'SELECT nama,\n  SUM(jumlah * harga_satuan) AS total'], ['from', 'FROM pesanan'], ['join', 'JOIN pelanggan ON pesanan.id_pelanggan\n  = pelanggan.id_pelanggan'], ['grp', 'GROUP BY nama'], ['hav', 'HAVING total > 100000'], ['ord', 'ORDER BY total DESC;'], ['x1', 'WHERE total > 100000', 'WHERE menyaring baris sebelum dikelompokkan, saat total belum ada. Saring kelompok dengan HAVING.'], ['x2', 'ORDER BY total ASC;', 'ASC dari yang terkecil. Dari yang terbesar: DESC.'], ['x3', 'GROUP BY id_pesanan', 'Kelompokkan per pelanggan, bukan per pesanan.']] },
+};
+// Sabotaged query: tokens, the wrong ones marked.
+const SABOT = [[['SELECT', 'kw'], ['nama_produk', 'salah'], [','], ['SUM(jumlah)', 'ok']], [['FROM', 'kw'], ['pesanan', 'tabel']], [['GROUP BY', 'kw'], ['nama_produk', 'salah'], [';']]];
+const SABOT_SQL = 'SELECT nama_produk, SUM(jumlah)\nFROM pesanan\nGROUP BY nama_produk;';
+const SABOT_HINT = { kw: 'Kata kunci ini benar.', tabel: 'Tabel pesanan memang sumbernya. Kolom mana yang tidak ada di tabel pesanan?', ok: 'Kolom jumlah ada di tabel pesanan, jadi SUM(jumlah) benar.' };
+export const LILIN_CHIPS = ['3.000', '15.000', '18.000', '90.000'];
+
+// Blanks filled left to right from a chip tray. Returns the board.
+function formula34(ctx, { oops, msg, lines, chips, want, hints, done, cls = '' }) {
+  let k = 0; const blanks = [];
+  const mk = () => { const b = el('span', { class: 'sq34-celah', 'data-drop': String(blanks.length) }, '?'); blanks.push(b); return b; };
+  const rows = el('div', { class: `sq34-rumus ${cls}` }, lines.map((parts) => el('div', null, parts.map((p) => (p === '_' ? mk() : p)))));
+  const tray = el('div', { class: 'sq34-angka-angka' }, ctx.rand.shuffle(chips.slice()).map((c) => el('div', { class: 'sq34-angka', 'data-drag': c }, c)));
+  const host = el('div', { class: 'sq34-papan' }, rows, tray);
+  dnd(host, (chip, blank) => {
+    if (k >= want.length || !blank.classList.contains('sq34-celah')) return;
+    if (+blank.dataset.drop !== k) { say(msg, 'info', 'Isi dari atas ke bawah, kiri ke kanan.'); return; }
+    if (chip.dataset.drag !== want[k]) { oops(); shake(chip); say(msg, 'bad', hints[Math.min(k, hints.length - 1)]); return; }
+    blank.textContent = want[k]; blank.classList.add('isi'); chip.remove(); ctx.sound.tap(); k++;
+    if (k < want.length) { say(msg, 'info', 'Tepat.'); return; }
+    done();
+  });
+  return host;
 }
 
-function cardRound(wrap, ctx, { q, opts, done }) {
-  const db = makeDb(SCHEMA); const final = db.run(q[2][q[2].length - 1][2])[0];
-  const show = el('div', { class: 'sq-alur-wadah' });
-  wrap.append(el('p', { class: 'prompt' }, `Kueri ${q[0]}: ${q[1]}`), el('div', { class: 'sq-resep' }, q[2].map(([c, t]) => el('span', { class: `sq-kartu k-${c || 'TABEL'}` }, c ? `${c} ${t}` : t))), show);
-  const area = el('div');
-  show.append(area);
-  choice(area, { prompt: 'Tebak tabel hasilnya', ctx, shuffle: true, columns: 1, options: opts.map(([l, c]) => ({ label: l, correct: !!c })), onRight: () => {
-    ctx.sound.good(); area.replaceChildren(el('p', { class: 'reveal' }, `Hasil ${q[0]}: ${final.rows.map((r) => r.map(money).join(' ')).join(' · ')}`));
-    show.append(pipeline(q)); setTimeout(done, 2600);
-  } });
+// Cards dropped onto rows; check(card, row) returns '' when right or a hint.
+function rowBoard34(ctx, { oops, msg, items, rows, check, done }) {
+  let left = rows.length;
+  const rowEls = rows.map(([k, t]) => el('div', { class: 'sq34-baris', 'data-drop': k }, el('span', { class: 'sq34-slot' }, '?'), el('span', null, t)));
+  const tray = el('div', { class: 'sq34-baki' }, ctx.rand.shuffle(items.slice()).map(([k, t]) => el('div', { class: 'sq34-kartu-nama', 'data-drag': k }, t)));
+  const host = el('div', { class: 'sq34-papan' }, el('div', { class: 'sq34-baris-baris' }, rowEls), tray);
+  dnd(host, (card, row) => {
+    if (!left || row.classList.contains('isi') || !row.classList.contains('sq34-baris')) return;
+    const why = check(card.dataset.drag, row.dataset.drop);
+    if (why) { oops(); shake(card); say(msg, 'bad', why); return; }
+    card.classList.add('locked'); row.querySelector('.sq34-slot').replaceWith(card); row.classList.add('isi'); ctx.sound.tap();
+    if (--left) { say(msg, 'info', 'Tepat.'); return; }
+    done();
+  });
+  return host;
+}
+
+// SQL tiles: lines are fixed text, a label, or a slot that wants one tile.
+function tileBoard(ctx, { oops, msg, spec, onFull }) {
+  const wants = spec.slots.filter((s) => typeof s === 'string' && spec.tiles.some((t) => t[0] === s));
+  const slots = []; const got = [];
+  const lines = spec.slots.map((s) => {
+    if (typeof s === 'object') return el('div', { class: 'sq34-label' }, s.label);
+    if (!wants.includes(s)) return el('div', { class: 'sq34-tetap' }, s);
+    const d = el('div', { class: 'sq34-ubin-slot', 'data-drop': String(slots.length), 'data-want': s }, el('span', { class: 'sq34-ph' }, '?'));
+    slots.push(d); return d;
+  });
+  const tray = el('div', { class: 'sq34-ubin-baki' }, ctx.rand.shuffle(spec.tiles.slice()).map(([id, t]) => el('div', { class: 'sq34-ubin', 'data-drag': id }, t)));
+  const code = el('div', { class: 'sq34-kode-susun' }, lines);
+  const host = el('div', { class: 'sq34-ubin-papan' }, code, tray);
+  dnd(host, (tile, slot) => {
+    if (!slot.classList.contains('sq34-ubin-slot') || slot.classList.contains('isi')) return;
+    const j = +slot.dataset.drop; const id = tile.dataset.drag;
+    if (!spec.free && j !== got.length) { say(msg, 'info', 'Isi dari baris paling atas.'); return; }
+    if (id !== slot.dataset.want) {
+      oops(); shake(tile);
+      const t = spec.tiles.find((x) => x[0] === id);
+      say(msg, 'bad', t[2] || (spec.free ? 'Ubin ini untuk baris yang lain.' : 'Ubin ini untuk baris yang lain. Urutan SQL: SELECT, FROM, JOIN, WHERE, GROUP BY, HAVING, ORDER BY.'));
+      return;
+    }
+    tile.classList.add('locked'); slot.replaceChildren(tile); slot.classList.add('isi'); got.push(id); ctx.sound.tap();
+    if (got.length < slots.length) { say(msg, 'info', 'Tepat.'); return; }
+    host.classList.add('selesai'); tray.remove();
+    onFull(spec.slots.map((s) => (typeof s === 'object' ? '' : wants.includes(s) ? spec.tiles.find((x) => x[0] === s)[1] : s)).filter(Boolean).join('\n'));
+  });
+  return host;
+}
+
+const runRows = (db, sql) => { const r = db.run(sql); return r[r.length - 1]; };
+const codeBox = (s) => el('pre', { class: 'sq34-kode' }, s);
+
+// Misi 1a: count Bu Rina, then find the three conflicting rows.
+function rinaRound(area, ctx, { oops, done }) {
+  const msg = msg34('Ketuk setiap baris Bu Rina. Berapa kali nama dan kontaknya ditulis ulang?');
+  const rina = new Set(); const bad = new Set(); let phase = 0;
+  const box = el('div', { class: 'sq34-meja' });
+  const draw = () => fill(box, tableView(BIG_COLS, BIG, { fmt: true, cls: 'sq34-besar', rowAttr: (r) => ({ 'data-no': r[0] }), rowCls: (r) => `${rina.has(r[0]) ? 'hl' : ''} ${bad.has(r[0]) ? 'temu' : ''}`, onRow: tap }));
+  function tap(r) {
+    const no = r[0];
+    if (phase === 0) {
+      if (rina.has(no)) return;
+      if (r[2] !== 'Bu Rina') { oops(); say(msg, 'bad', `Baris ${no} milik ${r[2]}, bukan Bu Rina.`); return; }
+      rina.add(no); ctx.sound.tap(); draw();
+      if (rina.size < 3) { say(msg, 'info', `Bu Rina ditemukan ${rina.size} kali.`); return; }
+      phase = 1; say(msg, 'info', 'Bu Rina ditulis 3 kali. Sekarang ketuk tiga baris yang bertentangan. Petunjuk: harga tas naik menjadi Rp50.000 mulai 15/10.');
+      return;
+    }
+    if (phase !== 1 || bad.has(no)) return;
+    if (!BAD_ROWS[no]) { oops(); say(msg, 'bad', `Baris ${no} cocok dengan baris lain. Bandingkan kontak setiap nama, dan harga tas menurut tanggalnya.`); return; }
+    bad.add(no); ctx.sound.good(); draw();
+    if (bad.size < 3) { say(msg, 'info', `Baris ${no}: ${BAD_ROWS[no]}`); return; }
+    phase = 2; say(msg, '', `Baris ${no}: ${BAD_ROWS[no]} Fakta yang ditulis berulang mudah bertentangan.`); done();
+  }
+  draw(); area.append(box, msg);
+}
+
+// Misi 1b: the missing money, then name each anomaly.
+function uangRound(area, ctx, { oops, done }) {
+  const msg = msg34('Kolom Total dijumlahkan: Rp565.000. Tapi baris 11 dipesan 16/10, setelah harga tas naik.');
+  const board = formula34(ctx, { oops, msg, chips: MONEY_CHIPS, want: MONEY_WANT,
+    lines: [['Baris 11: 2 × ', '_', ' = ', '_'], ['Seharusnya: 565.000 − 90.000 + 100.000 = ', '_']],
+    hints: ['Berapa harga tas mulai 15/10?', '2 × 50.000.', '565.000 − 90.000 + 100.000.'],
+    done: () => { say(msg, '', 'Toko seharusnya menerima Rp575.000. Satu harga yang lupa diperbarui membuat kas kurang Rp10.000.'); setTimeout(names, 2600); } });
+  area.append(tableView(BIG_COLS, BIG.filter((r) => r[0] === 11), { fmt: true, cls: 'sq34-sebaris' }), board, msg);
+  function names() {
+    say(msg, 'info', 'Pembaruan: data yang sama harus diubah di banyak baris. Penyisipan: data baru tidak bisa dicatat. Penghapusan: menghapus satu hal ikut menghapus hal lain.');
+    fill(area, rowBoard34(ctx, { oops, msg, items: ANOM_CARDS, rows: ANOMALY.map(([k, t]) => [k, t.slice(3)]),
+      check: (card, row) => (ANOMALY.find((a) => a[0] === row)[2] === card ? '' : 'Masalahnya muncul saat data diubah, ditambah, atau dihapus?'),
+      done: () => { say(msg, '', 'Dua anomali pembaruan, satu penyisipan, satu penghapusan. Obatnya: pecah tabel besar.'); done(); } }), msg);
+  }
+}
+
+// Misi 2a: column cards into three tables or the "computed" bin.
+function pecahRound(area, ctx, { oops, done }) {
+  const msg = msg34('Seret setiap kolom tabel besar ke tabel yang tepat. Kolom yang bisa dihitung tidak perlu disimpan.');
+  let left = SPLIT34.length;
+  const boxes = ['pelanggan', 'produk', 'pesanan'].map((t) => el('div', { class: 'sq34-wadah', 'data-drop': t }, el('b', null, `📁 ${t}`), el('div', { class: 'sq34-kolom-kolom' })));
+  const bin = el('div', { class: 'sq34-wadah buang', 'data-drop': 'buang' }, el('b', null, '🧮 tidak disimpan, dihitung saja'), el('div', { class: 'sq34-kolom-kolom' }));
+  const tray = el('div', { class: 'sq34-baki' }, ctx.rand.shuffle(SPLIT34.slice()).map(([k, t]) => el('div', { class: 'sq34-kartu-nama', 'data-drag': k }, t)));
+  const host = el('div', { class: 'sq34-papan' }, el('div', { class: 'sq34-wadah-wadah' }, boxes, bin), tray);
+  dnd(host, (card, box) => {
+    box = box.closest('.sq34-wadah'); if (!box || !left) return;
+    const [, t, want, col] = SPLIT34.find((s) => s[0] === card.dataset.drag);
+    if (box.dataset.drop !== want) { oops(); shake(card); say(msg, 'bad', `${t}: ${SPLIT_HINT[want]}`); return; }
+    card.remove(); box.querySelector('.sq34-kolom-kolom').append(el('span', { class: 'sq34-kolom' }, col || t)); ctx.sound.tap();
+    if (--left) { say(msg, 'info', want === 'buang' ? SPLIT_HINT.buang : `${t} → ${want}.${col}`); return; }
+    say(msg, '', 'Setiap tabel kini menyimpan satu jenis hal. Tapi bagaimana pesanan tahu siapa pemesannya? Itu tugas kunci.'); done();
+  });
+  area.append(host, msg);
+}
+
+// Misi 2b: primary and foreign keys, then the order-day price.
+function kunciRound(area, ctx, { oops, done }) {
+  const msg = msg34('Seret kunci: 🔑 kunci primer membuat setiap baris unik; 🔗 kunci asing menunjuk ke baris di tabel lain.');
+  let left = 5; const fk = [];
+  const slot = (t, c) => (c === 'pk' ? el('span', { class: 'sq34-kunci pk', 'data-drop': `pk-${t}` }, '🔑 ?') : /^fk/.test(c) ? el('span', { class: 'sq34-kunci fk', 'data-drop': c }, '🔗 ?') : el('span', { class: 'sq34-kolom' }, c));
+  const tabs = el('div', { class: 'sq34-skema' }, KEY_TABLES.map(([t, cs]) => el('div', { class: 'sq34-skema-tabel' }, el('b', null, `📁 ${t}`), el('div', { class: 'sq34-kolom-kolom' }, cs.map((c) => slot(t, c))))));
+  const tray = el('div', { class: 'sq34-angka-angka' }, ctx.rand.shuffle(KEY_CHIPS.slice()).map((c) => el('div', { class: 'sq34-angka kunci', 'data-drag': c }, c)));
+  const host = el('div', { class: 'sq34-papan' }, tabs, tray);
+  dnd(host, (chip, s) => {
+    if (!left || !s.classList.contains('sq34-kunci') || s.classList.contains('isi')) return;
+    const c = chip.dataset.drag; const d = s.dataset.drop; let why = '';
+    if (c === 'nama') why = 'Dua pelanggan bisa bernama sama, dan nama bisa berubah. Kunci harus unik dan tetap.';
+    else if (c === 'tanggal') why = 'Banyak pesanan terjadi pada tanggal yang sama; tanggal tidak unik.';
+    else if (d.startsWith('pk-')) { const t = d.slice(3); if (c !== `id_${t}`) why = t === 'pesanan' ? 'Satu pelanggan bisa punya banyak pesanan, jadi kolom itu tidak unik di tabel pesanan. Setiap pesanan butuh nomornya sendiri.' : `Kunci primer tabel ${t} adalah nomor ${t} itu sendiri.`; }
+    else if (c === 'id_pesanan') why = 'Kunci asing menunjuk ke tabel lain. id_pesanan adalah kunci primer pesanan sendiri.';
+    else if (fk.includes(c)) why = 'Pesanan butuh dua penunjuk: satu ke pelanggan, satu ke produk.';
+    if (why) { oops(); shake(chip); say(msg, 'bad', why); return; }
+    if (!d.startsWith('pk-')) fk.push(c);
+    chip.remove(); s.textContent = `${d.startsWith('pk-') ? '🔑' : '🔗'} ${c}`; s.classList.add('isi'); ctx.sound.tap();
+    if (--left) { say(msg, 'info', 'Tepat.'); return; }
+    say(msg, 'info', 'id_pelanggan di pesanan menunjuk ke baris pelanggan, id_produk ke baris produk. Nama cukup ditulis sekali.');
+    setTimeout(price, 2800);
+  });
+  area.append(host, msg);
+  function price() {
+    say(msg, 'info', 'Harga tas naik menjadi 50000 mulai 15/10. Berapa harga_satuan pesanan 11?');
+    fill(area, formula34(ctx, { oops, msg, chips: PRICE_CHIPS, want: ['50000'],
+      lines: [['Pesanan 4 · 8/10 · P02 · harga_satuan 45000'], ['Pesanan 9 · 15/10 · P02 · harga_satuan 50000'], ['Pesanan 11 · 16/10 · P02 · harga_satuan ', '_']],
+      hints: ['Pesanan 11 dibuat 16/10, sesudah harga naik.'],
+      done: () => { say(msg, '', 'harga_satuan mencatat harga pada hari pesanan, jadi kenaikan harga nanti tidak mengubah pesanan lama.'); done(); } }), msg);
+  }
+}
+
+// Misi 3: build a card query; the table after the last card shows on the right.
+function cardQuery(area, ctx, { oops, msg, q, done }) {
+  const placed = []; const ids = [];
+  const now = el('div', { class: 'sq34-kini' });
+  const show = () => {
+    const db = makeDb(SCHEMA);
+    let sql = buildSql({ from: q.from, cards: placed });
+    if (q.view && placed.some((c) => c.k === 'GABUNG') && !placed.some((c) => c.k === 'PILIH' || c.k === 'KELOMPOKKAN')) sql = sql.replace('SELECT *', `SELECT ${q.view.join(', ')}`);
+    const r = runRows(db, sql); const last = placed[placed.length - 1];
+    fill(now, tableView(r.cols, r.rows, { fmt: true, cap: last ? `Setelah kartu ${placed.length}: ${last.k}` : `Tabel ${q.from}`, cls: `sq34-antara ${ids.length === q.need.length ? 'akhir' : ''}` }));
+  };
+  const slots = q.need.map((_, j) => el('div', { class: 'sq34-kartu-slot', 'data-drop': String(j) }, el('span', { class: 'sq34-ph' }, `Kartu ${j + 1}`)));
+  const tray = el('div', { class: 'sq34-kartu-baki' }, ctx.rand.shuffle(Object.keys(q.cards)).map((id) => { const c = q.cards[id]; return el('div', { class: `sq34-kartu k-${c.k}`, 'data-drag': id }, el('b', null, c.k), el('span', null, cardLabel(c))); }));
+  const left = el('div', { class: 'sq34-alur' }, el('b', { class: 'sq34-soal' }, q.title), el('div', { class: 'sq34-mulai' }, `📋 TABEL ${q.from}`), slots, tray);
+  const host = el('div', { class: 'sq34-dua' }, left, now);
+  const tableOf = (col) => Object.keys(SCHEMA).find((t) => SCHEMA[t].cols.includes(col));
+  dnd(host, (card, slot) => {
+    if (!slot.classList.contains('sq34-kartu-slot') || slot.classList.contains('isi') || ids.length >= q.need.length) return;
+    if (+slot.dataset.drop !== ids.length) { say(msg, 'info', 'Pasang kartu dari atas ke bawah.'); return; }
+    const id = card.dataset.drag; const c = q.cards[id];
+    const no = (t) => { oops(); shake(card); say(msg, 'bad', t); };
+    if (!q.need.includes(id)) return no(c.hint);
+    const av = availCols(q.from, placed); const miss = usesCols(c).find((x) => !av.includes(x));
+    if (miss) {
+      if (placed.some((p) => p.k === 'KELOMPOKKAN')) return no(`Setelah dikelompokkan, tinggal kolom ${av.join(' dan ')}.`);
+      if (placed.some((p) => p.k === 'PILIH')) return no(`Kolom ${miss} sudah dibuang oleh kartu PILIH.`);
+      if (!tableOf(miss)) return no(`Kolom ${miss} baru ada setelah kartu KELOMPOKKAN.`);
+      return no(`Kolom ${miss} ada di tabel ${tableOf(miss)}. Gabungkan dulu dengan kartu GABUNG.`);
+    }
+    const later = q.need.filter((x) => x !== id && !ids.includes(x)).flatMap((x) => usesCols(q.cards[x]));
+    if (c.k === 'PILIH') { const lost = later.find((x) => !c.cols.includes(x)); if (lost) return no(`Kalau dipilih sekarang, kolom ${lost} hilang, padahal kartu lain masih membutuhkannya.`); }
+    if (c.k === 'KELOMPOKKAN') { const lost = later.find((x) => x !== c.col && x !== aggName(c)); if (lost) return no(`Kalau dikelompokkan sekarang, kolom ${lost} hilang, padahal kartu lain masih membutuhkannya.`); }
+    placed.push(c); ids.push(id); card.classList.add('locked'); slot.replaceChildren(card); slot.classList.add('isi'); ctx.sound.tap(); show();
+    if (ids.length < q.need.length) { say(msg, 'info', `Kartu ${c.k} dipasang. Lihat tabelnya berubah.`); return; }
+    tray.remove(); say(msg, '', q.win); done();
+  });
+  show();
+  return host;
+}
+
+function cardPair(area, ctx, { oops, done }, a, b) {
+  const msg = msg34('Seret kartu ke kotak Kartu 1, Kartu 2, dan seterusnya. Awas kartu jebakan.');
+  area.append(cardQuery(area, ctx, { oops, msg, q: CQ[a], done: () => setTimeout(second, 2800) }), msg);
+  function second() { say(msg, 'info', `Kueri berikutnya: ${CQ[b].title}.`); fill(area, cardQuery(area, ctx, { oops, msg, q: CQ[b], done }), msg); }
+}
+
+// Misi 3c: K5, then guess a COUNT result before it runs.
+function k5Round(area, ctx, { oops, done }) {
+  const msg = msg34('Siapa pelanggan dengan belanja terbesar? Susun kartunya.');
+  area.append(cardQuery(area, ctx, { oops, msg, q: CQ.K5, done: () => setTimeout(count, 3000) }), msg);
+  function count() {
+    say(msg, 'info', 'Pertanyaan diganti: berapa kali setiap pelanggan memesan? Tebak hasil kueri ini sebelum dijalankan.');
+    const db = makeDb(SCHEMA); const t = runRows(db, `SELECT id_pesanan, nama FROM pesanan ${JC}`);
+    const names = runRows(db, COUNT_SQL).rows.map((r) => r[0]);
+    const board = formula34(ctx, { oops, msg, chips: COUNT_CHIPS, want: COUNT_WANT, lines: names.map((n) => [`${n}: `, '_']), cls: 'jajar',
+      hints: ['Hitung baris Bu Rina di tabel kiri.', 'Hitung baris Bu Sari.', 'Hitung baris Dimas.', 'Hitung baris Pak Darto.', 'Hitung baris Pak Joko.'],
+      done: () => { say(msg, '', 'COUNT(*) menghitung baris di setiap kelompok. Bu Sari paling besar belanjanya, tapi Bu Rina dan Dimas sama seringnya memesan.'); done(); } });
+    fill(area, el('div', { class: 'sq34-dua' }, tableView(t.cols, t.rows, { cap: 'pesanan + pelanggan', cls: 'sq34-antara' }), el('div', { class: 'sq34-tumpuk' }, codeBox(COUNT_SQL), board)), msg);
+  }
+}
+
+// Misi 4: SQL from tiles for K2 and K4, run in the browser.
+function sqlRound(area, ctx, { oops, done }) {
+  const msg = msg34('Rakit SQL yang sama dengan kartu K2. Satu ubin satu baris.');
+  const one = (key, after) => {
+    const q = CQ[key]; const recipe = el('div', { class: 'sq34-resep' }, el('b', null, q.title), q.need.map((id) => { const c = q.cards[id]; return el('span', { class: `sq34-kartu kecil k-${c.k}` }, el('b', null, c.k), el('span', null, cardLabel(c))); }));
+    const out = el('div', { class: 'sq34-keluar' });
+    const board = tileBoard(ctx, { oops, msg, spec: SQLT[key], onFull: (sql) => { const r = runRows(makeDb(SCHEMA), sql); fill(out, tableView(r.cols, r.rows, { fmt: true, cap: '▶ hasil', cls: 'sq34-antara akhir' })); ctx.sound.good(); after(); } });
+    fill(area, el('div', { class: 'sq34-dua' }, el('div', { class: 'sq34-tumpuk kiri' }, recipe, out), board), msg);
+  };
+  one('K2', () => { say(msg, '', 'Hasilnya sama dengan kartu K2: pesanan 4, 8, 11.'); setTimeout(() => { say(msg, 'info', 'Sekarang K4: banyak terjual per produk.'); one('K4', () => { say(msg, '', 'GROUP BY mengelompokkan, SUM menjumlahkan: P01 10, P02 5, P03 3, P04 5.'); done(); }); }, 2800); });
+}
+
+// Misi 5: tap the sabotaged part, add the missing JOIN, then INSERT and DELETE.
+function sabotRound(area, ctx, { oops, done }) {
+  const msg = msg34('Kueri ini galat. Ketuk bagian yang salah.');
+  let found = false;
+  const err = el('p', { class: 'sq34-galat' }, '⚠ Galat! Kueri tidak bisa dijalankan.');
+  const code = el('div', { class: 'sq34-kode token' }, SABOT.map((line) => el('div', null, line.map(([t, kind]) => (kind ? onTap(el('button', { class: 'sq34-token', type: 'button', 'data-kind': kind }, t), (e) => {
+    if (found) return;
+    if (kind !== 'salah') { oops(); shake(e.currentTarget); say(msg, 'bad', SABOT_HINT[kind]); return; }
+    found = true; e.currentTarget.classList.add('salah'); ctx.sound.tap();
+    try { makeDb(SCHEMA).run(SABOT_SQL); } catch (x) { err.textContent = `⚠ ${x.message}`; }
+    say(msg, 'info', 'Ketemu! Baris JOIN dihapus Pengacau Data. Pasang ubin yang hilang.'); setTimeout(fix, 1800);
+  }) : el('span', null, t))))));
+  const cols = el('p', { class: 'sq34-catatan' }, `Kolom pesanan: ${SCHEMA.pesanan.cols.join(', ')}`);
+  area.append(el('div', { class: 'sq34-tumpuk' }, code, err, cols), msg);
+  function fix() {
+    const out = el('div', { class: 'sq34-keluar' });
+    fill(area, el('div', { class: 'sq34-dua' }, tileBoard(ctx, { oops, msg, spec: SQLT.fix, onFull: (sql) => {
+      const r = runRows(makeDb(SCHEMA), sql); err.remove(); fill(out, tableView(r.cols, r.rows, { cap: '▶ hasil', cls: 'sq34-antara akhir' })); ctx.sound.good();
+      say(msg, '', 'Kueri jalan lagi: lilin dan tas sama-sama terjual 5.'); setTimeout(change, 3000);
+    } }), el('div', { class: 'sq34-tumpuk' }, err, out)), msg);
+  }
+  function change() {
+    say(msg, 'info', 'Dua kartu kekacauan lagi! Rakit SQL untuk setiap kartu.');
+    const out = el('div', { class: 'sq34-keluar' });
+    fill(area, el('div', { class: 'sq34-dua' }, tileBoard(ctx, { oops, msg, spec: SQLT.ubah, onFull: (sql) => {
+      const db = makeDb(SCHEMA); db.run(sql);
+      const pl = runRows(db, 'SELECT * FROM pelanggan;'); const pr = runRows(db, 'SELECT * FROM produk;');
+      fill(out, tableView(pl.cols, pl.rows, { cap: 'pelanggan', cls: 'sq34-antara', hl: (r) => r[1] === 'Pak Joko' }), tableView(pr.cols, pr.rows, { fmt: true, cap: 'produk', cls: 'sq34-antara', hl: (r) => r[0] === 'P05' }));
+      ctx.sound.good(); say(msg, '', 'Pembatas buku tercatat tanpa pesanan, dan Pak Joko tetap tersimpan walau pesanannya dihapus. Anomali penyisipan dan penghapusan teratasi.'); done();
+    } }), out), msg);
+  }
+}
+
+// Misi 6 and Bos: UPDATE the candle price, then the loyal-customer query.
+function bosRound(area, ctx, { oops, done }) {
+  const msg = msg34('Harga lilin aromaterapi (P04) naik menjadi Rp18.000. Rakit SQL-nya.');
+  const db = makeDb(SCHEMA); const out = el('div', { class: 'sq34-keluar' });
+  fill(area, el('div', { class: 'sq34-dua' }, tileBoard(ctx, { oops, msg, spec: SQLT.harga, onFull: (sql) => {
+    db.run(sql); const pr = runRows(db, 'SELECT * FROM produk;'); const ps = runRows(db, "SELECT id_pesanan, tanggal, jumlah, harga_satuan FROM pesanan WHERE id_produk = 'P04';");
+    fill(out, tableView(pr.cols, pr.rows, { fmt: true, cap: 'produk', cls: 'sq34-antara', hl: (r) => r[0] === 'P04' }), tableView(ps.cols, ps.rows, { fmt: true, cap: 'pesanan lilin', cls: 'sq34-antara', hl: () => true }));
+    ctx.sound.good(); say(msg, 'info', 'Harga di produk naik, tetapi pesanan 3, 7, dan 10 tetap Rp15.000 karena harga_satuan menyimpan harga pada hari pesanan.'); setTimeout(diff, 3200);
+  } }), out), msg);
+  function diff() {
+    say(msg, 'info', 'Bagaimana kalau tidak ada harga_satuan dan total selalu dihitung dari harga di tabel produk?');
+    fill(area, formula34(ctx, { oops, msg, chips: LILIN_CHIPS, want: ['15.000'], lines: [['5 lilin lama dihitung ulang:'], ['5 × (18.000 − 15.000) = ', '_']], hints: ['5 × 3.000.'],
+      done: () => { say(msg, 'info', 'Laporan lama tiba-tiba bertambah Rp15.000, padahal uangnya tidak bertambah. Karena itu harga disimpan di setiap pesanan.'); setTimeout(boss, 3200); } }), msg);
+  }
+  function boss() {
+    say(msg, 'info', 'Misi Bos: hadiah untuk pelanggan setia yang belanja lebih dari Rp100.000, urut dari yang terbesar.');
+    const res = el('div', { class: 'sq34-keluar' });
+    fill(area, el('div', { class: 'sq34-dua' }, tileBoard(ctx, { oops, msg, spec: SQLT.setia, onFull: (sql) => {
+      const r = runRows(db, sql); fill(res, tableView(r.cols, r.rows, { fmt: true, cap: '🏆 pelanggan setia', cls: 'sq34-antara akhir' })); ctx.sound.good();
+      say(msg, '', 'Pelanggan setia: Bu Sari 185.000, Pak Darto 170.000, Dimas 106.000. WHERE menyaring baris, HAVING menyaring kelompok.'); done();
+    } }), res), msg);
+  }
 }
 
 export default {
@@ -127,43 +468,31 @@ export default {
     { id: 'giliran', icon: '🧑‍🤝‍🧑', label: 'Tebak Hasil Kueri', desc: 'Satu tim memilih kueri kartu, tim lain menebak tabel hasilnya sebelum dijalankan; tebakan benar 2 poin, lalu peran bertukar', create: createTeams },
   ],
   create(root, ctx) {
-    const wrap = el('div', { class: 'act basis-data' });
+    const wrap = el('div', { class: 'act sq34-main' });
     root.append(wrap);
     function render() {
       wrap.replaceChildren();
       const r = ctx.round;
       let solved = false;
-      const next = () => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, 2400); } };
-      const ask = (prompt, opts, columns = 1, subject = null, onRight = next) => choice(wrap, { prompt, subject, ctx, shuffle: true, onRight, columns, options: opts.map(([l, correct]) => ({ label: String(l), correct })) });
-      const then = (fn) => () => { wrap.replaceChildren(); fn(); };
-      const code = (s) => el('pre', { class: 'sq-kode' }, s);
-      if (r === 0) ask('Berapa kali nama dan kontak Bu Rina ditulis di tabel besar?', [[1], [2], [3, true], [4]], 4, tableView(BIG_COLS, BIG, { fmt: true, cls: 'besar', hl: (x) => x[2] === 'Bu Rina' }), then(() => badRowsRound(wrap, ctx, { done: next })));
-      else if (r === 1) ask('Jumlah kolom Total di tabel besar, dan uang yang seharusnya diterima?', [['Tercatat Rp565.000; seharusnya Rp575.000 (baris 11 seharusnya 2 × 50.000)', true], ['Tercatat Rp575.000; seharusnya Rp565.000'], ['Tercatat Rp565.000; sudah benar'], ['Tercatat Rp520.000; seharusnya Rp575.000']], 1, tableView(BIG_COLS, BIG, { fmt: true, cls: 'besar', hl: (x) => x[0] === 11 }),
-        then(() => pickRows(wrap, ctx, { prompt: 'Pasangkan setiap masalah dengan nama anomalinya', rows: ANOMALY, opts: ANOM_OPTS, info: 'Pembaruan: data yang sama harus diubah di banyak baris. Penyisipan: data baru tidak bisa dicatat sebelum ada data lain. Penghapusan: menghapus satu hal ikut menghapus hal lain.', why: (k, a, ok) => (ok ? `${k}: anomali ${ANOM_OPTS.find((o) => o[0] === a)[1]}.` : 'Masalahnya terjadi saat mengubah, menambah, atau menghapus data?'), done: next })));
-      else if (r === 2) pickRows(wrap, ctx, { prompt: 'Memecah tabel: ke tabel mana setiap kolom tabel besar?', rows: SPLIT.map(([k, t, a]) => [k, t, a]), opts: SPLIT_OPTS, cls: 'pecah', info: 'Setiap fakta cukup disimpan sekali.', why: (k, a, ok) => (ok ? SPLIT_WHY[k] : 'Kolom ini menerangkan pelanggan, produk, atau satu pesanan? Atau bisa dihitung?'),
-        done: then(() => ask('Kolom mana di tabel pesanan yang menjadi kunci asing?', [['id_pelanggan (ke tabel pelanggan) dan id_produk (ke tabel produk)', true], ['id_pesanan, karena nilainya berbeda di setiap baris'], ['jumlah dan harga_satuan'], ['tanggal']], 1, el('div', { class: 'sq-tiga' }, ...Object.entries(SCHEMA).map(([n, s]) => tableView(s.cols, s.rows.slice(0, 4), { cap: n, cls: 'kecil' }))))) });
-      else if (r === 3) ask('Di tabel pesanan, berapa harga_satuan pesanan nomor 11 (tas, 16/10)?', [['50000, harga pada hari pesanan', true], ['45000, seperti di tabel besar'], ['90000'], ['100000']], 2, null,
-        then(() => ask('Mengapa kolom Total tidak disimpan di tabel pesanan?', [['Total bisa dihitung dari jumlah × harga_satuan; bila disimpan juga, bisa tidak cocok seperti di tabel besar', true], ['Supaya tabelnya lebih pendek saja'], ['Karena total adalah kunci asing'], ['Karena SQL tidak bisa menyimpan angka besar']], 1, code(SCHEMA.pesanan.cols.join(' | ')))));
-      else if (r === 4) cardRound(wrap, ctx, { q: CARDQ[0], opts: [['Gantungan kunci batik 8000 · Lilin aromaterapi 15000', true], ['Gantungan kunci batik 8000'], ['Tas anyaman pandan 50000 · Kaos sablon kelas 60000'], ['Semua produk']], done: then(() => cardRound(wrap, ctx, { q: CARDQ[1], opts: [['Pesanan 4, 8, 11 (jumlah 1, 5, 2)', true], ['Pesanan 4 dan 11'], ['Pesanan 1, 6, 10'], ['Pesanan 8 saja']], done: next })) });
-      else if (r === 5) cardRound(wrap, ctx, { q: CARDQ[2], opts: [['Pesanan 4, 6, 9, 11', true], ['Pesanan 4, 6, 11'], ['Pesanan 9 dan 11'], ['Pesanan 4, 6, 9']], done: then(() => cardRound(wrap, ctx, { q: CARDQ[3], opts: [['P01 10 · P02 5 · P03 3 · P04 5', true], ['P01 3 · P02 4 · P03 2 · P04 3'], ['P01 10 · P02 4 · P03 3 · P04 5'], ['P01 5 · P02 5 · P03 3 · P04 10']], done: next })) });
-      else if (r === 6) cardRound(wrap, ctx, { q: CARDQ[4], opts: [['Bu Sari 185.000 · Pak Darto 170.000 · Dimas 106.000 · Bu Rina 99.000 · Pak Joko 15.000', true], ['Bu Rina 99.000 · Bu Sari 185.000 · Dimas 106.000 · Pak Darto 170.000 · Pak Joko 15.000'], ['Pak Darto 170.000 · Bu Sari 135.000 · Dimas 106.000 · Bu Rina 99.000 · Pak Joko 15.000'], ['Bu Sari 8 · Dimas 5 · Bu Rina 6 · Pak Darto 3 · Pak Joko 1']],
-        done: then(() => ask('Produk mana yang paling banyak terjual, dan siapa pelanggan dengan belanja terbesar?', [['Gantungan kunci batik (10 buah) · Bu Sari', true], ['Tas anyaman pandan · Pak Darto'], ['Kaos sablon kelas · Bu Sari'], ['Gantungan kunci batik · Bu Rina']])) });
-      else if (r === 7) ask('SQL mana yang sama dengan kueri K2?', [[SQLQ.K2, true], ["SELECT id_pesanan, tanggal, jumlah\nFROM pelanggan\nWHERE id_pelanggan = 'C04';"], ['SELECT id_pesanan, tanggal, jumlah\nFROM pesanan\nWHERE id_pelanggan = C04;'], ["SELECT *\nFROM pesanan\nORDER BY id_pelanggan = 'C04';"]], 2, null,
-        then(() => ask('Tebak hasil kueri ini', [['Bu Rina 3 · Bu Sari 3 · Dimas 3 · Pak Darto 2 · Pak Joko 1', true], ['Bu Sari 3 · Dimas 3 · Bu Rina 3 · Pak Darto 2 · Pak Joko 1'], ['Pak Joko 1 · Pak Darto 2 · Bu Rina 3 · Bu Sari 3 · Dimas 3'], ['Bu Sari 8 · Bu Rina 6 · Dimas 5 · Pak Darto 3 · Pak Joko 1']], 1, code(SQLQ['4c']))));
-      else if (r === 8) {
-        const db = makeDb(SCHEMA); const out = el('div', { class: 'sq-hasil' });
-        let err = ''; try { db.run(SQLQ['4d']); } catch (e) { err = e.message; }
-        out.append(el('p', { class: 'sq-galat' }, `⚠ Galat: ${err}`));
-        ask('Kueri ini menghasilkan galat. Apa kesalahannya?', [['Kolom nama_produk tidak ada di tabel pesanan; tabel produk harus digabungkan dulu dengan JOIN', true], ['SUM tidak boleh dipakai bersama GROUP BY'], ['Tanda titik koma harus dihapus'], ['GROUP BY harus ditulis sebelum FROM']], 1, el('div', { class: 'sq-dua-kecil' }, code(SQLQ['4d']), out),
-          then(() => ask('Perbaikan mana yang benar?', [[SQLQ['4d✓'], true], ['SELECT nama_produk, SUM(jumlah)\nFROM produk\nGROUP BY id_produk;'], ['SELECT nama_produk, SUM(jumlah)\nFROM pesanan, produk;'], ['SELECT id_produk, SUM(jumlah)\nFROM pesanan\nGROUP BY nama_produk;']], 2, null,
-            then(() => { const res = makeDb(SCHEMA).run(SQLQ['4d✓'])[0]; ask('Kueri perbaikan dijalankan. Produk mana yang banyak terjualnya sama?', [['Lilin aromaterapi dan tas anyaman pandan (5 buah)', true], ['Gantungan kunci batik dan kaos sablon kelas'], ['Semua produk sama'], ['Tidak ada yang sama']], 1, el('div', { class: 'sq-dua-kecil' }, code(SQLQ['4d✓']), resultView(res))); }))));
-      }
-      else {
-        const db = makeDb(SCHEMA); const res = db.run(SQLQ['4e']);
-        ask('Setelah INSERT pembatas buku dan DELETE pesanan nomor 3, apakah data Pak Joko ikut hilang?', [['Tidak: Pak Joko tetap tersimpan di tabel pelanggan; anomali penyisipan dan penghapusan teratasi', true], ['Ya, nama dan kontaknya ikut terhapus'], ['Ya, karena C02 dihapus otomatis'], ['Tidak bisa diketahui']], 1, el('div', { class: 'sq-dua-kecil' }, code(SQLQ['4e']), el('div', null, ...res.map((x) => resultView(x, { cls: 'kecil', hl: (row) => row[1] === 'Pak Joko' }))))),
-          then(() => ask('Mulai 20/10 harga lilin naik menjadi Rp18.000. SQL mana yang tepat, dan apakah total pesanan lilin lama ikut berubah?', [["UPDATE produk SET harga = 18000 WHERE id_produk = 'P04'; tidak berubah, karena harga lama tersimpan di harga_satuan", true], ["UPDATE pesanan SET harga_satuan = 18000 WHERE id_produk = 'P04'; tidak berubah"], ['UPDATE produk SET harga = 18000; semua total ikut naik'], ["DELETE FROM produk WHERE id_produk = 'P04'; lalu INSERT yang baru"]], 1, null,
-            then(() => ask('Bila tidak ada kolom harga_satuan dan total selalu dihitung dari harga di tabel produk, berapa selisih pendapatan lilin (5 buah terjual) setelah harga naik?', [['Rp15.000', true], ['Rp3.000'], ['Rp18.000'], ['Rp90.000']], 2))));
-      }
+      const next = (wait = 5200) => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, wait); } };
+      const area = el('div', { class: 'sq34-area' });
+      let chaos = null;
+      const go = (k, no) => {
+        const [judul, tujuan, kacau] = HEAD34[k];
+        chaos = el('div', { class: 'sq34-kacau' }, el('b', null, '🎭 Pengacau Data'), el('span', null, kacau));
+        wrap.append(el('div', { class: 'sq34-kepala' }, misiHead(no, judul, tujuan, '🗄️'), chaos), area);
+      };
+      const fin = (ms) => ({ oops: () => ctx.mistake(), done: () => { chaos.classList.add('beres'); chaos.lastChild.textContent = 'Kekacauan teratasi ✓'; next(ms); } });
+      if (r === 0) { go('rina', 1); rinaRound(area, ctx, fin(5500)); }
+      else if (r === 1) { go('uang', 1); uangRound(area, ctx, fin(5500)); }
+      else if (r === 2) { go('pecah', 2); pecahRound(area, ctx, fin(5500)); }
+      else if (r === 3) { go('kunci', 2); kunciRound(area, ctx, fin(5500)); }
+      else if (r === 4) { go('k12', 3); cardPair(area, ctx, fin(5500), 'K1', 'K2'); }
+      else if (r === 5) { go('k34', 3); cardPair(area, ctx, fin(5500), 'K3', 'K4'); }
+      else if (r === 6) { go('k5', 3); k5Round(area, ctx, fin(6000)); }
+      else if (r === 7) { go('sql', 4); sqlRound(area, ctx, fin(5500)); }
+      else if (r === 8) { go('sabot', 5); sabotRound(area, ctx, fin(6500)); }
+      else { go('bos', 'Bos'); bosRound(area, ctx, fin(7000)); }
     }
     render();
   },
