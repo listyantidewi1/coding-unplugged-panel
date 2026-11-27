@@ -6488,7 +6488,7 @@ button.at-orang { font-size: clamp(0.55rem, 3.4cqmin, 1.8rem); }
 @container (max-height: 520px) { .tk9-main .kd-peta svg { max-height: 40cqh; } }
 @container (max-aspect-ratio: 1/1) { .tk9-main .kd-peta svg { max-height: 40cqh; } .tk9-main .tk9-antre { font-size: clamp(0.5rem, 2cqmin, 1rem); } }
 @container (max-width: 1000px) and (min-height: 600px) { .tk9-main .kd-peta svg { max-height: 38cqh; } .tk9-main .kode-baris .btn { font-size: clamp(0.7rem, 3cqmin, 1.4rem); } }
-:is(.kk-main, .rh-main, .pk6-main, .mph-main, .pp8-main, .tk9-main, .kb10-main, .gk11-main, .rk13-main, .nd14-main, .tp15-main, .ka16-main, .pl17-main, .dk18-main, .lj19-main, .wb20-main, .jm21-main, .aj22-main, .gp23-main, .bs24-main, .tu25-main, .sb26-main, .rd27-main, .bl28-main, .hc29-main, .hk30-main, .md31-main, .kj32-main, .dl33-main, .sq34-main, .rb36-main, .pr37-main, .bf38-main, .kl39-main, .rp40-main, .pb41-main, .ug42-main, .bk43-main, .lk44-main, .pw45-main, .ap47-main, .sn48-main, .ek49-main, .pd50-main, .tp51-main, .rw52-main, .pm53-main, .pk54-main, .pr55-main, .pg56-main) .reveal { font-size: clamp(0.7rem, 3cqmin, 1.6rem); text-wrap: balance; }
+:is(.kk-main, .rh-main, .pk6-main, .mph-main, .pp8-main, .tk9-main, .kb10-main, .gk11-main, .rk13-main, .nd14-main, .tp15-main, .ka16-main, .pl17-main, .dk18-main, .lj19-main, .wb20-main, .jm21-main, .aj22-main, .gp23-main, .bs24-main, .tu25-main, .sb26-main, .rd27-main, .bl28-main, .hc29-main, .hk30-main, .md31-main, .kj32-main, .dl33-main, .sq34-main, .rb36-main, .pr37-main, .bf38-main, .kl39-main, .rp40-main, .pb41-main, .ug42-main, .bk43-main, .lk44-main, .pw45-main, .ap47-main, .sn48-main, .ek49-main, .pd50-main, .tp51-main, .rw52-main, .pm53-main, .pk54-main, .pr55-main, .pg56-main, .dr57-main) .reveal { font-size: clamp(0.7rem, 3cqmin, 1.6rem); text-wrap: balance; }
 @container (max-width: 1000px) and (min-height: 600px) { .tk9-main .kd-peta svg { max-height: 46cqh; } }
 
 /* sma-10 Konter Bagasi */
@@ -9879,3 +9879,60 @@ button.pw45-kotak { cursor: pointer; }
   .pg56-area, .pg56-kolom { gap: 0.3em; }
 }
 @container (max-aspect-ratio: 1/1) { .pg56-dua { flex-direction: column; align-items: center; } }
+/* sma-57 Dari Dapur ke Rilis (misi) */
+.dr57-main { gap: 0.6cqmin; --mk: #c2410c; --mk-muda: #fff7ed; --mk-tua: #7c2d12; }
+.dr57-main > .prompt { display: none; }
+.dr57-main .reveal { text-align: center; }
+.dr57-kepala { display: flex; align-items: center; justify-content: center; gap: 0.4em 1.2em; flex-wrap: wrap; width: 100%; }
+.dr57-kepala .misi-kepala { flex: 1 1 24em; min-width: 0; }
+.dr57-musuh { display: flex; align-items: center; gap: 0.5em; max-width: 100%; padding: 0.15em 0.8em; border: 2px dashed #b91c1c; border-radius: 0.6em; background: #fef2f2; color: #7f1d1d; font-size: clamp(0.6rem, 2.1cqmin, 1.1rem); transform: rotate(-1deg); }
+.dr57-musuh > span { min-width: 0; }
+.dr57-musuh.beres { border-style: solid; border-color: #16a34a; background: #f0fdf4; color: #14532d; transform: none; }
+.dr57-area { display: flex; flex-direction: column; align-items: center; gap: 0.7cqmin; width: 100%; min-width: 0; font-size: clamp(0.55rem, min(2.1cqmin, 1.5cqw), 1.25rem); }
+.dr57-area .mk-kode code { white-space: pre-wrap; overflow-wrap: anywhere; }
+.dr57-area .mk-susun { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: center; }
+.dr57-area .mk-ubin-baki { flex-direction: row; flex-wrap: wrap; justify-content: center; max-width: 26em; }
+.dr57-area .mk-chip-chip { max-width: 36em; }
+.dr57-area .mk-kode.ketuk .mk-baris { cursor: pointer; }
+.dr57-area .mk-kode.ketuk .mk-baris:hover { outline: 2px solid #f59e0b; }
+.dr57-dua { display: flex; gap: 1.6cqmin; align-items: center; justify-content: center; width: 100%; max-width: 96em; }
+.dr57-dua > * { min-width: 0; }
+.dr57-kolom { display: flex; flex-direction: column; align-items: center; gap: 0.5em; min-width: 0; max-width: 100%; }
+.dr57-persona { padding: 0.2em 0.8em; border-radius: 0.6em; background: #ffedd5; color: #7c2d12; font-weight: 800; text-align: center; }
+.dr57-judul { color: #57534e; font-family: ui-monospace, Menlo, Consolas, monospace; font-weight: 700; }
+.dr57-tanya { display: flex; flex-direction: column; gap: 0.3em; max-width: 26em; }
+.dr57-q { padding: 0.3em 0.7em; border: 2px solid #c2410c; border-bottom-width: 0.22em; border-radius: 0.6em; background: #fff; color: #1c1917; font: inherit; text-align: left; cursor: pointer; }
+.dr57-q.sudah { border-color: #d6d3d1; background: #f5f5f4; color: #78716c; cursor: default; }
+.dr57-q.sudah.buka { border-color: #16a34a; background: #f0fdf4; color: #14532d; }
+.dr57-pilah { display: flex; flex-direction: column; align-items: center; gap: 0.5em; max-width: 100%; }
+.dr57-baki { display: flex; flex-wrap: wrap; gap: 0.35em; justify-content: center; max-width: 40em; min-height: 1em; }
+.dr57-kartu { max-width: 18em; padding: 0.3em 0.6em; border: 2px solid #a8a29e; border-bottom-width: 0.22em; border-radius: 0.5em; background: #fffbeb; color: #1c1917; font: inherit; font-size: 0.9em; text-align: left; cursor: pointer; box-shadow: 0 0.1em 0.25em rgb(0 0 0 / 0.12); }
+.dr57-kartu.on { border-color: #c2410c; background: #fed7aa; transform: translateY(-0.15em); }
+.dr57-tumpuk-tumpuk { display: flex; flex-wrap: wrap; gap: 0.4em; justify-content: center; }
+.dr57-tumpuk { display: flex; flex-direction: column; gap: 0.2em; min-width: 8em; max-width: 14em; min-height: 3.2em; padding: 0.3em 0.5em; border: 2px dashed #c2410c; border-radius: 0.6em; background: #fff7ed; color: #7c2d12; cursor: pointer; }
+.dr57-tumpuk > b { text-align: center; }
+.dr57-tumpuk > span { padding: 0.05em 0.35em; border-radius: 0.3em; background: #fff; color: #44403c; font-size: 0.75em; }
+.dr57-timbang { display: flex; flex-direction: column; align-items: center; gap: 0.2em; }
+.dr57-bungkus { font-size: 1.3em; letter-spacing: -0.1em; min-height: 1.3em; }
+.dr57-timbang code { font-size: 1.2em; font-weight: 800; color: #7c2d12; }
+.dr57-geser { display: flex; flex-wrap: wrap; gap: 0.3em; justify-content: center; }
+.dr57-btn { padding: 0.25em 0.8em; border: 2px solid #c2410c; border-bottom-width: 0.22em; border-radius: 0.5em; background: #fff; color: #7c2d12; font: inherit; font-weight: 800; cursor: pointer; }
+.dr57-area .dr57-catat-btn, .dr57-area .dr57-jalan, .dr57-area .dr57-perbaiki { padding: 0.25em 1em; font-size: 0.95em; }
+.dr57-catat { display: flex; flex-wrap: wrap; gap: 0.25em; justify-content: center; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.85em; }
+.dr57-catat span { padding: 0.05em 0.4em; border: 1px solid #d6d3d1; border-radius: 0.4em; background: #fff; color: #44403c; }
+.dr57-pesanan-pesanan { display: grid; grid-template-columns: repeat(2, minmax(0, 13em)); gap: 0.4em; justify-content: center; }
+.dr57-pesanan { display: flex; flex-direction: column; align-items: flex-start; gap: 0.05em; padding: 0.3em 0.6em; border: 2px solid #a8a29e; border-bottom-width: 0.22em; border-radius: 0.6em; background: #fff; color: #1c1917; font: inherit; text-align: left; cursor: pointer; }
+.dr57-pesanan small { color: #57534e; font-size: 0.78em; }
+.dr57-pesanan i { align-self: flex-end; padding: 0 0.4em; border-radius: 0.3em; background: #1c1917; color: #fde68a; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.75em; font-style: normal; }
+.dr57-pesanan.on { border-color: #c2410c; background: #ffedd5; }
+.dr57-galat { grid-column: 1 / -1; justify-self: center; padding: 0.25em 1em; border: 2px solid #7f1d1d; border-bottom-width: 0.22em; border-radius: 0.5em; background: #fee2e2; color: #7f1d1d; font: inherit; font-weight: 800; cursor: pointer; }
+.dr57-lampu { display: flex; flex-wrap: wrap; gap: 0.3em; justify-content: center; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.85em; }
+.dr57-lampu span { padding: 0.05em 0.45em; border-radius: 0.4em; font-weight: 700; }
+.dr57-lampu span.hijau { background: #dcfce7; color: #14532d; }
+.dr57-lampu span.merah { background: #fee2e2; color: #7f1d1d; }
+@container (max-height: 520px) {
+  .dr57-main .misi-tujuan { display: none; }
+  .dr57-main { gap: 0.35cqmin; }
+  .dr57-area, .dr57-kolom { gap: 0.3em; }
+}
+@container (max-aspect-ratio: 1/1) { .dr57-dua { flex-direction: column; align-items: center; } }
