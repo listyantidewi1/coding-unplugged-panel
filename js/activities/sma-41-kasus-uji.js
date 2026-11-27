@@ -7,7 +7,7 @@
 import { el, onTap, button, shake } from '../core/util.js';
 import { dnd } from '../core/kit.js';
 import { say, pickTeams, scoreBar, finishBoard, pyCode, stepper, fmtNum } from './smp-kit.js';
-import { misiHead, fill, codeView, codeFill, rowsView, fillBoard, layar, play } from './misi-kit.js';
+import { misiHead, fill, codeView, codeFill, rowsView, fillBoard, layar, play, adeganDulu, grafikBatang } from './misi-kit.js';
 import { runPy, pyRepr } from './mini-py.js';
 
 // The rules, written independently of the code: expected result or null (None).
@@ -265,6 +265,11 @@ function bosRound(area, ctx, { oops, done }) {
   }
 }
 
+// The ticket board as a queue at the museum gate, before the tariff table.
+const adegan41 = () => ({ judul: 'Antrean di gerbang museum', ket: 'Tinggi batang = harga tiket. Hari libur, setiap tiket berbayar naik Rp2.000. Umur yang mustahil tidak punya harga.',
+  isi: grafikBatang([['0–4 th', '👶', 0, 'gratis'], ['5–12 th', '🧒', 5000, 'Rp5.000'], ['13–59 th', '🧑', 15000, 'Rp15.000'], ['13–59, pelajar', '🎒', 8000, 'Rp8.000'], ['60 th ke atas', '👵', 7500, 'Rp7.500'], ['umur < 0 atau > 120', '🚫', 0, 'None']]
+    .map(([label, ikon, nilai, teks], i) => ({ label, ikon, nilai, teks, warna: ['#a8a29e', '#f59e0b', '#ea580c', '#0d9488', '#7c3aed', '#9ca3af'][i] })), { tinggi: 6 }) });
+
 export default {
   id: 'sma-41-kasus-uji',
   title: 'Kasus Uji Tiket Museum',
@@ -297,7 +302,7 @@ export default {
         wrap.append(el('div', { class: 'pb41-kepala' }, misiHead(no, judul, tujuan, '🎟️'), foe), area);
       };
       const fin = (ms) => ({ oops: () => ctx.mistake(), done: () => { foe.classList.add('beres'); foe.lastChild.textContent = 'Bug tertangkap ✓'; next(ms); } });
-      if (r === 0) { go('harapan', 1); harapanRound(area, ctx, fin(5000)); }
+      if (r === 0) { go('harapan', 1); harapanRound(area, ctx, fin(5000)); adeganDulu(ctx, area, adegan41()); }
       else if (r === 1) { go('pita', 2); pitaRound(area, ctx, fin(5000)); }
       else if (r === 2) { go('batas', 3); batasRound(area, ctx, fin(5500)); }
       else if (r === 3) { go('tembak', 4); tembakRound(area, ctx, fin(6000)); }

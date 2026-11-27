@@ -6,7 +6,7 @@
 import { el, onTap, button, shake } from '../core/util.js';
 import { dnd } from '../core/kit.js';
 import { say, pickTeams, scoreBar, finishBoard, fmtNum } from './sma-kit.js';
-import { misiHead, fill } from './misi-kit.js';
+import { misiHead, fill, adeganDulu, grafikTumpuk } from './misi-kit.js';
 
 export const CARDS = [
   [1, '@sekar.ayu', 'foto', 'Malam pembukaan meriah sekali', '#FESTIVALWANASARI #kulinerwanasari'],
@@ -333,6 +333,13 @@ function privacyBoss(area, ctx, { oops, done }) {
   }
 }
 
+// Before the reducer table: every tagar as one bar built from its four parts.
+function adegan31() {
+  const per = PARTS.map((_, p) => count(partCards(p))); const order = TAGS.slice().sort((a, b) => ruleGroup(a) - ruleGroup(b) || a.localeCompare(b));
+  return { judul: 'Kartu kemunculan dari empat bagian', ket: 'Setiap warna adalah satu bagian data. Panjang batang = semua kemunculan tagar itu.',
+    isi: grafikTumpuk(order.map((t) => ({ label: `#${t}`, nilai: per.map((c) => c[t] || 0) })), ['A', 'B', 'C', 'D'].map((b, i) => ({ label: `bagian ${b}`, warna: ['#2563eb', '#db2777', '#d97706', '#059669'][i] })), { lebar: 20 }) };
+}
+
 export default {
   id: 'sma-31-mahadata',
   title: 'Menghitung Trending Topik',
@@ -363,7 +370,7 @@ export default {
       else if (r === 1) { go('ejaan', 1); mergeRound(area, ctx, fin(6000)); }
       else if (r === 2) { go('kurir', 2); courierRound(area, ctx, fin(6000)); }
       else if (r === 3) { go('imbang', 2); balanceRound(area, ctx, fin(6000)); }
-      else if (r === 4) { go('reduce', 3); reduceRound(area, ctx, fin(6000)); }
+      else if (r === 4) { go('reduce', 3); reduceRound(area, ctx, fin(6000)); adeganDulu(ctx, area, adegan31()); }
       else if (r === 5) { go('siluman', 3); fakeRound(area, ctx, fin(6500)); }
       else if (r === 6) { go('balap1', 4); raceRound(area, ctx, { stages: RACES[0], ...fin(1500) }); }
       else if (r === 7) { go('balap2', 4); raceRound(area, ctx, { stages: RACES[1], ...fin(1500) }); }

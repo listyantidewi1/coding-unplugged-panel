@@ -8,7 +8,7 @@
 import { el, onTap, button, shake } from '../core/util.js';
 import { dnd } from '../core/kit.js';
 import { say, pickTeams, scoreBar, finishBoard, pyTracer, pyCode, stepper } from './smp-kit.js';
-import { misiHead, fill, codeView, rowsView, fillBoard, tileSlots, layar, play } from './misi-kit.js';
+import { misiHead, fill, codeView, rowsView, fillBoard, tileSlots, layar, play, adeganDulu, grafikKelompok } from './misi-kit.js';
 import { runPy, pyRepr, makePyRunner } from './mini-py.js';
 
 export const HARI = ['Kamis', 'Jumat', 'Sabtu'];
@@ -358,6 +358,11 @@ function bosRound(area, ctx, { oops, done }) {
   }
 }
 
+// The bazaar's three days as a picture, shown before the penjualan table.
+const PENJUALAN36 = [[120, 85, 60, 45], [150, 95, 40, 35], [210, 130, 75, 55]];
+const adegan36 = () => ({ judul: 'Bazar Amal, tiga hari', ket: 'Tinggi batang = penjualan (ribu rupiah). Setiap stan punya tiga batang: Kamis, Jumat, Sabtu.',
+  isi: grafikKelompok(STAN.map((n, s) => ({ label: n, ikon: ['🍰', '🥤', '🧺', '📚'][s], nilai: PENJUALAN36.map((h) => h[s]) })), HARI.map((h, i) => ({ label: h, warna: ['#60a5fa', '#f59e0b', '#10b981'][i] })), { tinggi: 7 }) });
+
 export default {
   id: 'sma-36-rekap-bazar',
   title: 'Rekap Bazar Amal',
@@ -393,11 +398,11 @@ export default {
       const fin = (ms) => ({ oops: () => ctx.mistake(), done: () => { bug.classList.add('beres'); bug.lastChild.textContent = 'Bug dibasmi ✓'; next(ms); } });
       if (r === 0) { go('ramal', 1); ramalRound(area, ctx, fin(5000)); }
       else if (r === 1) { go('setel', 1); setelRound(area, ctx, fin(5000)); }
-      else if (r === 2) { go('jalan', 2); jalanRound(area, ctx, fin(5500)); }
+      else if (r === 2) { go('jalan', 2); jalanRound(area, ctx, fin(5500)); adeganDulu(ctx, area, adegan36()); }
       else if (r === 3) { go('hitung', 2); hitungRound(area, ctx, fin(5500)); }
-      else if (r === 4) { go('dodi', 2); dodiRound(area, ctx, fin(5500)); }
+      else if (r === 4) { go('dodi', 2); dodiRound(area, ctx, fin(5500)); adeganDulu(ctx, area, adegan36()); }
       else if (r === 5) { go('terlaris', 3); terlarisRound(area, ctx, fin(5000)); }
-      else if (r === 6) { go('stan', 3); stanRound(area, ctx, fin(5500)); }
+      else if (r === 6) { go('stan', 3); stanRound(area, ctx, fin(5500)); adeganDulu(ctx, area, adegan36()); }
       else if (r === 7) { go('henti', 4); hentiRound(area, ctx, fin(6000)); }
       else if (r === 8) { go('batas', 5); batasRound(area, ctx, fin(6000)); }
       else { go('bos', 'Bos'); bosRound(area, ctx, fin(7000)); }

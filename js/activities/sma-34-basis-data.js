@@ -8,7 +8,7 @@
 import { el, onTap, button, shake } from '../core/util.js';
 import { dnd } from '../core/kit.js';
 import { say, pickTeams, scoreBar, finishBoard, fmtNum } from './sma-kit.js';
-import { misiHead, fill } from './misi-kit.js';
+import { misiHead, fill, adeganDulu, grafikBatang } from './misi-kit.js';
 import { makeDb, SqlError } from './sql-mini.js';
 
 // [no, tanggal, pelanggan, kontak, produk, harga, jumlah, total]
@@ -451,6 +451,17 @@ function bosRound(area, ctx, { oops, done }) {
   }
 }
 
+// Pictures shown before the shop's tables: the order slips, and the product shelf.
+const WAJAH34 = { 'Bu Rina': '👩‍🏫', Dimas: '🧑‍🎓', 'Pak Joko': '👮', 'Bu Sari': '👩', 'Pak Darto': '👨‍🏫' };
+const BARANG34 = { 'Gantungan kunci batik': '🔑', 'Lilin aromaterapi': '🕯️', 'Tas anyaman pandan': '👜', 'Kaos sablon kelas': '👕' };
+const struk34 = () => el('div', { class: 'sq34-struk-struk' }, BIG.map(([no, tgl, nama, , produk, , jml], i) => el('div', { class: 'sq34-struk', style: { animationDelay: `${i * 0.12}s` } },
+  el('small', null, `#${no} · ${tgl}`), el('span', { class: 'sq34-struk-wajah' }, WAJAH34[nama]), el('b', null, nama), el('span', null, `${BARANG34[produk]} × ${jml}`))));
+const adegan34 = {
+  struk: () => ({ judul: 'Dua minggu pesanan di Toko Kerajinan Kelas', isi: struk34(), ket: 'Setiap kertas pesanan ditulis tangan oleh Nadia: siapa, kapan, barang apa, berapa banyak. Semuanya disalin ke satu tabel besar.' }),
+  produk: () => ({ judul: 'Rak barang toko', ket: 'Tinggi batang = harga satu barang. Setiap barang punya kode sendiri, P01 sampai P04.',
+    isi: grafikBatang(SCHEMA.produk.rows.map(([id, nama, harga], i) => ({ label: `${id} ${nama}`, ikon: BARANG34[nama], nilai: harga, teks: `Rp${fmtNum(harga)}`, warna: ['#2563eb', '#d97706', '#059669', '#db2777'][i] })), { tinggi: 7 }) }),
+};
+
 export default {
   id: 'sma-34-basis-data',
   title: 'Basis Data Toko Kerajinan Kelas',
@@ -483,13 +494,13 @@ export default {
         wrap.append(el('div', { class: 'sq34-kepala' }, misiHead(no, judul, tujuan, '🗄️'), chaos), area);
       };
       const fin = (ms) => ({ oops: () => ctx.mistake(), done: () => { chaos.classList.add('beres'); chaos.lastChild.textContent = 'Kekacauan teratasi ✓'; next(ms); } });
-      if (r === 0) { go('rina', 1); rinaRound(area, ctx, fin(5500)); }
+      if (r === 0) { go('rina', 1); rinaRound(area, ctx, fin(5500)); adeganDulu(ctx, area, adegan34.struk()); }
       else if (r === 1) { go('uang', 1); uangRound(area, ctx, fin(5500)); }
       else if (r === 2) { go('pecah', 2); pecahRound(area, ctx, fin(5500)); }
       else if (r === 3) { go('kunci', 2); kunciRound(area, ctx, fin(5500)); }
-      else if (r === 4) { go('k12', 3); cardPair(area, ctx, fin(5500), 'K1', 'K2'); }
-      else if (r === 5) { go('k34', 3); cardPair(area, ctx, fin(5500), 'K3', 'K4'); }
-      else if (r === 6) { go('k5', 3); k5Round(area, ctx, fin(6000)); }
+      else if (r === 4) { go('k12', 3); cardPair(area, ctx, fin(5500), 'K1', 'K2'); adeganDulu(ctx, area, adegan34.produk()); }
+      else if (r === 5) { go('k34', 3); cardPair(area, ctx, fin(5500), 'K3', 'K4'); adeganDulu(ctx, area, adegan34.struk()); }
+      else if (r === 6) { go('k5', 3); k5Round(area, ctx, fin(6000)); adeganDulu(ctx, area, adegan34.struk()); }
       else if (r === 7) { go('sql', 4); sqlRound(area, ctx, fin(5500)); }
       else if (r === 8) { go('sabot', 5); sabotRound(area, ctx, fin(6500)); }
       else { go('bos', 'Bos'); bosRound(area, ctx, fin(7000)); }

@@ -117,3 +117,42 @@ export function play(screen, lines, { gap = 260, end = null, err = null } = {}) 
   };
   tick();
 }
+
+// A picture of the data before its table. The mission's own pieces wait in a
+// fragment until "Tampilkan tabel" is tapped, then return unchanged.
+export function adeganDulu(ctx, area, { judul, isi, ket = '', tombol = '📋 Tampilkan tabel' }) {
+  const simpan = document.createDocumentFragment(); simpan.append(...area.childNodes);
+  const node = el('div', { class: 'mk-adegan' }, el('b', { class: 'mk-adegan-judul' }, `👀 ${judul}`), el('div', { class: 'mk-adegan-panggung' }, isi),
+    ket ? el('p', { class: 'mk-adegan-ket' }, ket) : null,
+    onTap(el('button', { class: 'btn primary mk-adegan-lanjut', type: 'button' }, tombol), () => { ctx.sound.tap(); node.remove(); area.append(simpan); }));
+  area.append(node);
+  return node;
+}
+
+// Bars that grow one by one. rows: { label, ikon, nilai, teks, warna }.
+export function grafikBatang(rows, { maks = Math.max(...rows.map((r) => r.nilai)), tinggi = 8 } = {}) {
+  return el('div', { class: 'mk-grafik', style: { '--tinggi': `${tinggi}em` } }, rows.map((r, i) => el('div', { class: 'mk-grafik-kolom' },
+    el('div', { class: 'mk-grafik-rel tegak' }, el('small', { class: 'mk-grafik-nilai', style: { animationDelay: `${0.25 + i * 0.15}s` } }, r.teks ?? String(r.nilai)),
+      el('i', { class: 'mk-grafik-batang', style: { height: `${Math.max(2, (80 * r.nilai) / maks)}%`, background: r.warna || 'var(--mk)', animationDelay: `${i * 0.15}s` } })),
+    el('span', { class: 'mk-grafik-ikon' }, r.ikon || ''), el('small', { class: 'mk-grafik-label' }, r.label))));
+}
+
+// Grouped bars: one group per item, one bar per series, with a legend.
+export function grafikKelompok(groups, series, { tinggi = 8 } = {}) {
+  const maks = Math.max(...groups.flatMap((g) => g.nilai)); let k = 0;
+  return el('div', { class: 'mk-grafik-wadah' },
+    el('div', { class: 'mk-grafik', style: { '--tinggi': `${tinggi}em` } }, groups.map((g) => el('div', { class: 'mk-grafik-kolom' },
+      el('div', { class: 'mk-grafik-rel kelompok' }, g.nilai.map((v, j) => el('i', { class: 'mk-grafik-batang', title: `${series[j].label}: ${v}`, style: { height: `${Math.max(2, (100 * v) / maks)}%`, background: series[j].warna, animationDelay: `${(k++) * 0.08}s` } }))),
+      el('span', { class: 'mk-grafik-ikon' }, g.ikon || ''), el('small', { class: 'mk-grafik-label' }, g.label)))),
+    el('div', { class: 'mk-legenda' }, series.map((s) => el('span', null, el('i', { style: { background: s.warna } }), s.label))));
+}
+
+// Stacked horizontal bars: each row splits into coloured parts (counts shown inside).
+export function grafikTumpuk(rows, parts, { lebar = 22 } = {}) {
+  const maks = Math.max(...rows.map((r) => r.nilai.reduce((a, b) => a + b, 0)));
+  return el('div', { class: 'mk-tumpuk-wadah' },
+    el('div', { class: 'mk-tumpuk' }, rows.map((r, i) => el('div', { class: 'mk-tumpuk-baris' }, el('small', { class: 'mk-tumpuk-label' }, r.label),
+      el('div', { class: 'mk-tumpuk-rel', style: { width: `${lebar}em` } }, el('div', { class: 'mk-tumpuk-isi', style: { width: `${(100 * r.nilai.reduce((a, b) => a + b, 0)) / maks}%`, animationDelay: `${i * 0.12}s` } },
+        r.nilai.map((v, j) => el('i', { style: { flex: String(v), background: parts[j].warna } }, String(v)))))))),
+    el('div', { class: 'mk-legenda' }, parts.map((s) => el('span', null, el('i', { style: { background: s.warna } }), s.label))));
+}

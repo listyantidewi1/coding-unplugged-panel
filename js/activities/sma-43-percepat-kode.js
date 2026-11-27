@@ -9,7 +9,7 @@
 import { el, onTap, button, shake } from '../core/util.js';
 import { dnd } from '../core/kit.js';
 import { say, pickTeams, scoreBar, finishBoard, pyCode, pyTracer, fmtNum } from './smp-kit.js';
-import { misiHead, fill, codeView, rowsView, fillBoard, tileSlots, layar, play } from './misi-kit.js';
+import { misiHead, fill, codeView, rowsView, fillBoard, tileSlots, layar, play, adeganDulu, grafikKelompok } from './misi-kit.js';
 import { runPy, makePyRunner, pyRepr, PySet } from './mini-py.js';
 
 export const KODE = [4827, 1063, 7351, 2917, 6409, 3580, 8134, 5293, 9748, 6215, 2917, 3742];
@@ -295,6 +295,10 @@ function bosRound(area, ctx, { oops, done }) {
   area.append(top, el('div', { class: 'bk43-dua' }, left, right), msg);
 }
 
+// The stopwatch results as a race, before the timing table.
+const adegan43 = () => ({ judul: 'Lomba lari dua program', ket: 'Setiap kali banyak kode digandakan, seberapa jauh batang 🐢 bersarang melonjak? Bandingkan dengan 🐇 set.',
+  isi: grafikKelompok(WAKTU.map(([n, a, b]) => ({ label: `${fmtNum(n)} kode`, ikon: '⏱️', nilai: [a, b] })), [{ label: '🐢 bersarang', warna: '#b45309' }, { label: '🐇 set', warna: '#2563eb' }], { tinggi: 8 }) });
+
 export default {
   id: 'sma-43-percepat-kode',
   title: 'Mempercepat Kode',
@@ -332,7 +336,7 @@ export default {
       else if (r === 1) { go('menara', 1); menaraRound(area, ctx, fin(5500)); }
       else if (r === 2) { go('rudi', 2); rudiRound(area, ctx, fin(6000)); }
       else if (r === 3) { go('laci', 3); laciRound(area, ctx, fin(6000)); }
-      else if (r === 4) { go('jam', 4); jamRound(area, ctx, fin(6000)); }
+      else if (r === 4) { go('jam', 4); jamRound(area, ctx, fin(6000)); adeganDulu(ctx, area, adegan43()); }
       else if (r === 5) { go('cepat', 4); cepatRound(area, ctx, fin(6000)); }
       else if (r === 6) { go('buru', 5); buruRound(area, ctx, fin(6000)); }
       else if (r === 7) { go('urut', 5); urutRound(area, ctx, fin(7000)); }
