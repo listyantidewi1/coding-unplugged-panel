@@ -5,8 +5,10 @@
 // luas, and json.dumps with indent=2. Every result comes from running the
 // worksheet code in mini-py on the same file contents.
 
-import { el, onTap, button } from '../core/util.js';
-import { say, pickTeams, scoreBar, finishBoard, rowsChoose, pickSet, pyCode, pyTracer, fmtNum } from './smp-kit.js';
+import { el, onTap, button, shake } from '../core/util.js';
+import { dnd } from '../core/kit.js';
+import { say, pickTeams, scoreBar, finishBoard, pyCode, pyTracer, fmtNum } from './smp-kit.js';
+import { misiHead, fill, codeView, codeFill, rowsView, fillBoard, layar, play } from './misi-kit.js';
 import { runPy, pyRepr } from './mini-py.js';
 
 export const CSV = 'nama,luas_ha,hasil_kg\nPak Darto,0.5,2900\nBu Wati,0.25,1450\nPak Joko,0,75,4100\nPak Slamet,0.75,4200\nBu Ani,1.0,\nBu Lastri,1.0,5800\nPak Budi,satu,3800\nPak Yanto,0.5,3050\nBu Rina,0.6,-500\n';
@@ -22,7 +24,6 @@ export const LENGKAP = [...VALID.slice(0, 13), 'def periksa_lengkap(baris, terli
 
 const lab = (from, n) => Array.from({ length: n }, (_, i) => String(from + i));
 const q = (s) => JSON.stringify(s);
-const uniq = (xs) => [...new Set(xs)];
 export const barisBerkas = (t) => t.split('\n');
 
 // Run a program on a CSV text; returns the run and the files it left behind.
@@ -76,6 +77,194 @@ export function berkasAcak(rand) {
   return `nama,luas_ha,hasil_kg\n${rows.join('\n')}\n`;
 }
 
+// ---- Permainan: Pos Periksa Data ----
+// The team runs the data checkpoint of Kelompok Tani Makmur: rows are split
+// into column cards, converted, checked at the periksa gate, counted and packed
+// into JSON. Si Penyelundup Data sneaks broken rows past without an error.
+const HEAD50 = {
+  bongkar: ['Bongkar Baris CSV', 'Seret setiap baris ke kotak data atau rusak, lalu uji tiga ekspresi.', 'Baris rusakku menyamar!'],
+  tumbang: ['Program yang Tumbang', 'Jadilah program Rudi: ketuk kolom[2] di setiap baris.', 'Pak Joko lewat diam-diam, hehe.'],
+  gerbang: ['Rakit Gerbang Validasi', 'Lengkapi periksa dan perulangannya.', 'Gerbangmu bolong!'],
+  jaga: ['Jaga Gerbang', 'Setiap baris tiba di gerbang: ketuk lampu dan alasannya.', 'Aku datang bersepuluh!'],
+  hitung: ['Hitung Produktivitas', 'Masukkan kartu yang lolos ke kalkulator, lalu baca keluarannya.', 'Rata-rata saja, gampang!'],
+  json: ['Kemas ke JSON', 'Isi kartu JSON Bu Wati, lalu bandingkan ukuran berkasnya.', 'Angka jadi teks, teks jadi angka!'],
+  jelajah: ['Jelajah JSON', 'Ketuk jalan menuju nilai yang diminta.', 'Datamu kusembunyikan berlapis-lapis.'],
+  selundup: ['Penyelundup lawan Penjaga', 'Ramalkan hasil periksa untuk lima baris selundupan.', 'Kali ini barisku lebih licik!'],
+  subur: ['Berkas Tani Subur', 'Kelompok lain mengirim berkas baru. Jaga gerbangnya!', 'Berkas baru, penyamaran baru!'],
+  bos: ['Gerbang Super', 'Tambah aturan kewajaran dan nama ganda, lalu kenali csv.reader.', 'Panen 29 ton dari setengah hektare!'],
+};
+const msg50 = (t) => el('p', { class: 'reveal info' }, t);
+const pyq = (s) => pyRepr(s);
+const BARIS50 = barisBerkas(CSV);
+
+// Cards dropped into named boxes; cards are [text, boxId or null, hint].
+function sortBoard50(ctx, { oops, msg, bins, cards, done, onPlace = null }) {
+  let left = cards.filter((c) => c[1]).length;
+  const binEls = bins.map(([id, lab]) => el('div', { class: `pd50-kotak ${id}`, 'data-drop': id }, el('b', null, lab), el('div', { class: 'pd50-isi' })));
+  const tray = el('div', { class: 'pd50-baki' }, cards.map((c, i) => el('div', { class: 'pd50-baris', 'data-drag': String(i) }, c[0])));
+  const host = el('div', { class: 'pd50-kolom' }, tray, el('div', { class: 'pd50-kotak-kotak' }, binEls));
+  dnd(host, (chip, bin) => {
+    if (!bin.classList.contains('pd50-kotak') || chip.classList.contains('locked')) return; const c = cards[+chip.dataset.drag];
+    if (c[1] !== bin.dataset.drop) { oops(); shake(chip); say(msg, 'bad', c[2]); return; }
+    chip.classList.add('locked'); bin.lastChild.append(onPlace ? onPlace(c, chip) : chip); ctx.sound.tap(); left--;
+    if (left) { say(msg, 'info', c[3] || 'Tepat.'); return; }
+    tray.remove(); done();
+  });
+  return host;
+}
+const potong = (b) => el('span', { class: 'pd50-potong' }, b.split(',').map((k, i) => el('code', null, el('sup', null, i), pyq(k))));
+
+// Misi 1: split rows, sort them, and test three expressions.
+function bongkarRound(area, ctx, { oops, done }) {
+  const msg = msg50('Seret setiap baris ke kotak. Saat jatuh, baris dipecah menjadi kolom.'); const box = el('div', { class: 'pd50-kolom' });
+  const A = analisa(); const ALASAN = { 4: 'Koma desimal memecah 0,75 menjadi dua kolom: 4 kolom.', 6: 'Kolom hasil_kg kosong.', 8: 'Luas ditulis dengan huruf.', 10: 'Hasil panen negatif.' };
+  const cards = BARIS50.slice(1, 10).map((b, i) => { const n = i + 2; const r = A.rusak.has(n); return [`${n} · ${b}`, r ? 'rusak' : 'data', r ? `${ALASAN[n]} Baris ini rusak.` : 'Tiga kolom, angka, dan positif: baris ini sah.', r ? `Baris ${n}: ${A.rusak.get(n)}.` : 'Tepat.']; });
+  fill(box, el('div', { class: 'pd50-judul' }, el('code', null, `1 · ${BARIS50[0]}`), potong(BARIS50[0])), sortBoard50(ctx, { oops, msg, bins: [['data', '✅ data'], ['rusak', '🚫 rusak']], cards,
+    onPlace: (c, chip) => { const b = c[0].split(' · ')[1]; chip.replaceChildren(el('b', null, c[0].split(' · ')[0]), potong(b)); return chip; },
+    done: () => { say(msg, 'info', 'Baris rusak tertangkap. Sekarang uji tiga ekspresi.'); const papan = box.lastChild;
+      fill(box, el('div', { class: 'pd50-dua' }, papan, fillBoard(ctx, { oops, msg, view: rowsView([['"Pak Joko,0,75,4100".split(",") → ', '_', ' kolom'], ['"0.5" + "0.25" → ', '_'], ['float("0.5") + float("0.25") → ', '_']]), chips: ['4', '3', evalPy('"0.5" + "0.25"'), evalPy('float("0.5") + float("0.25")'), '0.3'], want: ['4', evalPy('"0.5" + "0.25"'), evalPy('float("0.5") + float("0.25")')],
+        hints: ['Hitung potongan setelah dipecah di setiap koma.', 'Dua teks yang dijumlah hanya disambung.', 'float mengubah teks menjadi bilangan dulu.'], done: () => { say(msg, '', 'Semua isi CSV adalah teks. Angka baru menjadi angka setelah int() atau float().'); done(); } }))); } }));
+  area.append(box, msg);
+}
+
+// Misi 2: be Rudi's loop.
+function tumbangRound(area, ctx, { oops, done }) {
+  const msg = msg50('Untuk setiap baris, ketuk kolom[2] yang diambil baris kode 6.'); const box = el('div', { class: 'pd50-kolom' }); const J = rudiJejak(); const R = rudi(); let k = 0; let total = 0;
+  const kiri = el('div', { class: 'pd50-kolom' }); const kanan = el('div', { class: 'pd50-kolom' });
+  const kode = () => codeView(['with open("panen.csv") as f:', '  semua = f.read().split("\\n")', 'total = 0', 'for baris in semua[1:]:', '  kolom = baris.split(",")', '  total = total + int(kolom[2])', 'print("Rata-rata hasil:",', '      total / (len(semua) - 1))'], { labels: ['1', '2', '3', '4', '5', '6', '7', ''], hl: k < J.length ? [5] : [], warn: k >= J.length ? [5] : [] });
+  const draw = () => { fill(kiri, kode(), el('div', { class: 'pd50-total' }, 'total = ', el('b', null, String(total))));
+    if (k >= J.length) return; const b = BARIS50[J[k].baris - 1];
+    fill(kanan, el('code', { class: 'pd50-soal' }, `baris berkas ${J[k].baris}`), el('div', { class: 'pd50-potong besar' }, b.split(',').map((x, i) => onTap(el('button', { type: 'button', class: 'pd50-kol', 'data-i': i }, el('sup', null, i), pyq(x)), () => tap(i))))); };
+  function tap(i) {
+    if (k >= J.length) return; const s = J[k];
+    if (i !== 2) { oops(); say(msg, 'bad', 'Indeks dimulai dari 0: kolom[2] adalah potongan ketiga.'); return; }
+    ctx.sound.tap();
+    if (s.galat) { k = J.length; draw(); const out = layar(); kanan.append(out); play(out, [], { err: `${R.error.type}: ${R.error.message}` }); say(msg, 'info', `int('') gagal: program tumbang di baris kode 6. Satu pertanyaan lagi.`);
+      kanan.append(fillBoard(ctx, { oops, msg, view: rowsView([['len(semua) - 1 → ', '_'], ['baris Pak Joko menyumbang ', '_']]), chips: ['10', '9', '11', '75', '4100'], want: ['10', '75'], hints: ['split("\\n") juga memberi baris kosong di akhir berkas.', 'Baris Pak Joko punya 4 kolom, dan kolom[2] berisi 75.'],
+        done: () => { say(msg, '', 'Si Penyelundup menang dua kali: 75 masuk diam-diam, lalu program tumbang. Perlu gerbang!'); done(); } })); return; }
+    total = s.total; k++; draw(); say(msg, 'info', s.k2 === '75' ? 'Hanya 75? Pak Joko lolos tanpa pesan galat!' : `total = ${total}.`);
+  }
+  draw(); fill(box, el('div', { class: 'pd50-dua' }, kiri, kanan));
+  area.append(box, msg);
+}
+
+// Misi 3: assemble periksa and its loop.
+function gerbangRound(area, ctx, { oops, done }) {
+  const msg = msg50('Penjaga Gerbang: lengkapi dua pemeriksaan di periksa.'); const box = el('div', { class: 'pd50-kolom' }); const out = layar();
+  const tahapB = () => { say(msg, 'info', 'Sekarang perulangan yang memanggil periksa.');
+    fill(box, fillBoard(ctx, { oops, msg, view: codeFill(['for i in range(1, len(semua)):', ['  if ', '_', ':'], '    continue', '  isi, pesan = periksa(semua[i])', '  if isi is None:', ['    rusak.append(', '_', ')'], '  else:', '    data.append(isi)'], { labels: lab(18, 8) }),
+      chips: ['semua[i].strip() == ""', 'semua[i] is None', '(i + 1, pesan)', '(i, pesan)'], want: ['semua[i].strip() == ""', '(i + 1, pesan)'], hints: ['Lewati baris kosong di akhir berkas.', 'i dimulai dari 0 untuk baris pertama berkas: nomor barisnya i + 1.'],
+      done: () => { const A = analisa(); say(msg, 'info', 'Gerbang dijalankan untuk seluruh berkas…'); box.append(out); play(out, [`rusak = ${pyRepr(A.R.vars.rusak)}`, `len(data) = ${A.data.length}`], { gap: 600, end: () => { say(msg, '', 'Empat penyelundup tertangkap dengan nomor baris dan alasannya. Lima catatan masuk.'); done(); } }); } })); };
+  fill(box, fillBoard(ctx, { oops, msg, view: codeFill(['def periksa(baris):', '  kolom = baris.split(",")', ['  if ', '_', ':'], '    return None, ("jumlah kolom "', '      + str(len(kolom)))', '  # 5–10: float, int, except ValueError', ['  if ', '_', ':'], '    return None, "angka harus positif"'], { labels: ['1', '2', '3', '4', '', '5', '11', '12'] }),
+    chips: ['len(kolom) != 3', 'len(kolom) == 3', 'luas <= 0 or hasil <= 0', 'luas < 0 and hasil < 0'], want: ['len(kolom) != 3', 'luas <= 0 or hasil <= 0'], hints: ['Tolak bila jumlah kolomnya bukan 3.', 'Satu saja yang nol atau negatif sudah salah.'], done: () => setTimeout(tahapB, 800) }));
+  area.append(box, msg);
+}
+
+// Misi 3b: rows arrive at the gate one by one.
+function jagaRound(area, ctx, { oops, done }, csv = null) {
+  const msg = msg50('Baris berikutnya tiba. Lampu hijau, lampu merah dengan alasan, atau lewati baris kosong?'); const box = el('div', { class: 'pd50-kolom' }); const A = analisa(csv || CSV); const BARIS = barisBerkas(csv || CSV); let n = 2;
+  const masuk = el('div', { class: 'pd50-kotak data' }, el('b', null, '✅ data'), el('div', { class: 'pd50-isi' })); const tolak = el('div', { class: 'pd50-kotak rusak' }, el('b', null, '🚫 rusak'), el('div', { class: 'pd50-isi' }));
+  const gate = el('div', { class: 'pd50-kolom' });
+  const asli = (m) => (BARIS[m - 1].trim() === '' ? 'lewat' : A.rusak.has(m) ? A.rusak.get(m) : 'ok');
+  const want = (m) => asli(m).replace(/^jumlah kolom \d+$/, 'jumlah kolom');
+  const draw = () => { if (n > BARIS.length) { fill(gate); return; } const b = BARIS[n - 1];
+    fill(gate, el('code', { class: 'pd50-soal' }, `baris ${n}: ${b === '' ? "''" : b}`), el('div', { class: 'pd50-tombol', 'data-want': want(n) }, [['ok', '🟢 masuk data'], ['jumlah kolom', '🔴 jumlah kolom'], ['bukan angka', '🔴 bukan angka'], ['angka harus positif', '🔴 angka harus positif'], ['lewat', '⏭️ continue']].map(([v, t]) => onTap(el('button', { type: 'button', class: 'pd50-pilih', 'data-v': v }, t), () => jawab(v))))); };
+  function jawab(v) {
+    if (n > BARIS.length) return; const w = want(n); const b = BARIS[n - 1];
+    if (v !== w) { oops(); say(msg, 'bad', w === 'lewat' ? 'Baris kosong: strip() == "" sehingga continue.' : w === 'ok' ? 'Tiga kolom, angka, positif: lampu hijau.' : w.startsWith('jumlah') ? 'Hitung kolomnya dulu: pemeriksaan pertama.' : w === 'bukan angka' ? 'float atau int gagal: except ValueError.' : 'Ada angka nol atau negatif.'); return; }
+    ctx.sound.tap(); if (w === 'ok') masuk.lastChild.append(el('span', { class: 'pd50-cap' }, b.split(',')[0])); else if (w !== 'lewat') tolak.lastChild.append(el('span', { class: 'pd50-cap' }, `${n}: ${asli(n)}`)); n++; draw();
+    if (n <= BARIS.length) { say(msg, 'info', 'Tepat.'); return; }
+    if (csv) { const J = rudiJejak(csv); const g = J.find((x) => x.galat); const nomor = BARIS.slice(1, -1).map((_, i) => String(i + 2)); gate.dataset.tumbang = g ? String(g.baris) : 'tidak tumbang';
+      say(msg, 'info', 'Berkas habis. Bagaimana kalau berkas ini diberikan ke program Rudi?');
+      fill(gate, fillBoard(ctx, { oops, msg, view: rowsView([['program Rudi tumbang di baris berkas ', '_']]), chips: [...nomor, 'tidak tumbang'], want: [g ? String(g.baris) : 'tidak tumbang'], hints: ['Program Rudi hanya membaca kolom[2]: tumbang bila kolom itu tidak ada atau bukan bilangan bulat.'],
+        done: () => { say(msg, '', g ? `Di baris ${g.baris} ${g.galat}. Gerbang periksa tetap jalan sampai baris terakhir.` : 'Program Rudi tidak tumbang, tetapi menjumlah baris rusak diam-diam. Itu lebih berbahaya!'); done(); } })); return; }
+    say(msg, 'info', 'Berkas habis.'); box.append(fillBoard(ctx, { oops, msg, view: rowsView([['catatan di data: ', '_', ', di rusak: ', '_']]), chips: [String(A.data.length), String(A.rusak.size), '9', '10'], want: [String(A.data.length), String(A.rusak.size)], hints: ['Hitung kartu hijau.', 'Hitung kartu merah.'],
+      done: () => { say(msg, '', 'Tidak ada yang tumbang: setiap baris rusak dicatat dengan nomor dan alasannya.'); done(); } }));
+  }
+  draw(); fill(box, el('div', { class: 'pd50-dua' }, gate, el('div', { class: 'pd50-kolom' }, masuk, tolak)));
+  area.append(box, msg);
+}
+
+// Misi 4: the calculator.
+function hitungRound(area, ctx, { oops, done }) {
+  const msg = msg50('Seret setiap catatan yang lolos ke kalkulator.'); const box = el('div', { class: 'pd50-kolom' }); const nv = (x) => (x && typeof x === 'object' ? x.v : x); const A = analisa(); A.data = A.data.map((d) => ({ ...d, luas: nv(d.luas), hasil: nv(d.hasil) })); let L = 0; let H = 0; let n = 0;
+  const angka = (x) => (Number.isInteger(x) ? x.toFixed(1) : String(+x.toFixed(4))); const kal = el('div', { class: 'pd50-kal', 'data-drop': 'kal' }, el('b', null, '🧮 kalkulator'), el('code', null, 'total_luas = 0 · total_hasil = 0'));
+  const per = A.data.map((d) => d.hasil / d.luas); const rata = per.reduce((s, x) => s + x, 0) / per.length;
+  const host = el('div', { class: 'pd50-dua' }, el('div', { class: 'pd50-baki kolom' }, A.data.map((d, i) => el('div', { class: 'pd50-baris', 'data-drag': String(i) }, `${d.nama} · ${angka(d.luas)} ha · ${d.hasil} kg`))), kal);
+  dnd(host, (c, t) => { if (t.dataset.drop !== 'kal' || c.classList.contains('locked')) return; const d = A.data[+c.dataset.drag]; L += d.luas; H += d.hasil; n++; c.classList.add('locked'); c.remove(); ctx.sound.tap();
+    kal.lastChild.textContent = `total_luas = ${angka(L)} · total_hasil = ${H}`;
+    if (n < A.data.length) { say(msg, 'info', `${d.nama} masuk.`); return; }
+    say(msg, 'info', 'Baca keluaran baris terakhir program, lalu bandingkan dua cara menghitung produktivitas.');
+    box.append(codeView(['print(len(data), total_hasil / len(data),', '      total_hasil / total_luas)']), fillBoard(ctx, { oops, msg, view: rowsView([['keluaran: ', '_'], ['rata-rata produktivitas 5 petani: ', '_'], ['produktivitas kelompok: ', '_', ' kg/ha']]),
+      chips: [A.out[0], '5 3480 5800', fmtNum(rata), fmtNum(H / L), fmtNum(H / A.data.length)], want: [A.out[0], fmtNum(rata), fmtNum(H / L)],
+      hints: ['Pembagian / selalu memberi float.', 'Jumlahkan lima produktivitas, lalu bagi 5.', 'Total hasil ÷ total luas: lahan besar berbobot lebih besar.'], done: () => { say(msg, '', `${fmtNum(H / L / 1000, 1)} ton per hektare. Rata-rata dari rata-rata (${fmtNum(rata)}) mengabaikan luas lahan.`); done(); } })); });
+  fill(box, host);
+  area.append(box, msg);
+}
+
+// Misi 5: pack a record into JSON, then compare sizes.
+function jsonRound(area, ctx, { oops, done }) {
+  const msg = msg50('Kemas catatan Bu Wati: teks pakai tanda kutip, angka tidak.'); const box = el('div', { class: 'pd50-kolom' }); const A = analisa();
+  const sah = [BARIS50[0], ...BARIS50.filter((b, i) => i && A.data.some((d) => b.startsWith(`${d.nama},`)))].join('\n') + '\n'; const rasio = A.json.length / sah.length;
+  fill(box, el('code', { class: 'pd50-soal' }, 'Bu Wati,0.25,1450'), fillBoard(ctx, { oops, msg, view: rowsView([['{"nama": ', '_', ','], [' "luas_ha": ', '_', ','], [' "hasil_kg": ', '_', '}']]), chips: ['"Bu Wati"', '0.25', '1450', '"0.25"', '"1450"', 'Bu Wati'], want: ['"Bu Wati"', '0.25', '1450'],
+    hints: ['Teks JSON selalu di dalam tanda kutip ganda.', 'periksa sudah mengubahnya menjadi float.', 'periksa sudah mengubahnya menjadi int.'],
+    done: () => { say(msg, 'info', `json.dumps(laporan, indent=2) menulis ${A.json.length} karakter. CSV lima baris sah ${sah.length} karakter.`);
+      box.append(fillBoard(ctx, { oops, msg, view: rowsView([['JSON sekitar ', '_', ' kali lebih besar'], ['keuntungannya: ', '_']]), chips: [String(Math.round(rasio)), String(Math.round(rasio) + 3), 'nama kunci dan tipe ikut tersimpan', 'berkasnya lebih kecil'], want: [String(Math.round(rasio)), 'nama kunci dan tipe ikut tersimpan'],
+        hints: [`${A.json.length} ÷ ${sah.length}.`, 'Setiap nilai berlabel, dan angka tetap angka.'], done: () => { say(msg, '', `${fmtNum(rasio, 2)} kali: JSON lebih boros, tetapi bisa bertingkat dan tidak perlu menebak tipe.`); done(); } })); } }));
+  area.append(box, msg);
+}
+
+// Misi 5b: walk a nested JSON value by tapping keys and indexes.
+export const JALAN50 = [['panen', 3, 'hasil_kg'], ['panen', 0, 'nama'], ['musim']];
+function jelajahRound(area, ctx, { oops, done }) {
+  const msg = msg50('Ketuk kunci atau indeks satu per satu.'); const box = el('div', { class: 'pd50-kolom' }); const A = analisa(); const lap = JSON.parse(A.json); let q = 0; let path = [];
+  const tujuan = () => JALAN50[q]; const ekspr = (p) => `json.loads(teks)${p.map((x) => `[${typeof x === 'number' ? x : `"${x}"`}]`).join('')}`;
+  const draw = () => {
+    let cur = lap; path.forEach((p) => { cur = cur[p]; });
+    const isObj = cur && typeof cur === 'object';
+    const items = !isObj ? [] : Array.isArray(cur) ? cur.map((v, i) => [i, `[${i}] ${v.nama ?? ''}`]) : Object.keys(cur).map((k) => [k, `"${k}"`]);
+    fill(box, el('code', { class: 'pd50-soal' }, `cari: ${ekspr(tujuan())}`), el('code', { class: 'pd50-jalan' }, ekspr(path) || 'json.loads(teks)'),
+      el('div', { class: 'pd50-json' }, items.map(([k, t]) => onTap(el('button', { type: 'button', class: 'pd50-kunci', 'data-k': String(k) }, t, el('small', null, typeof cur[k] === 'object' ? (Array.isArray(cur[k]) ? ` [${cur[k].length}]` : ' {…}') : `: ${JSON.stringify(cur[k])}`)), () => tap(k)))));
+  };
+  function tap(k) {
+    const w = tujuan()[path.length];
+    if (k !== w) { oops(); say(msg, 'bad', typeof w === 'number' ? `List diakses dengan indeks; indeks dimulai dari 0.` : `Ketuk kunci "${w}".`); return; }
+    path.push(k); ctx.sound.tap();
+    if (path.length < tujuan().length) { draw(); say(msg, 'info', 'Masuk satu lapis.'); return; }
+    box.querySelector('.pd50-json')?.replaceChildren(); let v = lap; path.forEach((p) => { v = v[p]; }); say(msg, 'info', `${ekspr(path)} → ${JSON.stringify(v)}`); q++; path = [];
+    if (q < JALAN50.length) { setTimeout(draw, 900); return; }
+    box.append(fillBoard(ctx, { oops, msg, view: rowsView([['["panen"][3] adalah catatan ', '_']]), chips: [lap.panen[3].nama, lap.panen[2].nama, lap.panen[4].nama], want: [lap.panen[3].nama], hints: ['Hitung dari 0.'], done: () => { say(msg, '', 'JSON bertingkat: dictionary berisi list berisi dictionary.'); done(); } }));
+  }
+  draw();
+  area.append(box, msg);
+}
+
+// Misi 6: five smuggled rows versus periksa.
+export const BANK50 = ['Pak Edi,0.5,2.900', 'Bu Siti, 0.5 , 3000 ', 'Pak Eko,0.5,29000', 'Pak Darto,0.5,2900', '"Darto, S.P.",0.5,2900'];
+function selundupRound(area, ctx, { oops, done }) {
+  const msg = msg50('Ramalkan: apakah periksa menerima atau menolak setiap baris?'); const box = el('div', { class: 'pd50-kolom' });
+  const hasil = BANK50.map((b) => runPy([...VALID.slice(0, 13), `isi, pesan = periksa(${JSON.stringify(b)})`, 'print(pesan)']).out[0]);
+  fill(box, sortBoard50(ctx, { oops, msg, bins: [['terima', '🟢 diterima'], ['tolak', '🔴 ditolak']], cards: BANK50.map((b, i) => [b, hasil[i] === 'ok' ? 'terima' : 'tolak', hasil[i] === 'ok' ? 'Jalankan periksa langkah demi langkah: semua pemeriksaannya lolos.' : `periksa menolaknya: ${hasil[i]}.`, `→ ${hasil[i]}`]),
+    done: () => { say(msg, 'info', 'Tetapi apakah periksa selalu benar?');
+      box.append(fillBoard(ctx, { oops, msg, view: rowsView([['lolos padahal salah: Pak Eko (29 ton) dan ', '_'], ['ditolak padahal sah: ', '_']]), chips: ['Pak Darto kedua', '"Darto, S.P."', 'Bu Siti', 'Pak Edi'], want: ['Pak Darto kedua', '"Darto, S.P."'],
+        hints: ['Nama yang sudah ada di berkas.', 'Koma di dalam tanda kutip ikut dipecah split.'], done: () => { say(msg, '', 'Penyelundup licik lolos dari aturan yang ada. Misi Bos akan menambah aturannya.'); done(); } })); } }));
+  area.append(box, msg);
+}
+
+// Misi Bos: the super gate.
+function bosRound(area, ctx, { oops, done }) {
+  const msg = msg50('Tolak panen yang tidak masuk akal: lebih dari 10.000 kg per hektare.'); const box = el('div', { class: 'pd50-kolom' }); const out = layar();
+  const tahapC = () => { say(msg, 'info', 'Terakhir: modul csv paham tanda kutip.');
+    fill(box, codeView(['import csv', 'for kolom in csv.reader(f):', '  ...']), fillBoard(ctx, { oops, msg, view: rowsView([['"Darto, S.P.",0.5,2900 → ', '_', ' kolom'], ['nama: ', '_']]), chips: ['3', '4', 'Darto, S.P.', '"Darto'], want: ['3', 'Darto, S.P.'], hints: ['Koma di dalam tanda kutip bukan pemisah.', 'Tanda kutipnya dibuang.'],
+      done: () => { say(msg, '', 'Gerbang Super: kewajaran di periksa, nama ganda di perulangan, dan csv.reader untuk nama berkoma.'); done(); } })); };
+  const tahapB = () => { say(msg, 'info', 'Nama ganda butuh ingatan tentang baris sebelumnya: periksa di perulangan dengan set.');
+    fill(box, fillBoard(ctx, { oops, msg, view: codeFill(['terlihat = set()', 'for i in range(1, len(semua)):', '  ...', '  if isi is None:', '    rusak.append((i + 1, pesan))', ['  elif ', '_', ':'], '    rusak.append((i + 1, "nama ganda"))', ['  else: data.append(isi); ', '_']]),
+      chips: ['isi["nama"] in terlihat', 'terlihat.add(isi["nama"])', 'isi in data', 'terlihat.append(isi["nama"])'], want: ['isi["nama"] in terlihat', 'terlihat.add(isi["nama"])'], hints: ['Periksa apakah namanya sudah pernah terlihat.', 'set memakai add, bukan append.'], done: () => setTimeout(tahapC, 800) })); };
+  fill(box, fillBoard(ctx, { oops, msg, view: codeFill(['  if luas <= 0 or hasil <= 0:', '    return None, "angka harus positif"', ['  if ', '_', ':'], '    return None, "tidak masuk akal"']), chips: ['hasil / luas > 10000', 'hasil > 10000', 'luas / hasil > 10000'], want: ['hasil / luas > 10000'], hints: ['Produktivitas = hasil ÷ luas.'],
+    done: () => { const p = periksaLengkap('Pak Eko,0.5,29000', []); box.append(out); play(out, [`Pak Eko,0.5,29000 → ${p.pesan}`], { end: () => setTimeout(tahapB, 1000) }); } }));
+  area.append(box, msg);
+}
+
 export default {
   id: 'sma-50-csv-json',
   title: 'Data Panen dalam CSV dan JSON',
@@ -93,94 +282,23 @@ export default {
     { id: 'giliran', icon: '🪤', label: 'Baris Jebakan', desc: 'Satu tim menyusun baris jebakan, tim lain memilih aturan validasi yang menangkapnya', create: createTeams },
   ],
   create(root, ctx) {
-    const wrap = el('div', { class: 'act csv-json' });
-    root.append(wrap);
-    const A = analisa(CSV); const RR = rudi(CSV); const J = rudiJejak(CSV); const semua = barisBerkas(CSV);
+    const wrap = el('div', { class: 'act pd50-main' }); root.append(wrap);
     function render() {
-      wrap.replaceChildren();
-      const r = ctx.round;
-      let solved = false;
-      const next = () => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, 2400); } };
-      if (r === 0) {
-        wrap.append(berkas(CSV));
-        rowsChoose(wrap, ctx, { prompt: 'Mengenal berkas CSV', cls: 'cj-isi', rows: [
-          ['k', 'Gunanya baris 1 (kepala)', ['menyebutkan nama dan urutan kolom; bukan data, jadi dilewati program', 'berisi data petani pertama', 'menandai akhir berkas', 'tidak ada gunanya'], 'menyebutkan nama dan urutan kolom; bukan data, jadi dilewati program'],
-          ['n', 'Banyak kolom di setiap baris', ['2', '3', '4', '10'], '3'],
-          ['p', 'Pemisah kolom', ['koma', 'titik', 'spasi', 'titik koma'], 'koma'],
-          ['b', 'Baris 11', ['kosong karena berkas diakhiri tanda baris baru; cukup dilewati', 'baris rusak yang harus dilaporkan', 'kepala kedua', 'data Bu Rina'], 'kosong karena berkas diakhiri tanda baris baru; cukup dilewati'],
-        ], done: next });
-      }
-      else if (r === 1) {
-        wrap.append(berkas(CSV));
-        pickSet(wrap, ctx, { prompt: 'Tanpa program: ketuk baris berkas yang rusak', items: lab(2, 9).map((n) => [n, `baris ${n}`]), right: [...A.rusak.keys()].map(String), done: next,
-          why: 'Baris 4 memakai koma desimal (0,75), baris 6 hasilnya kosong, baris 8 luasnya ditulis dengan huruf, dan baris 10 hasilnya negatif.' });
-      }
-      else if (r === 2) {
-        const E = [['"Pak Darto,0.5,2900".split(",")', ["['Pak Darto 0.5 2900']", "['Pak Darto', 0.5, 2900]", "('Pak Darto', '0.5', '2900')"]], ['"Pak Joko,0,75,4100".split(",")', ["['Pak Joko', '0,75', '4100']", "['Pak Joko', '0', '75']", "['Pak Joko', 0.75, 4100]"]], ['"Bu Ani,1.0,".split(",")', ["['Bu Ani', '1.0']", "['Bu Ani', '1.0', None]", "['Bu Ani', '1.0', '0']"]],
-          ['"0.5" + "0.25"', ['0.75', "'0.75'", 'TypeError']], ['float("0.5") + float("0.25")', ["'0.50.25'", '0.7', '1']], ['int("2900") + 100', ["'2900100'", '2910', 'TypeError']], ['int(" 3000 ")', ['ValueError', "' 3000 '", '300']]];
-        rowsChoose(wrap, ctx, { prompt: 'Hasil setiap ekspresi Python', cls: 'cj-isi cj-mono', rows: E.map(([e, salah], i) => { const v = evalPy(e); return [`e${i}`, e, uniq([v, ...salah]), v]; }), done: next,
-          info: 'Hasil split selalu list teks. Tanda + pada teks menyambung, jadi teks diubah dulu dengan int atau float.' });
-      }
-      else if (r === 3) {
-        wrap.append(el('div', { class: 'cj-dua' }, pyCode(RUDI, { labels: lab(1, 7), cls: 'cj-kecil' }), berkas(CSV, { sampai: 6, cls: 'kecil' })));
-        rowsChoose(wrap, ctx, { prompt: 'Telusuri program Rudi: kolom[2] → total sesudahnya', cls: 'cj-isi cj-mono', rows: J.map((x) => {
-          const right = x.galat ? `${pyRepr(x.k2, true)} → program berhenti` : `${pyRepr(x.k2, true)} → ${x.total}`;
-          const salah = x.galat ? [`'' → ${J.at(-2).total}`, `'0' → ${J.at(-2).total}`, `${pyRepr(semua[x.baris - 1].split(',')[1], true)} → ${J.at(-2).total + 1}`] : [`${pyRepr(x.k2, true)} → ${x.total - parseInt(x.k2, 10) + 1}`, `${pyRepr(semua[x.baris - 1].split(',').at(-1), true)} → ${x.total - parseInt(x.k2, 10) + parseInt(semua[x.baris - 1].split(',').at(-1), 10)}`, `${pyRepr(x.k2, true)} → ${x.k2}`];
-          return [`b${x.baris}`, `Baris berkas ${x.baris}`, uniq([right, ...salah]), right]; }), done: next });
-      }
-      else if (r === 4) {
-        const E = RR.error;
-        wrap.append(el('div', { class: 'cj-dua' }, pyCode(RUDI, { labels: lab(1, 7), cls: 'cj-kecil', warn: [E.line] }), el('pre', { class: 'cj-layar' }, `⚠ Baris ${E.line + 1} · ${E.type}: ${E.message}`)));
-        rowsChoose(wrap, ctx, { prompt: 'Program Rudi berhenti', cls: 'cj-isi', rows: [
-          ['l', 'Baris kode tempat berhenti', ['2', '4', '6', '7'], String(E.line + 1)],
-          ['m', 'Pesan galat', uniq([`${E.type}: ${E.message}`, 'IndexError: list index out of range', "ValueError: could not convert string to float: ''", "TypeError: unsupported operand type(s) for +: 'int' and 'str'"]), `${E.type}: ${E.message}`],
-          ['d', 'Baris Pak Joko (berkas 4)', ['diam-diam salah: kolom[2] berisi 75, padahal hasilnya 4.100 kg, dan program tetap berjalan', 'membuat program berhenti', 'dibaca dengan benar', 'dilewati program'], 'diam-diam salah: kolom[2] berisi 75, padahal hasilnya 4.100 kg, dan program tetap berjalan'],
-          ['n', 'len(semua) − 1 untuk berkas ini', ['9', '10', '11', '8'], String(semua.length - 1)],
-          ['w', 'Mengapa pembagi di baris 7 tetap salah', ['ada baris kosong di akhir berkas, dan pembagi harus menghitung baris yang benar-benar dipakai', 'kepala ikut dihitung dua kali', 'len menghitung huruf, bukan baris', 'pembaginya sudah benar'], 'ada baris kosong di akhir berkas, dan pembagi harus menghitung baris yang benar-benar dipakai'],
-        ], done: next });
-      }
-      else if (r === 5) {
-        wrap.append(pyCode(VALID_KOSONG, { labels: lab(1, 25), cls: 'cj-kecil', warn: [2, 10, 18, 22] }));
-        rowsChoose(wrap, ctx, { prompt: 'Lengkapi baris 3, 11, 19, dan 23', cls: 'cj-isi cj-mono', rows: [
-          ['l3', 'Baris 3', ['len(kolom) != 3', 'len(kolom) == 3', 'len(baris) != 3', 'kolom != 3'], 'len(kolom) != 3'],
-          ['l11', 'Baris 11', ['luas <= 0 or hasil <= 0', 'luas < 0 and hasil < 0', 'luas <= 0 and hasil <= 0', 'luas > 0 or hasil > 0'], 'luas <= 0 or hasil <= 0'],
-          ['l19', 'Baris 19', ['semua[i].strip() == ""', 'semua[i] == None', 'len(semua) == 0', 'semua[i].strip() != ""'], 'semua[i].strip() == ""'],
-          ['l23', 'Baris 23', ['(i + 1, pesan)', '(i, pesan)', '(i - 1, pesan)', 'pesan'], '(i + 1, pesan)'],
-        ], done: next, info: 'Indeks list mulai dari 0, sedangkan nomor baris berkas mulai dari 1.' });
-      }
-      else if (r === 6) {
-        const opsi = ['diterima · ok', 'ditolak · jumlah kolom 4', 'ditolak · bukan angka', 'ditolak · angka harus positif'];
-        wrap.append(berkas(CSV, { cls: 'kecil' }));
-        rowsChoose(wrap, ctx, { prompt: 'Jalankan periksa untuk setiap baris data', cls: 'cj-isi', rows: lab(2, 9).map((n) => { const p = A.rusak.get(Number(n)); return [`b${n}`, `${n}. ${semua[n - 1]}`, opsi, p ? `ditolak · ${p}` : 'diterima · ok']; }), done: next });
-      }
-      else if (r === 7) {
-        const csv = berkasAcak(ctx.rand); const B = analisa(csv); const bs = barisBerkas(csv);
-        const opsi = ['ok', 'jumlah kolom 2', 'jumlah kolom 4', 'bukan angka', 'angka harus positif'];
-        wrap.append(berkas(csv, { cls: 'kecil' }));
-        rowsChoose(wrap, ctx, { prompt: 'Berkas dari Kelompok Tani Subur: hasil periksa setiap baris', cls: 'cj-isi', rows: bs.slice(1, -1).map((t, i) => { const n = i + 2; const p = B.rusak.get(n) ?? 'ok'; return [`b${n}`, `${n}. ${t}`, uniq([p, ...opsi]), p]; }), done: next,
-          info: 'Titik ribuan (2.900) ditolak int. Koma desimal menambah satu kolom.' });
-      }
-      else if (r === 8) {
-        const [nD, rata, prod] = A.out[0].split(' ');
-        wrap.append(el('div', { class: 'cj-dua' }, pyCode(HITUNG, { labels: lab(26, 6), cls: 'cj-kecil' }), tabelData(A.data)));
-        rowsChoose(wrap, ctx, { prompt: 'Menghitung dari data yang sah', cls: 'cj-isi cj-mono', rows: [
-          ['r', 'Isi rusak', uniq([pyRepr(A.R.vars.rusak), '[4, 6, 8, 10]', "[(3, 'jumlah kolom 4'), (5, 'bukan angka'), (7, 'bukan angka'), (9, 'angka harus positif')]", "[(4, 'jumlah kolom 4'), (6, 'bukan angka'), (8, 'bukan angka'), (10, 'angka harus positif'), (11, 'jumlah kolom 1')]"]), pyRepr(A.R.vars.rusak)],
-          ['o', 'Keluaran baris 31', uniq([A.out[0], `${nD} ${prod} ${rata}`, '9 3480.0 5800.0', `${nD} ${prod} ${prod}`]), A.out[0]],
-          ['s', 'Produktivitas kelompok', ['5,8 ton gabah per hektare (kg per hektare)', '5.800 ton per hektare', '3,48 ton per hektare', '5,8 kg per hektare'], `${fmtNum(Number(prod) / 1000)} ton gabah per hektare (kg per hektare)`],
-          ['c', 'Cara Sari (rata-rata 5.820)', ['salah untuk kelompok: sawah 0,25 ha dan 1 ha diberi bobot sama; yang tepat total hasil ÷ total luas', 'lebih tepat karena memakai semua petani', 'sama saja, selisihnya pembulatan', 'tepat bila datanya lima'], 'salah untuk kelompok: sawah 0,25 ha dan 1 ha diberi bobot sama; yang tepat total hasil ÷ total luas'],
-        ], done: next });
-      }
-      else {
-        const wati = A.data[1]; const rec = `{"nama": ${q(wati.nama)}, "luas_ha": ${pyRepr(wati.luas)}, "hasil_kg": ${wati.hasil}}`;
-        const v3 = runPy([...PROGRAM, 'print(json.loads(teks)["panen"][3]["hasil_kg"])'], { limit: 60000, files: { 'panen.csv': CSV } }).out.at(-1);
-        wrap.append(el('div', { class: 'cj-dua' }, pyCode(SIMPAN, { labels: lab(32, 5), cls: 'cj-kecil' }), el('pre', { class: 'cj-layar json' }, A.json.split('\n').slice(0, 14).join('\n') + '\n  …')));
-        rowsChoose(wrap, ctx, { prompt: 'Menyimpan sebagai JSON', cls: 'cj-isi cj-mono', rows: [
-          ['w', 'Catatan Bu Wati di JSON', uniq([rec, `{'nama': 'Bu Wati', 'luas_ha': 0.25, 'hasil_kg': 1450}`, '{"nama": "Bu Wati", "luas_ha": "0.25", "hasil_kg": "1450"}', 'Bu Wati,0.25,1450']), rec],
-          ['k', 'Tanpa tanda kutip berarti', ['angka; aplikasi langsung mendapat angka tanpa int atau float', 'teks', 'nilai kosong', 'nama kolom'], 'angka; aplikasi langsung mendapat angka tanpa int atau float'],
-          ['i', 'json.loads(teks)["panen"][3]["hasil_kg"]', uniq([v3, '4200', '3050', '4100']), v3],
-          ['u', 'Mengapa JSON lebih besar', ['nama kunci ditulis ulang di setiap catatan, ditambah kurung, kutip, dan indentasi', 'angka disimpan dua kali', 'JSON memakai huruf kapital', 'JSON menyimpan baris rusak juga'], 'nama kunci ditulis ulang di setiap catatan, ditambah kurung, kutip, dan indentasi'],
-        ], done: next });
-      }
+      wrap.replaceChildren(); const r = ctx.round; let solved = false;
+      const next = (wait = 5200) => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, wait); } };
+      const area = el('div', { class: 'pd50-area' }); let foe = null;
+      const go = (k, no) => { const [judul, tujuan, ulah] = HEAD50[k]; foe = el('div', { class: 'pd50-musuh' }, el('b', null, '🦹 Si Penyelundup Data'), el('span', null, ulah)); wrap.append(el('div', { class: 'pd50-kepala' }, misiHead(no, judul, tujuan, '🛂'), foe), area); };
+      const fin = (ms) => ({ oops: () => ctx.mistake(), done: () => { foe.classList.add('beres'); foe.lastChild.textContent = 'Data bersih ✓'; next(ms); } });
+      if (r === 0) { go('bongkar', 1); bongkarRound(area, ctx, fin(5500)); }
+      else if (r === 1) { go('tumbang', 2); tumbangRound(area, ctx, fin(5500)); }
+      else if (r === 2) { go('gerbang', 3); gerbangRound(area, ctx, fin(5500)); }
+      else if (r === 3) { go('jaga', 3); jagaRound(area, ctx, fin(5500)); }
+      else if (r === 4) { go('subur', 4); jagaRound(area, ctx, fin(5500), berkasAcak(ctx.rand)); }
+      else if (r === 5) { go('hitung', 5); hitungRound(area, ctx, fin(6000)); }
+      else if (r === 6) { go('json', 6); jsonRound(area, ctx, fin(6000)); }
+      else if (r === 7) { go('jelajah', 6); jelajahRound(area, ctx, fin(5500)); }
+      else if (r === 8) { go('selundup', 7); selundupRound(area, ctx, fin(6000)); }
+      else { go('bos', 'Bos'); bosRound(area, ctx, fin(7000)); }
     }
     render();
   },
@@ -196,10 +314,6 @@ function berkas(csv, { sampai = null, rusak = null, cls = '' } = {}) {
       rusak ? el('small', { class: 'cj-alasan' }, alasan ? `⚠ ${alasan}` : no === 1 ? 'kepala' : t.trim() === '' ? 'dilewati' : '✓ ok') : null);
   }));
 }
-function tabelData(data) {
-  return el('table', { class: 'cj-tabel' }, el('tr', null, ['nama', 'luas_ha', 'hasil_kg'].map((h) => el('th', null, h))), data.map((d) => el('tr', null, el('td', null, d.nama), el('td', null, pyRepr(d.luas)), el('td', null, String(d.hasil)))));
-}
-
 // Parser: edit the file, every change reruns the worksheet program and Rudi's program.
 const BERSIH = barisBerkas(CSV).filter((t, i) => i === 0 || (t && !analisa(CSV).rusak.has(i + 1))).join('\n') + '\n';
 function createParser(root, ctx) {
