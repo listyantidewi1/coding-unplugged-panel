@@ -69,6 +69,7 @@ export function runSession(root, activity, { mode, players, extra, first = 0, se
       player: index,
       total,
       sound,
+      mode: mode === 'race' ? 'race' : teams ? 'turns' : 'solo',
       get round() { return state.solved; },
       // Returns true while puzzles remain, so the activity knows whether to
       // render the next one.

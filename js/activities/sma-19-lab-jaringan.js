@@ -4,8 +4,8 @@
 // splitting the network with a /25 mask. Pings travel across a tappable map.
 
 import { el, onTap, button, shake } from '../core/util.js';
-import { choice } from '../core/kit.js';
 import { say, pickTeams, scoreBar, finishBoard } from './sma-kit.js';
+import { misiHead, fill } from './misi-kit.js';
 
 const NET = '192.168.10.';
 const ROUTER = '192.168.10.1';
@@ -159,88 +159,10 @@ function animate(box, path, ok, cb) {
 
 // --- rounds ---
 export const DEVICE_JOBS = [['Modem (ONT)', 'Mengubah sinyal dari penyedia internet menjadi sinyal untuk jaringan sekolah'], ['Router', 'Menghubungkan jaringan sekolah dengan jaringan lain dan menjadi pintu keluarnya (gateway)'], ['Switch', 'Menghubungkan semua perangkat berkabel sehingga bisa saling berkirim data di dalam sekolah'], ['Titik akses Wi-Fi', 'Menghubungkan perangkat tanpa kabel ke jaringan sekolah'], ['Kabel UTP', 'Membawa sinyal antara sebuah komputer dan switch'], ['Server ujian', 'Menyimpan soal dan mengirimkannya ketika diminta komputer murid']];
-function matchRound(wrap, ctx, { done }) {
-  const right = ctx.rand.shuffle(DEVICE_JOBS.map((p) => p[1]));
-  const ok = new Set(); let sel = null;
-  const box = el('div', { class: 'lj-cocok' });
-  const msg = el('p', { class: 'reveal info' }, 'Ketuk perangkat, lalu tugasnya.');
-  const draw = () => box.replaceChildren(el('div', { class: 'lj-kolom' }, DEVICE_JOBS.map(([l], i) => onTap(el('button', { class: `lj-item ${ok.has(i) ? 'cocok' : sel === i ? 'pilih' : ''}`, type: 'button' }, `${i + 1}. ${l}`), () => { if (ok.has(i)) return; sel = i; draw(); }))),
-    el('div', { class: 'lj-kolom lebar' }, right.map((r) => { const i = DEVICE_JOBS.findIndex((p) => p[1] === r); return onTap(el('button', { class: `lj-item ${ok.has(i) ? 'cocok' : ''}`, type: 'button' }, r), () => {
-      if (sel === null || ok.has(i)) return;
-      if (sel !== i) { ctx.mistake(); shake(box); say(msg, 'bad', `${DEVICE_JOBS[sel][0]} bukan perangkat yang bertugas begitu.`); return; }
-      ok.add(i); sel = null; ctx.sound.tap(); draw();
-      if (ok.size === DEVICE_JOBS.length) { say(msg, '', 'Semua cocok: internet → modem → router → switch dan titik akses → komputer.'); done(); }
-    }); })));
-  wrap.append(el('p', { class: 'prompt' }, 'Perangkat jaringan sekolah: pasangkan setiap perangkat dengan tugasnya.'), box, msg);
-  draw();
-}
-
 export const ADDRS = [['192.168.10.37', true, 'Di jaringan yang sama dan belum dipakai.'], ['192.168.10.0', false, 'Alamat jaringan.'], ['192.168.10.255', false, 'Alamat siaran.'], ['192.168.11.37', false, 'Jaringan lain: angka ketiganya 11.'], ['192.168.10.256', false, 'Bukan alamat sah: angka paling besar 255.'], ['192.168.10.1', false, 'Sudah dipakai router; alamatnya akan bentrok.']];
-function addrRound(wrap, ctx, { done }) {
-  const ans = {};
-  const box = el('div', { class: 'lj-alamat' });
-  const msg = el('p', { class: 'reveal info' }, 'Jaringan 192.168.10.0, subnet mask 255.255.255.0.');
-  const draw = () => box.replaceChildren(...ADDRS.map(([ip, ok, why], i) => el('div', { class: `lj-baris ${i in ans ? (ok ? 'ya' : 'tidak') : ''}` }, el('code', null, ip),
-    i in ans ? el('span', null, `${ok ? '✓ Boleh' : '✗ Tidak'} · ${why}`) : el('span', { class: 'lj-dua' }, ...[[true, 'Boleh'], [false, 'Tidak']].map(([v, l]) => onTap(el('button', { class: 'seg-btn', type: 'button' }, l), () => {
-      if (v !== ok) { ctx.mistake(); shake(box); say(msg, 'bad', ok ? `${ip} boleh: angka terakhir 1–254, jaringan sama, belum dipakai.` : `${ip} tidak boleh. Periksa angka ketiga, angka terakhir, dan alamat yang sudah dipakai.`); return; }
-      ans[i] = v; ctx.sound.tap(); draw();
-      if (Object.keys(ans).length === ADDRS.length) { say(msg, '', 'Semua alamat sudah diperiksa.'); done(); }
-    }))))));
-  wrap.append(el('p', { class: 'prompt' }, 'Komputer baru di lab: alamat mana yang boleh diberikan?'), box, msg);
-  draw();
-}
-
 // PC1–PC6 config cards; the wrong field on each card, or null when it is right.
 export const CARDS = [['PC1', '192.168.10.21', MASK, ROUTER, ROUTER, null, 'Benar'], ['PC2', '192.168.10.25', MASK, ROUTER, ROUTER, 'ip', 'Alamat bentrok dengan PC5 (.25); ganti, misalnya ke 192.168.10.22'], ['PC3', '192.168.11.23', MASK, ROUTER, ROUTER, 'ip', 'Alamat di jaringan lain; ubah ke 192.168.10.23'], ['PC4', '192.168.10.24', MASK, '192.168.10.254', ROUTER, 'gw', 'Gateway salah: tidak ada perangkat di .254; ubah ke 192.168.10.1'], ['PC5', '192.168.10.25', MASK, ROUTER, ROUTER, 'ip', 'Alamat bentrok dengan PC2 (.25); ganti salah satunya'], ['PC6', '192.168.10.26', MASK, ROUTER, '', 'dns', 'DNS kosong; isi 192.168.10.1']];
 const FIELDS = [['ip', 'Alamat IP', 1], ['mask', 'Subnet mask', 2], ['gw', 'Gateway', 3], ['dns', 'DNS', 4]];
-function cardsRound(wrap, ctx, { done }) {
-  const solved = new Set();
-  const box = el('div', { class: 'lj-kartu-kartu' });
-  const msg = el('p', { class: 'reveal info' }, 'Ketuk isian yang salah pada setiap kartu, atau ✓ Benar bila tidak ada masalah.');
-  const hit = (i, f) => {
-    if (solved.has(i)) return;
-    const card = CARDS[i];
-    if (f !== card[5]) { ctx.mistake(); shake(box); say(msg, 'bad', f ? `${card[0]}: isian ${FIELDS.find((x) => x[0] === f)[1].toLowerCase()} itu benar.` : `${card[0]} masih punya masalah. Bandingkan dengan kartu lain.`); return; }
-    solved.add(i); ctx.sound.tap(); say(msg, 'info', `${card[0]}: ${card[6]}.`); draw();
-    if (solved.size === CARDS.length) { say(msg, '', 'Semua kartu diperiksa: PC1 benar, PC2 dan PC5 bentrok, PC3 di jaringan lain, PC4 gateway salah, PC6 DNS kosong.'); done(); }
-  };
-  const draw = () => box.replaceChildren(...CARDS.map((c, i) => el('div', { class: `lj-kartu ${solved.has(i) ? 'beres' : ''}` }, el('b', null, c[0]),
-    ...FIELDS.map(([f, l, k]) => onTap(el('button', { class: `lj-isian ${solved.has(i) && c[5] === f ? 'salah' : ''}`, type: 'button' }, el('small', null, l), el('span', null, c[k] || '(kosong)')), () => hit(i, f))),
-    solved.has(i) ? el('small', { class: 'lj-catat' }, c[6]) : onTap(el('button', { class: 'seg-btn', type: 'button' }, '✓ Benar'), () => hit(i, null)))));
-  wrap.append(el('p', { class: 'prompt' }, 'Kartu konfigurasi lab: temukan isian yang salah.'), box, msg);
-  draw();
-}
-
-// Diagnosis: run tests, choose where the check stops, then the cause and fix.
-function diagFlow(wrap, ctx, { net, dev, title, lines = [], fault, done }) {
-  const { res, stop } = diagnose(net, dev);
-  const shown = new Set(); let tests = 0; let phase = 'uji';
-  const box = el('div', { class: 'lj-peta kecil' });
-  const tree = el('div', { class: 'lj-pohon' });
-  const tail = el('div', { class: 'lj-ekor' });
-  const msg = el('p', { class: 'reveal info' }, 'Jalankan uji pada pohon diagnosis. Berhenti pada langkah pertama yang jawabannya "tidak".');
-  box.innerHTML = mapSvg(net, { sel: dev, hide: true, only: [] });
-  const run = (k) => {
-    if (shown.has(k) || phase !== 'uji') return;
-    shown.add(k); tests++; ctx.sound.tap();
-    if (k >= 2) { const t0 = net.tick; const r = k === 2 ? ping(net, dev, net.cfg[dev].gw || '0.0.0.0') : k === 3 ? ping(net, dev, INTERNET) : open(net, dev, 'bahan.belajar.example'); net.tick = t0; animate(box, r.path, res[k].ok === true); }
-    draw();
-  };
-  const draw = () => {
-    tree.replaceChildren(...STEPS.map((s, k) => el('div', { class: `lj-langkah ${shown.has(k) ? (res[k].ok === true ? 'ya' : 'tidak') : ''}` }, el('b', null, `${k + 1}`), el('span', null, s),
-      shown.has(k) ? el('small', null, res[k].text) : onTap(el('button', { class: 'seg-btn', type: 'button' }, 'Uji'), () => run(k)))));
-    tail.replaceChildren();
-    if (phase === 'uji') tail.append(el('p', { class: 'lj-tanya' }, 'Pemeriksaan berhenti di:'), el('div', { class: 'seg' }, [1, 2, 3, 4, 5, 6].map((s) => onTap(el('button', { class: 'seg-btn', type: 'button' }, STOP_LABEL(s)), () => {
-      if (s !== stop) { ctx.mistake(); shake(tail); say(msg, 'bad', shown.size < s ? 'Jalankan uji dulu sebelum menyimpulkan.' : s > stop ? `Ada langkah sebelum ${s} yang jawabannya "tidak".` : `Langkah ${s} lolos; lanjutkan uji.`); return; }
-      phase = 'sebab'; ctx.sound.tap(); say(msg, 'info', `Berhenti di langkah ${stop}: ${fault ? FAULTS[fault].kind.toLowerCase() : 'jaringan baik'}.`); draw();
-      const opts = ctx.rand.shuffle(Object.keys(FAULTS).filter((f) => f !== fault)).slice(0, 3).map((f) => [`${FAULTS[f].label}: ${FAULTS[f].fix.toLowerCase()}`]);
-      choice(tail, { prompt: 'Penyebab dan perbaikannya?', ctx, shuffle: true, columns: 1, onRight: () => { say(msg, '', `${FAULTS[fault].label}. ${FAULTS[fault].fix}.`); done(tests); }, options: [[`${FAULTS[fault].label}: ${FAULTS[fault].fix.toLowerCase()}`, true], ...opts].map(([l, c]) => ({ label: l, correct: !!c })) });
-    }))));
-  };
-  wrap.append(el('p', { class: 'prompt' }, title), el('div', { class: 'lj-diag' }, el('div', { class: 'lj-kiri' }, lines.length ? el('ul', { class: 'lj-laporan' }, lines.map((l) => el('li', null, l))) : null, box), el('div', { class: 'lj-kanan' }, tree, tail)), msg);
-  draw();
-}
-
 export const REPORTS = [
   { dev: 'perpus', fault: 'kabel', title: 'Laporan 1. Komputer perpustakaan (berkabel): "Internetnya tidak bisa!"' },
   { dev: 'laptop', fault: 'gateway', gw: '192.168.10.254', title: 'Laporan 2. Laptop Bu Wati di ruang guru (Wi-Fi), pengaturan diisi manual.' },
@@ -259,36 +181,449 @@ export function randomFault(rand, f = rand.pick(Object.keys(FAULTS)), dev = rand
 
 export const WIFI = [
   ['Jenis pengamanan', 'WEP', [['WPA2 atau WPA3', true, 'WEP bisa dipecahkan dalam hitungan menit.'], ['Terbuka tanpa kata sandi', false]]],
-  ['Kata sandi Wi-Fi', '12345678, ditempel di dinding kantin', [['Kalimat sandi panjang (≥ 12 karakter), hanya untuk yang berhak, diganti berkala', true, '12345678 termasuk yang paling sering ditebak.'], ['sekolah2026, tidak ditempel', false]]],
+  ['Kata sandi Wi-Fi', '12345678, ditempel di dinding kantin', [['Kalimat sandi ≥ 12 karakter, hanya untuk yang berhak', true, '12345678 termasuk yang paling sering ditebak.'], ['sekolah2026, tidak ditempel', false]]],
   ['Akun pengelola', 'admin / admin', [['Kata sandi kuat yang hanya diketahui pengelola', true, 'admin/admin diketahui umum.'], ['admin / admin123', false]]],
   ['Jaringan ponsel murid dan tamu', 'sama dengan lab dan server ujian', [['Jaringan tamu yang terpisah', true, 'Ponsel berprogram jahat tidak lagi menjangkau server ujian.'], ['Tetap sama, tetapi kata sandinya diganti', false]]],
   ['WPS (tombol atau PIN 8 angka)', 'aktif', [['Matikan WPS', true, 'PIN diperiksa dua bagian dan angka terakhirnya angka cek: cukup 10.000 + 1.000 = 11.000 percobaan, bukan 100 juta.'], ['Ganti PIN dengan 8 angka lain', false]]],
   ['Perangkat lunak (firmware)', 'terakhir diperbarui 4 tahun lalu', [['Perbarui dan periksa pembaruan berkala', true, 'Firmware lama punya celah yang sudah diketahui umum.'], ['Biarkan, selama masih menyala', false]]],
   ['Halaman pengaturan', 'hanya dari ruang server lewat kabel', [['Buka juga dari Wi-Fi supaya praktis', false]]],
 ];
-function wifiRound(wrap, ctx, { done }) {
-  const fixed = WIFI.map((w, i) => (i === 6 ? null : false));
-  const box = el('div', { class: 'lj-wifi' });
-  const meter = el('div', { class: 'lj-meter' });
-  const msg = el('p', { class: 'reveal info' }, 'Untuk setiap pengaturan: biarkan bila sudah aman, atau pilih perbaikannya.');
-  const draw = () => {
-    const s = fixed.slice(0, 6).filter((x) => x === true).length + 1;
-    meter.replaceChildren(el('span', null, `Nilai keamanan ${Math.round((s / 7) * 100)}`), el('i', { style: { width: `${(s / 7) * 100}%` } }));
-    box.replaceChildren(...WIFI.map(([name, cur, opts], i) => el('div', { class: `lj-atur ${fixed[i] === true ? 'aman' : ''}` }, el('b', null, `${i + 1}. ${name}`), el('span', null, fixed[i] === true ? (i === 6 ? cur : opts.find((o) => o[1])[0]) : cur),
-      fixed[i] === true ? el('small', null, i === 6 ? '✓ Sudah aman.' : `✓ ${opts.find((o) => o[1])[2]}`) : el('div', { class: 'seg' }, ...[['Biarkan (aman)', i === 6], ...opts.map(([l, ok]) => [l, ok])].map(([l, ok]) => onTap(el('button', { class: 'seg-btn', type: 'button' }, l), () => {
-        if (!ok) { ctx.mistake(); shake(box); say(msg, 'bad', i === 6 ? 'Jangan: siapa pun yang tersambung ke Wi-Fi bisa mencoba mengubah pengaturan.' : l.startsWith('Biarkan') ? `"${cur}" belum aman.` : 'Perbaikan itu belum cukup aman.'); return; }
-        fixed[i] = true; ctx.sound.tap(); say(msg, 'info', i === 6 ? 'Benar: halaman pengaturan hanya bisa dibuka lewat kabel dari ruang server.' : opts.find((o) => o[1])[2]); draw();
-        if (fixed.every((x) => x === true)) { say(msg, '', 'Wi-Fi sekolah kini aman: WPA2/WPA3, sandi kuat, akun pengelola kuat, jaringan tamu, WPS mati, firmware baru.'); done(); }
-      }))))));
+// ---------- Permainan: Teknisi Siaga ----------
+// The school network must be green before tomorrow's 07.00 exam. Faulty devices
+// carry a red sticker on the map and turn green once the fix is found.
+
+const STIKER = { merah: '#dc2626', hijau: '#16a34a', kuning: '#f59e0b' };
+const UTP = [345, 300];
+// The network map with stickers, dark (powerless) devices, tags and a tappable UTP cable.
+function denah(net, { sel = null, hide = false, tap = [], stick = {}, dark = [], tags = {}, cut = [], utp = false } = {}) {
+  const off = (k) => dark.includes(k);
+  const isCut = (a, b) => cut.some(([x, y]) => (x === a && y === b) || (x === b && y === a));
+  const lines = LINKS.map(([a, b]) => {
+    const [x1, y1] = NODES[a]; const [x2, y2] = NODES[b]; const wifi = b === 'laptop';
+    const c = isCut(a, b);
+    const grey = off(a) || off(b);
+    const stroke = c ? '#dc2626' : grey ? '#94a3b8' : wifi ? '#7c3aed' : a === 'inet' ? '#f97316' : '#2563eb';
+    return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${stroke}" stroke-width="5" ${wifi || c || grey ? 'stroke-dasharray="10 9"' : ''}/>${c ? `<text x="${(x1 + x2) / 2}" y="${(y1 + y2) / 2 + 12}" font-size="34" text-anchor="middle">✂️</text>` : ''}`;
+  });
+  const node = (k, [x, y, icon, name, fixed]) => {
+    const c = net.cfg[k];
+    const ip = fixed ?? (hide ? '?' : c.ip || 'tanpa alamat');
+    const can = tap.includes(k);
+    const d = off(k);
+    const fillc = d ? '#475569' : k === sel ? '#fef08a' : '#f8fafc';
+    const st = stick[k] ? `<g transform="rotate(10 ${x + 58} ${y - 48})"><rect x="${x + 36}" y="${y - 62}" width="46" height="30" rx="4" fill="${STIKER[stick[k]]}" stroke="#fff" stroke-width="3"/><text x="${x + 59}" y="${y - 40}" font-size="20" text-anchor="middle" fill="#fff" font-weight="900">${stick[k] === 'hijau' ? '✓' : '!'}</text></g>` : '';
+    const sub = tags[k] ? `<text x="${x}" y="${y + 42}" font-size="18" font-weight="900" text-anchor="middle" fill="#15803d">${tags[k]}</text>` : ip ? `<text x="${x}" y="${y + 42}" font-size="19" font-weight="600" text-anchor="middle" fill="${d ? '#cbd5e1' : '#334155'}">${ip}</text>` : '';
+    return `<g ${can ? `data-d="${k}" class="lj19-node"` : ''}><rect x="${x - 78}" y="${y - 54}" width="156" height="108" rx="16" fill="${fillc}" stroke="${k === sel ? '#ca8a04' : can ? '#1e293b' : '#94a3b8'}" stroke-width="${k === sel ? 7 : can ? 4 : 3}"/><text x="${x}" y="${y - 12}" font-size="34" text-anchor="middle" ${d ? 'opacity="0.45"' : ''}>${icon}</text><text x="${x}" y="${y + 18}" font-size="20" font-weight="800" text-anchor="middle" fill="${d ? '#e2e8f0' : '#0f172a'}">${name}</text>${sub}${st}</g>`;
   };
-  wrap.append(el('p', { class: 'prompt' }, 'Wi-Fi sekolah yang aman: periksa ketujuh pengaturan titik akses.'), meter, box, msg);
+  const cable = utp ? `<g ${tap.includes('utp') ? 'data-d="utp" class="lj19-node"' : ''}><rect x="${UTP[0] - 70}" y="${UTP[1] - 22}" width="140" height="44" rx="22" fill="${tags.utp ? '#dcfce7' : '#fff'}" stroke="#1e293b" stroke-width="3"/><text x="${UTP[0]}" y="${UTP[1] + 8}" font-size="20" font-weight="800" text-anchor="middle" fill="#0f172a">🔗 ${tags.utp ? `${tags.utp}` : 'Kabel UTP'}</text></g>` : '';
+  return `<svg viewBox="0 15 1010 545" role="img" aria-label="Denah jaringan sekolah">${lines.join('')}${Object.entries(NODES).map(([k, n]) => node(k, n)).join('')}${cable}<g class="lj-anim"></g></svg>`;
+}
+const tapDenah = (box, fn) => box.addEventListener('pointerdown', (e) => { const g = e.target.closest('[data-d]'); if (!g) return; e.preventDefault(); fn(g.dataset.d, g); });
+
+// +/− counter instead of typing a number.
+function stepper(start, { lo = 0, hi = 999, onOk }) {
+  let v = start;
+  const num = el('b', { class: 'lj19-angka' });
+  const set = (x) => { v = Math.max(lo, Math.min(hi, x)); num.textContent = v; };
+  const node = el('div', { class: 'lj19-stepper' }, ...[[-10, '−10'], [-1, '−1']].map(([d, l]) => button(l, () => set(v + d))), num, ...[[1, '+1'], [10, '+10']].map(([d, l]) => button(l, () => set(v + d))), button('✓ Pasang', (e) => onOk(v, e?.currentTarget || node, node), 'primary'));
+  set(start);
+  return node;
+}
+
+// Tap a card from the tray, then a bin.
+function sortRound(wrap, ctx, { cards, bins, intro, why, win, done }) {
+  let sel = null; const placed = {};
+  const tray = el('div', { class: 'lj19-baki' });
+  const binBox = el('div', { class: 'lj19-kotak-kotak' });
+  const msg = el('p', { class: 'reveal info' }, intro);
+  function draw() {
+    fill(tray, cards.filter((c) => !(c.id in placed)).map((c) => onTap(el('button', { type: 'button', class: `lj19-kartu ${sel === c.id ? 'pilih' : ''}` }, c.label), () => { sel = c.id; ctx.sound.tap(); draw(); })));
+    fill(binBox, bins.map((b) => onTap(el('div', { class: 'lj19-kotak' }, el('b', null, b.label), b.sub ? el('small', null, b.sub) : null, el('div', { class: 'lj19-isi' }, cards.filter((c) => placed[c.id] === b.id).map((c) => el('span', null, c.short || c.label)))), (e) => drop(b.id, e.currentTarget))));
+  }
+  function drop(bin, node) {
+    if (!sel) { say(msg, 'info', 'Ketuk kartu dulu, lalu kotaknya.'); return; }
+    const c = cards.find((x) => x.id === sel);
+    if (c.bin !== bin) { ctx.mistake(); shake(node); say(msg, 'bad', why(c, bin)); return; }
+    placed[c.id] = bin; sel = null; ctx.sound.tap(); draw();
+    if (Object.keys(placed).length === cards.length) { say(msg, '', win); done(); } else say(msg, 'info', c.note || 'Tepat. Kartu berikutnya.');
+  }
+  wrap.append(tray, binBox, msg);
   draw();
 }
 
-function subnetBar(marks = []) {
-  return el('div', { class: 'lj-subnet' }, el('div', { class: 'lj-bagian lab' }, el('b', null, 'Lab'), el('span', null, '.0 jaringan · .1–.126 · .127 siaran')), el('div', { class: 'lj-bagian kantor' }, el('b', null, 'Kantor'), el('span', null, '.128 jaringan · .129–.254 · .255 siaran')),
-    ...marks.map(([x, t]) => el('i', { class: 'lj-tanda', style: { left: `${(x / 256) * 100}%` } }, t)));
+// Misi 1a: stick six job cards onto the devices on the map.
+const TUGAS = [['modem', '📶', 'Mengubah sinyal dari penyedia internet'], ['router', '🔀', 'Pintu keluar ke jaringan lain (gateway)'], ['sw', '🔌', 'Menyambungkan semua perangkat berkabel'], ['ap', '📡', 'Menyambungkan perangkat tanpa kabel'], ['utp', '🔗', 'Membawa sinyal dari komputer ke switch'], ['server', '🗄️', 'Menyimpan soal ujian']];
+function jobRound(wrap, ctx, { done }) {
+  const net = makeNet(); let sel = null; const ok = {};
+  const box = el('div', { class: 'lj19-peta' });
+  const tray = el('div', { class: 'lj19-baki' });
+  const msg = el('p', { class: 'reveal info' }, 'Ketuk kartu tugas, lalu ketuk perangkat yang bertugas begitu.');
+  const nameOf = (k) => (k === 'utp' ? 'Kabel UTP' : label(k));
+  function draw() {
+    box.innerHTML = denah(net, { utp: true, tap: ['inet', 'modem', 'router', 'ap', 'sw', 'utp', 'server', 'printer', 'PC1', 'laptop'], tags: Object.fromEntries(Object.keys(ok).map((k) => [k, k === 'utp' ? '✓' : '✓ tugas cocok'])), stick: Object.fromEntries(Object.keys(ok).filter((k) => k !== 'utp').map((k) => [k, 'hijau'])) });
+    fill(tray, TUGAS.filter(([k]) => !ok[k]).map(([k, , t]) => onTap(el('button', { type: 'button', class: `lj19-kartu ${sel === k ? 'pilih' : ''}` }, t), () => { sel = k; ctx.sound.tap(); draw(); })));
+  }
+  tapDenah(box, (k) => {
+    if (!sel) { say(msg, 'info', 'Ketuk kartu tugas dulu.'); return; }
+    if (k !== sel) { ctx.mistake(); shake(box); say(msg, 'bad', `${nameOf(k)} tidak bertugas "${TUGAS.find((x) => x[0] === sel)[2].toLowerCase()}".`); return; }
+    ok[k] = true; sel = null; ctx.sound.tap(); draw();
+    if (Object.keys(ok).length === TUGAS.length) { say(msg, '', 'Semua tugas tertempel: internet → modem → router → switch dan titik akses → perangkat.'); done(); }
+    else say(msg, 'info', `${nameOf(k)}: tepat.`);
+  });
+  wrap.append(tray, box, msg);
+  draw();
 }
+
+// Misi 1b: sort the four networks by size, then predict two outages on the map.
+const MODEL = [['lab', 'Komputer dan printer di lab sekolah', 'LAN'], ['jam', 'Ponsel, jam tangan pintar, dan pengeras suara nirkabel milik satu orang', 'PAN'], ['kamera', 'Kamera lalu lintas di puluhan simpang satu kota', 'MAN'], ['bank', 'Bank dengan kantor cabang di 30 provinsi', 'WAN']];
+function modelRound(wrap, ctx, { done }) {
+  const area = el('div', { class: 'lj19-area' });
+  wrap.append(area);
+  sortRound(area, ctx, {
+    cards: MODEL.map(([id, l, bin]) => ({ id, label: l, short: l.split(' ').slice(0, 3).join(' '), bin })),
+    bins: [['PAN', '👤 satu orang'], ['LAN', '🏫 satu gedung'], ['MAN', '🏙️ satu kota'], ['WAN', '🌏 antarkota, antarnegara']].map(([id, sub]) => ({ id, label: id, sub })),
+    intro: 'Ketuk kartu jaringan, lalu kotak jenisnya.',
+    why: (c) => `Seberapa luas "${c.label.toLowerCase()}"?`,
+    win: 'PAN satu orang, LAN satu gedung, MAN satu kota, WAN antarkota.',
+    done: () => setTimeout(() => { if (area.isConnected) outage(); }, 2600),
+  });
+  const EV = [
+    { text: '✂️ Kabel PC3 putus.', opts: [['Hanya PC3 terputus', true], ['Semua PC terputus'], ['Semua perangkat terputus']], cut: [['sw', 'PC3']], dark: ['PC3'], why: 'Topologi bintang: setiap perangkat punya kabel sendiri ke switch.' },
+    { text: '⚡ Switch mati.', opts: [['Semua perangkat berkabel terputus; laptop Wi-Fi masih ke internet', true], ['Hanya switch yang mati'], ['Semua perangkat terputus, termasuk Wi-Fi']], dark: ['sw', 'server', 'printer', 'PC1', 'PC2', 'PC3', 'PC4', 'PC5', 'PC6', 'perpus', 'tu', 'kepsek'], why: 'Switch adalah pusat bintang. Titik akses tersambung ke router, bukan ke switch.' },
+  ];
+  function outage(n = 0) {
+    const ev = EV[n];
+    const net = makeNet();
+    const box = el('div', { class: 'lj19-peta' });
+    const tools = el('div', { class: 'lj19-tombol' });
+    const msg = el('p', { class: 'reveal info' }, 'Tebak dulu akibatnya.');
+    box.innerHTML = denah(net, {});
+    fill(area, el('div', { class: 'pp8-kejadian' }, el('small', null, `🃏 Kejadian ${n + 1} dari ${EV.length}`), el('b', null, ev.text)), box, tools, msg);
+    fill(tools, ctx.rand.shuffle(ev.opts).map(([l, ok]) => button(l, (e) => {
+      if (!ok) { ctx.mistake(); shake(e?.currentTarget || tools); say(msg, 'bad', 'Bayangkan jalur kabelnya di denah. Coba lagi.'); return; }
+      ctx.sound.good(); box.innerHTML = denah(net, { cut: ev.cut || [], dark: ev.dark });
+      if (n === 0) { fill(tools); say(msg, '', `Hanya PC3 padam. ${ev.why}`); setTimeout(() => { if (area.isConnected) outage(1); }, 3000); return; }
+      say(msg, 'info', `${ev.why} Bisakah laptop guru membuka server ujian sekarang?`);
+      fill(tools, [['Bisa', false], ['Tidak bisa', true]].map(([l2, ok2]) => button(l2, (e2) => {
+        if (!ok2) { ctx.mistake(); shake(e2?.currentTarget || tools); say(msg, 'bad', 'Ikuti jalur dari laptop ke server ujian di denah.'); return; }
+        fill(tools); ctx.sound.good();
+        animate(box, route('laptop', 'inet'), true, () => setTimeout(() => { if (box.isConnected) animate(box, ['laptop', 'ap', 'router', 'sw'], false); }, 500));
+        say(msg, '', 'Laptop masih ke internet lewat titik akses dan router, tetapi server ujian ada di balik switch yang mati.');
+        done();
+      })));
+    })));
+  }
+}
+
+// Misi 2a: sort six address stickers, then count the usable addresses.
+function addrSortRound(wrap, ctx, { done }) {
+  const area = el('div', { class: 'lj19-area' });
+  wrap.append(el('div', { class: 'lj19-jaringan' }, el('b', null, '🏫 Jaringan lab: 192.168.10.0'), el('span', null, 'subnet mask 255.255.255.0 · router 192.168.10.1')), area);
+  const REASON = { true: 'ok', 'Alamat jaringan.': 'jar', 'Alamat siaran.': 'siar', 'Jaringan lain: angka ketiganya 11.': 'lain', 'Bukan alamat sah: angka paling besar 255.': 'sah', 'Sudah dipakai router; alamatnya akan bentrok.': 'pakai' };
+  sortRound(area, ctx, {
+    cards: ctx.rand.shuffle(ADDRS.map(([ip, ok, why]) => ({ id: ip, label: ip, bin: ok ? 'ok' : REASON[why], note: `${ip}: ${why}` }))),
+    bins: [['ok', '✅ Boleh dipakai'], ['jar', 'Alamat jaringan'], ['siar', 'Alamat siaran'], ['lain', 'Jaringan lain'], ['sah', 'Bukan alamat sah'], ['pakai', 'Sudah terpakai']].map(([id, l]) => ({ id, label: l })),
+    intro: 'Ketuk stiker alamat, lalu kotak yang tepat.',
+    why: (c) => `${c.label} bukan di kotak itu. Periksa angka ketiga, angka terakhir, dan alamat router.`,
+    win: 'Semua stiker tersortir.',
+    done: () => setTimeout(() => { if (area.isConnected) count(); }, 1800),
+  });
+  function count() {
+    const grid = el('div', { class: 'lj19-rak' }, Array.from({ length: 256 }, (_, i) => el('i', { class: i === 0 || i === 255 ? 'tutup' : i === 1 ? 'router' : '' })));
+    const msg = el('p', { class: 'reveal info' }, 'Rak 256 alamat (.0 sampai .255). Berapa perangkat paling banyak yang bisa diberi alamat?');
+    fill(area, grid, stepper(256, { lo: 0, hi: 300, onOk: (v, node, st) => {
+      if (v !== 254) { ctx.mistake(); shake(node); say(msg, 'bad', v > 254 ? 'Ada dua alamat yang tidak boleh dipakai perangkat.' : 'Terlalu sedikit: router juga perangkat.'); return; }
+      ctx.sound.good(); st.replaceWith(el('b', { class: 'lj19-angka' }, '254')); say(msg, '', '254 perangkat: 256 alamat dikurangi alamat jaringan .0 dan alamat siaran .255. Router ikut dihitung: ia memakai .1.'); done();
+    } }), msg);
+  }
+}
+
+// Misi 2b: the DHCP machine hands out .100–.199 until it runs dry.
+function dhcpRound(wrap, ctx, { done }) {
+  const area = el('div', { class: 'lj19-area' });
+  wrap.append(el('div', { class: 'lj19-jaringan' }, el('b', null, '🎰 Mesin DHCP di router'), el('span', null, 'membagikan 192.168.10.100 sampai 192.168.10.199')), area);
+  const msg = el('p', { class: 'reveal info' }, 'Tebak dulu: berapa perangkat yang bisa mendapat alamat otomatis?');
+  let given = 0;
+  const grid = el('div', { class: 'lj19-rak kecil' }, Array.from({ length: 100 }, (_, i) => el('i', { title: `.${100 + i}` })));
+  const paint = () => [...grid.children].forEach((c, i) => c.classList.toggle('isi', i < given));
+  fill(area, grid, stepper(50, { lo: 0, hi: 300, onOk: (v, node, st) => {
+    if (v !== 100) { ctx.mistake(); shake(node); say(msg, 'bad', v === 99 ? 'Hitung kedua ujungnya: .100 dan .199 ikut.' : 'Hitung dari .100 sampai .199.'); return; }
+    ctx.sound.good(); st.remove(); pour();
+  } }), msg);
+  function pour() {
+    const tools = el('div', { class: 'lj19-tombol' });
+    area.append(tools); area.append(msg);
+    say(msg, 'info', 'Tebakan tepat: 100. Datangkan ponsel murid ke Wi-Fi sekolah.');
+    const more = () => fill(tools, given < 100 ? button('📱 Datangkan 25 ponsel', () => { given += 25; ctx.sound.tap(); paint(); say(msg, 'info', `${given} alamat terpakai, sisa ${100 - given}.`); more(); }, 'primary')
+      : button('📱 Satu ponsel lagi', () => { ctx.sound.tap(); late(); }, 'primary'));
+    more();
+    function late() {
+      fill(tools, el('div', { class: 'lj19-telat' }, el('b', null, '📱 Ponsel ke-101'), el('code', null, '169.254.80.3')), ...[['Bisa membuka server ujian', false], ['Tidak bisa', true]].map(([l, ok]) => button(l, (e) => {
+        if (!ok) { ctx.mistake(); shake(e?.currentTarget || tools); say(msg, 'bad', 'Bandingkan angka depannya dengan 192.168.10.x.'); return; }
+        ctx.sound.good(); fixed();
+      })));
+      say(msg, 'info', 'DHCP habis. Ponsel memberi dirinya alamat 169.254.80.3. Bisakah ia membuka server ujian?');
+    }
+    function fixed() {
+      const net = makeNet(); const pick = new Set();
+      const box = el('div', { class: 'lj19-peta' });
+      const draw = () => { box.innerHTML = denah(net, { tap: ENDS, stick: Object.fromEntries([...pick].map((k) => [k, 'hijau'])), tags: Object.fromEntries([...pick].map((k) => [k, '📌 alamat tetap'])) }); };
+      fill(area, box, msg);
+      say(msg, 'info', '169.254.x.y bukan jaringan 192.168.10.x, jadi tidak ada yang bisa menjawabnya. Sekarang ketuk dua perangkat yang perlu alamat tetap di luar rentang DHCP.');
+      draw();
+      tapDenah(box, (k) => {
+        if (pick.size === 2 || pick.has(k)) return;
+        if (k !== 'server' && k !== 'printer') { ctx.mistake(); shake(box); say(msg, 'bad', `${label(k)} boleh berganti alamat setiap hari; tidak ada yang mencarinya lewat alamatnya.`); return; }
+        pick.add(k); ctx.sound.tap(); draw();
+        if (pick.size === 2) { ctx.sound.good(); say(msg, '', 'Server ujian .5 dan printer .9 dicari banyak komputer lewat alamatnya, jadi alamatnya tetap dan di luar .100–.199 supaya DHCP tidak membagikannya.'); done(); }
+      });
+    }
+  }
+}
+
+// Misi 3: raid the configuration cards, then install the fix from buttons.
+const PERBAIKAN = { PC2: [['192.168.10.22', true], ['192.168.10.21', 'Itu alamat PC1.'], ['192.168.10.5', 'Itu alamat server ujian.']], PC3: [['192.168.10.23', true], ['192.168.11.24', 'Masih jaringan lain.'], ['192.168.10.255', 'Itu alamat siaran.']], PC4: [['192.168.10.1', true], ['192.168.10.5', 'Server ujian bukan pintu keluar.'], ['192.168.11.1', 'Gateway harus di jaringan yang sama.']], PC6: [['192.168.10.1', true], ['192.168.100.1', 'Server itu tidak menjawab.'], ['192.168.10.255', 'Itu alamat siaran.']] };
+function raidRound(wrap, ctx, { done }) {
+  const cards = CARDS.map((c) => ({ id: c[0], v: { ip: c[1], mask: c[2], gw: c[3], dns: c[4] }, bad: c[5], note: c[6] }));
+  const green = new Set(); let fixing = null;
+  const box = el('div', { class: 'lj19-razia' });
+  const msg = el('p', { class: 'reveal info' }, 'Ketuk isian yang salah pada kartu bertanda merah, atau ✓ Benar bila tidak ada masalah.');
+  const badOf = (c) => (c.id === 'PC5' ? (green.has('PC2') ? null : 'ip') : c.bad);
+  function hit(c, f, node) {
+    if (green.has(c.id) || fixing) return;
+    const want = badOf(c);
+    if (c.id === 'PC5' && f === 'ip' && want) { say(msg, 'info', 'PC5 bentrok dengan PC2. Cukup ganti salah satu: kita ganti PC2.'); return; }
+    if (f !== want) { ctx.mistake(); shake(node); say(msg, 'bad', f ? `${c.id}: ${FIELDS.find((x) => x[0] === f)[1].toLowerCase()} itu benar.` : `${c.id} masih punya masalah.`); return; }
+    ctx.sound.tap();
+    if (!f) { win(c); return; }
+    fixing = { c, f }; say(msg, 'info', `${c.note.split(';')[0]}. Pilih perbaikannya.`); draw();
+  }
+  function fix(v, why, node) {
+    const { c, f } = fixing;
+    if (why !== true) { ctx.mistake(); shake(node); say(msg, 'bad', why); return; }
+    c.v[f] = v; fixing = null; win(c);
+  }
+  function win(c) {
+    green.add(c.id); draw();
+    if (green.size === cards.length) { ctx.sound.good(); say(msg, '', 'Semua kartu hijau: PC1 benar, PC2 pindah ke .22 sehingga PC5 tidak bentrok lagi, PC3 ke .23, gateway PC4 .1, DNS PC6 .1.'); done(); }
+    else say(msg, 'info', `${c.id} hijau.${c.id === 'PC2' ? ' PC5 kini tidak bentrok lagi.' : ''}`);
+  }
+  function draw() {
+    fill(box, cards.map((c) => {
+      const g = green.has(c.id);
+      const isFix = fixing && fixing.c === c;
+      return el('div', { class: `lj19-kartu-pc ${g ? 'hijau' : 'merah'}` }, el('div', { class: 'lj19-kepala' }, el('b', null, `🖥️ ${c.id}`), el('span', { class: 'lj19-stiker' }, g ? '✓' : '!')),
+        FIELDS.map(([f, l]) => (isFix && fixing.f === f
+          ? el('div', { class: 'lj19-pilih' }, el('small', null, l), ctx.rand.shuffle(PERBAIKAN[c.id]).map(([v, why]) => onTap(el('button', { type: 'button', class: 'lj19-nilai' }, v), (e) => fix(v, why, e.currentTarget))))
+          : onTap(el('button', { type: 'button', class: `lj19-isian ${g && c.bad === f ? 'baru' : ''}` }, el('small', null, l), el('code', null, c.v[f] || '(kosong)')), (e) => hit(c, f, e.currentTarget)))),
+        g ? null : onTap(el('button', { type: 'button', class: 'lj19-benar' }, '✓ Benar'), (e) => hit(c, null, e.currentTarget)));
+    }));
+  }
+  wrap.append(box, msg);
+  draw();
+}
+
+// Misi 4: five face-down test cards. Flip only what you need, stop at the first "no".
+const CAUSES = { ...FAULTS, dhcp: { label: 'Tidak mendapat alamat dari DHCP', kind: 'Masalah alamat', step: 2, fix: 'Periksa mesin DHCP di router, perluas rentangnya, lalu minta alamat ulang' } };
+function diagCards(wrap, ctx, { net, dev, fault, title, after, done }) {
+  const { res, stop } = diagnose(net, dev);
+  const seen = new Set(); let phase = 'uji';
+  const box = el('div', { class: 'lj19-peta kecil' });
+  const deck = el('div', { class: 'lj19-dek' });
+  const tail = el('div', { class: 'lj19-ekor' });
+  const count = el('span', { class: 'lj19-hitung' });
+  const msg = el('p', { class: 'reveal info' }, 'Buka kartu uji seperlunya. Ketuk 🛑 pada langkah pertama yang jawabannya tidak.');
+  const map = (s) => { box.innerHTML = denah(net, { sel: dev, hide: true, stick: { [dev]: s } }); };
+  map('merah');
+  function flip(k) {
+    if (seen.has(k) || phase !== 'uji') return;
+    seen.add(k); ctx.sound.tap();
+    if (k >= 2) { const t0 = net.tick; const r = k === 2 ? ping(net, dev, net.cfg[dev].gw || '0.0.0.0') : k === 3 ? ping(net, dev, INTERNET) : open(net, dev, 'bahan.belajar.example'); net.tick = t0; animate(box, r.path, res[k].ok === true); }
+    else animate(box, [dev], res[k].ok === true);
+    draw();
+  }
+  function halt(k, node) {
+    if (phase !== 'uji') return;
+    if (k + 1 > stop) { ctx.mistake(); shake(node); say(msg, 'bad', 'Ada langkah lebih awal yang jawabannya tidak.'); return; }
+    if (res[k].ok === true) { ctx.mistake(); shake(node); say(msg, 'bad', 'Langkah ini lolos. Lanjutkan.'); return; }
+    const miss = [...Array(k).keys()].filter((j) => !seen.has(j));
+    if (miss.length) { ctx.mistake(); shake(node); say(msg, 'bad', `Langkah ${miss.map((j) => j + 1).join(', ')} belum diperiksa. Pohon diagnosis dibaca dari bawah.`); return; }
+    phase = 'sebab'; ctx.sound.good(); draw();
+    say(msg, 'info', `Berhenti di langkah ${stop}, ${seen.size} kartu dibuka${seen.size > stop ? ` (cukup ${stop})` : ''}. Apa penyebabnya?`);
+    const others = ctx.rand.shuffle(Object.keys(CAUSES).filter((f) => f !== fault)).sort((a, b) => Math.abs(CAUSES[a].step - stop) - Math.abs(CAUSES[b].step - stop)).slice(0, 3);
+    fill(tail, el('small', null, '🔎 Penyebab'), el('div', { class: 'lj19-tombol' }, ctx.rand.shuffle([fault, ...others]).map((f) => button(CAUSES[f].label, (e) => {
+      if (f !== fault) { ctx.mistake(); shake(e?.currentTarget || tail); say(msg, 'bad', `${CAUSES[f].label} akan berhenti di langkah ${CAUSES[f].step}${CAUSES[f].step === stop ? ', tetapi lihat lagi isi kartunya' : ''}.`); return; }
+      ctx.sound.tap(); fixStep();
+    }))));
+  }
+  function fixStep() {
+    const wrong = ctx.rand.shuffle(Object.keys(CAUSES).filter((f) => f !== fault)).slice(0, 2);
+    say(msg, 'info', `${CAUSES[fault].label}. Pilih perbaikannya.`);
+    fill(tail, el('small', null, '🛠️ Perbaikan'), el('div', { class: 'lj19-tombol tegak' }, ctx.rand.shuffle([fault, ...wrong]).map((f) => button(CAUSES[f].fix, (e) => {
+      if (f !== fault) { ctx.mistake(); shake(e?.currentTarget || tail); say(msg, 'bad', 'Perbaikan itu untuk masalah lain.'); return; }
+      ctx.sound.good(); fill(tail); phase = 'beres'; map('hijau');
+      animate(box, route(dev, 'inet'), true);
+      if (after) after(tail, msg, () => done(seen.size)); else { say(msg, '', `${CAUSES[fault].fix}. ${label(dev)} kembali hijau.`); done(seen.size); }
+    }))));
+  }
+  function draw() {
+    count.textContent = `🃏 ${seen.size} kartu dibuka`;
+    fill(deck, STEPS.map((s, k) => {
+      const o = seen.has(k);
+      const kind = o ? (res[k].ok === true ? 'ya' : res[k].ok === 'kadang' ? 'kadang' : 'tidak') : 'tutup';
+      return el('div', { class: `lj19-uji ${kind}` }, el('b', null, k + 1), onTap(el('button', { type: 'button', class: 'lj19-muka' }, el('span', null, s), o ? el('small', null, `${res[k].ok === true ? '✓' : res[k].ok === 'kadang' ? '⚠️' : '✗'} ${res[k].text}`) : el('small', null, '🔒 ketuk untuk membuka')), () => flip(k)),
+        o && phase === 'uji' && res[k].ok !== true ? onTap(el('button', { type: 'button', class: 'lj19-stop' }, '🛑'), (e) => halt(k, e.currentTarget)) : null);
+    }).reverse());
+  }
+  wrap.append(el('div', { class: 'lj19-laporan' }, el('b', null, title), count), el('div', { class: 'lj19-diag' }, box, el('div', { class: 'lj19-kanan' }, deck, tail)), msg);
+  draw();
+}
+
+const LAPORAN = [
+  { dev: 'perpus', fault: 'kabel', title: '📞 Laporan 1 · Komputer perpustakaan (berkabel): "Internetnya tidak bisa!"' },
+  { dev: 'laptop', fault: 'gateway', gw: '192.168.10.254', title: '📞 Laporan 2 · Laptop Bu Wati (Wi-Fi), pengaturan diisi manual.' },
+  { dev: 'tu', fault: 'dns', dns: '192.168.100.1', title: '📞 Laporan 3 · Komputer ruang TU (berkabel): situs tidak terbuka.' },
+  { dev: 'kepsek', fault: 'dhcp', title: '📞 Laporan 4 · Komputer kepala sekolah, pagi hari setelah 100 ponsel tersambung.' },
+  { dev: 'PC1', fault: 'isp', title: '📞 Laporan 5 · Semua komputer bisa ping gateway, tetapi tidak bisa ping 203.0.113.10.' },
+];
+function laporanNet(L) {
+  const n = makeNet();
+  if (L.fault === 'kabel') FAULTS.kabel.apply(n, L.dev);
+  if (L.gw) n.cfg[L.dev].gw = L.gw;
+  if (L.dns) n.cfg[L.dev].dns = L.dns;
+  if (L.fault === 'dhcp') Object.assign(n.cfg[L.dev], { ip: '169.254.80.3', mask: '255.255.0.0', gw: '', dns: '' });
+  if (L.fault === 'isp') n.isp = false;
+  return n;
+}
+const examAfter = (tail, msg, fin) => {
+  say(msg, 'info', 'Gangguan di penyedia internet. Bisakah ujian besok tetap berjalan?');
+  fill(tail, el('div', { class: 'lj19-tombol' }, [['Tetap jalan', true], ['Batal', false]].map(([l, ok]) => button(l, (e) => {
+    if (!ok) { e?.currentTarget && shake(e.currentTarget); say(msg, 'bad', 'Di mana server ujian berada? Lihat denahnya.'); return; }
+    fill(tail); say(msg, '', 'Ujian tetap jalan: server ujian ada di jaringan sekolah, dicapai lewat switch tanpa internet.'); fin();
+  }))));
+};
+// Several reports in a row inside one round.
+function reportChain(wrap, ctx, { list, done }) {
+  const area = el('div', { class: 'lj19-area' });
+  wrap.append(area);
+  let total = 0; let min = 0;
+  const go = (i) => {
+    fill(area);
+    const L = list[i];
+    const net = L.net || laporanNet(L);
+    min += diagnose(net, L.dev).stop;
+    diagCards(area, ctx, { net, dev: L.dev, fault: L.fault, title: `${L.title}${list.length > 1 ? ` (${i + 1}/${list.length})` : ''}`, after: L.fault === 'isp' ? examAfter : null, done: (n) => {
+      total += n;
+      if (i + 1 < list.length) setTimeout(() => { if (area.isConnected) go(i + 1); }, 2600);
+      else { area.querySelector('.reveal')?.append(` Total ${total} kartu dibuka, paling sedikit ${min}.`); done(); }
+    } });
+  };
+  go(0);
+}
+
+// Misi 5: the Wi-Fi fortress. Each fix closes a gap; the meter climbs.
+function wifiFort(wrap, ctx, { done }) {
+  const fixed = WIFI.map(() => false);
+  const box = el('div', { class: 'lj19-wifi' });
+  const meter = el('div', { class: 'lj19-meter' });
+  const msg = el('p', { class: 'reveal info' }, 'Tim Audit menemukan pengaturan titik akses ini. Tutup setiap celah, biarkan yang sudah aman.');
+  const draw = () => {
+    const s = fixed.filter(Boolean).length;
+    fill(meter, el('i', { style: { width: `${(s / 7) * 100}%` } }), el('span', null, `🛡️ Nilai keamanan ${s} / 7`));
+    fill(box, WIFI.map(([name, cur, opts], i) => el('div', { class: `lj19-atur ${fixed[i] ? 'aman' : ''}` }, el('b', null, `${fixed[i] ? '🛡️' : '⚠️'} ${name}`), el('span', null, fixed[i] && i !== 6 ? opts.find((o) => o[1])[0] : cur),
+      fixed[i] ? null : el('div', { class: 'lj19-tombol kiri' }, ctx.rand.shuffle([['Biarkan', i === 6], ...opts.map(([l, ok]) => [l, ok])]).map(([l, ok]) => onTap(el('button', { class: 'lj19-opsi', type: 'button' }, l), (e) => {
+        if (!ok) { ctx.mistake(); shake(e.currentTarget); say(msg, 'bad', i === 6 ? 'Jangan: siapa pun yang tersambung ke Wi-Fi bisa mencoba mengubah pengaturan.' : l === 'Biarkan' ? `"${cur}" masih celah.` : 'Perbaikan itu belum cukup aman.'); return; }
+        fixed[i] = true; ctx.sound.tap(); say(msg, 'info', i === 6 ? 'Benar: halaman pengaturan hanya bisa dibuka lewat kabel dari ruang server.' : opts.find((o) => o[1])[2]); draw();
+        if (fixed.every(Boolean)) { ctx.sound.good(); say(msg, '', 'Benteng Wi-Fi utuh: WPA2/WPA3, sandi panjang, akun pengelola kuat, jaringan tamu terpisah, WPS mati, firmware baru.'); done(); }
+      }))))));
+  };
+  wrap.append(meter, box, msg);
+  draw();
+}
+
+// Misi Bos: cut 192.168.10.0 into lab and office with mask .128.
+function subnetBoss(wrap, ctx, { done }) {
+  const area = el('div', { class: 'lj19-area' });
+  const bar = el('div', { class: 'lj19-pita' });
+  const msg = el('p', { class: 'reveal info' });
+  wrap.append(el('div', { class: 'lj19-jaringan' }, el('b', null, '✂️ 192.168.10.0 · mask 255.255.255.128'), el('span', null, 'Lab dan kantor dipisah menjadi dua jaringan.')), bar, area, msg);
+  let cutAt = null; const marks = [];
+  const pos = (x) => `${(x / 256) * 100}%`;
+  function drawBar(extra = []) {
+    fill(bar, cutAt == null ? Array.from({ length: 15 }, (_, i) => (i + 1) * 16).map((x) => onTap(el('button', { type: 'button', class: 'lj19-potong', style: { left: pos(x) } }, `.${x}`), (e) => cut(x, e.currentTarget)))
+      : [el('div', { class: 'lj19-bagian lab', style: { width: pos(128) } }, el('b', null, '🖥️ Lab'), el('small', null, '.0 · .1–.126 · .127')), el('div', { class: 'lj19-bagian kantor', style: { width: pos(128) } }, el('b', null, '🗂️ Kantor'), el('small', null, '.128 · .129–.254 · .255'))],
+    [...marks, ...extra].map(([a, b, cls, t]) => el('i', { class: `lj19-rentang ${cls}`, style: { left: pos(a), width: pos(b - a + 1) } }, t)), el('em', { class: 'lj19-ujung kiri' }, '.0'), el('em', { class: 'lj19-ujung kanan' }, '.255'));
+  }
+  function cut(x, node) {
+    if (cutAt != null) return;
+    if (x !== 128) { ctx.mistake(); shake(node); say(msg, 'bad', `Mask .128 berarti setiap bagian 128 alamat. Potongan di .${x} membuat bagian ${x} dan ${256 - x}.`); return; }
+    cutAt = 128; ctx.sound.good(); drawBar();
+    say(msg, 'info', 'Dua bagian, masing-masing 128 alamat. Berapa yang bisa dipakai perangkat di setiap bagian?');
+    fill(area, stepper(128, { lo: 0, hi: 200, onOk: (v, n) => {
+      if (v !== 126) { ctx.mistake(); shake(n); say(msg, 'bad', 'Setiap bagian punya alamat jaringan dan alamat siarannya sendiri.'); return; }
+      ctx.sound.good(); say(msg, 'info', '126 per bagian: lab .1–.126, kantor .129–.254. Ketuk perangkat, lalu bagiannya menurut alamat.'); place();
+    } }));
+  }
+  function place() {
+    const devs = [['pc', '🖥️ PC lab .100', 'lab'], ['kt', '🗂️ Komputer kantor .130', 'kantor'], ['tu', '🗂️ Ruang TU .33', 'lab']];
+    let sel = null; const put = {};
+    const draw = () => fill(area, el('div', { class: 'lj19-baki' }, devs.filter(([k]) => !put[k]).map(([k, l]) => onTap(el('button', { type: 'button', class: `lj19-kartu ${sel === k ? 'pilih' : ''}` }, l), () => { sel = k; ctx.sound.tap(); draw(); }))),
+      el('div', { class: 'lj19-kotak-kotak dua' }, [['lab', '🖥️ Lab .0–.127'], ['kantor', '🗂️ Kantor .128–.255']].map(([b, l]) => onTap(el('div', { class: `lj19-kotak ${b}` }, el('b', null, l), el('div', { class: 'lj19-isi' }, devs.filter(([k]) => put[k] === b).map(([, t]) => el('span', null, t)))), (e) => drop(b, e.currentTarget)))));
+    function drop(b, node) {
+      if (!sel) { say(msg, 'info', 'Ketuk perangkat dulu.'); return; }
+      const d = devs.find((x) => x[0] === sel);
+      if (d[2] !== b) { ctx.mistake(); shake(node); say(msg, 'bad', sel === 'tu' ? 'Ruangnya memang kantor, tetapi alamat .33 jatuh di bagian mana?' : 'Lihat angka terakhir alamatnya.'); return; }
+      put[sel] = b; sel = null; ctx.sound.tap(); draw();
+      if (Object.keys(put).length === devs.length) moveTu();
+    }
+    draw();
+  }
+  function moveTu() {
+    say(msg, 'info', 'Ruang TU itu kantor, tetapi alamatnya .33 ada di bagian lab. Pindahkan ke alamat mana?');
+    fill(area, el('div', { class: 'lj19-tombol' }, ctx.rand.shuffle([['.133', true], ['.128', 'Itu alamat jaringan kantor.'], ['.255', 'Itu alamat siaran kantor.'], ['.127', 'Itu alamat siaran lab.']]).map(([l, ok]) => button(`192.168.10${l}`, (e) => {
+      if (ok !== true) { ctx.mistake(); shake(e?.currentTarget || area); say(msg, 'bad', ok); return; }
+      ctx.sound.good(); talk();
+    }))));
+  }
+  function talk() {
+    say(msg, 'info', 'TU pindah ke .133. Sekarang PC lab .100 mengirim berkas ke komputer kantor .130. Lewat mana?');
+    fill(area, el('div', { class: 'lj19-tombol' }, ctx.rand.shuffle([['Langsung lewat switch', false], ['Lewat router (gateway)', true]]).map(([l, ok]) => button(l, (e) => {
+      if (!ok) { ctx.mistake(); shake(e?.currentTarget || area); say(msg, 'bad', 'Satu switch, tetapi kini dua jaringan berbeda.'); return; }
+      ctx.sound.good(); dhcp();
+    }))));
+  }
+  function dhcp() {
+    const pick = {};
+    say(msg, 'info', 'Lewat router: .100 dan .130 kini berbeda jaringan. Rentang DHCP lama .100–.199 menyeberangi batas. Pilih rentang baru untuk lab dan kantor.');
+    const draw = () => {
+      const ex = [[100, 199, 'lama', 'DHCP lama .100–.199']];
+      if (pick.lab) ex.push([50, 120, 'baru', 'lab .50–.120']);
+      if (pick.kantor) ex.push([150, 250, 'baru', 'kantor .150–.250']);
+      drawBar(pick.lab && pick.kantor ? ex.slice(1) : ex);
+      fill(area, ...[['lab', [['.50–.120', true], ['.100–.127', 'Memuat .127, alamat siaran lab.'], ['.0–.100', 'Memuat .0, alamat jaringan lab.']]], ['kantor', [['.150–.250', true], ['.128–.199', 'Memuat .128, alamat jaringan kantor.'], ['.200–.255', 'Memuat .255, alamat siaran kantor.']]]].map(([b, opts]) => el('div', { class: 'lj19-baris' }, el('b', null, b === 'lab' ? '🖥️ Lab' : '🗂️ Kantor'),
+        pick[b] ? el('span', { class: 'lj19-ok' }, `✓ ${opts[0][0]}`) : ctx.rand.shuffle(opts).map(([l, ok]) => button(l, (e) => {
+          if (ok !== true) { ctx.mistake(); shake(e?.currentTarget || area); say(msg, 'bad', ok); return; }
+          pick[b] = true; ctx.sound.tap(); draw();
+          if (pick.lab && pick.kantor) { ctx.sound.good(); say(msg, '', 'Jaringan terbagi: lab .1–.126 dengan DHCP .50–.120, kantor .129–.254 dengan DHCP .150–.250, TU di .133. Lab dan kantor bicara lewat router.'); done(); }
+        })))));
+    };
+    draw();
+  }
+  drawBar();
+  say(msg, 'info', 'Ketuk tempat garis pemisah pada rak 256 alamat.');
+}
+
+const HEAD19 = {
+  medan: ['Kenali Medan', 'Tempelkan kartu tugas ke perangkat di denah.'],
+  model: ['Kenali Medan', 'Sortir jaringan menurut luasnya, lalu tebak akibat gangguan.'],
+  alamat: ['Jatah Alamat', 'Alamat mana yang boleh dipakai komputer baru di lab?'],
+  dhcp: ['Jatah Alamat', 'Mesin DHCP membagikan alamat sampai habis.'],
+  razia: ['Razia Kartu', 'Temukan isian yang salah, lalu pasang perbaikannya.'],
+  pohon: ['Pohon Diagnosis', 'Buka kartu uji seperlunya; berhenti di langkah pertama yang gagal.'],
+  acak: ['Pohon Diagnosis', 'Laporan gangguan acak. Kartu sesedikit mungkin.'],
+  wifi: ['Benteng Wi-Fi', 'Tutup celah titik akses sampai nilai keamanan penuh.'],
+  boss: ['Lab dan Kantor', 'Bagi jaringan sekolah menjadi dua dengan mask 255.255.255.128.'],
+};
 
 export default {
   id: 'sma-19-lab-jaringan',
@@ -306,37 +641,27 @@ export default {
     { id: 'giliran', icon: '🕵️', label: 'Masalah Tersembunyi', desc: 'Satu tim memasang masalah tersembunyi, tim lain menjalankan uji satu per satu; makin sedikit uji, makin besar poinnya', create: createTeams },
   ],
   create(root, ctx) {
-    const wrap = el('div', { class: 'act lab-jaringan' });
+    const wrap = el('div', { class: 'act lab-jaringan lj19-main' });
     root.append(wrap);
+    const f1 = ctx.rand.pick(Object.keys(FAULTS));
+    const f2 = ctx.rand.pick(Object.keys(FAULTS).filter((f) => FAULTS[f].step !== FAULTS[f1].step));
+    const acak = [f1, f2].map((f, i) => { const r = randomFault(ctx.rand, f); return { ...r, title: `📞 Laporan acak ${i + 1} · ${label(r.dev)}: "Internetnya tidak bisa!"`, after: null }; });
     function render() {
       wrap.replaceChildren();
       const r = ctx.round;
       let solved = false;
-      const next = () => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, 2400); } };
-      const ask = (prompt, opts, columns = 1, subject = null, onRight = next) => choice(wrap, { prompt, subject, ctx, shuffle: true, onRight, columns, options: opts.map(([l, correct]) => ({ label: String(l), correct })) });
-      const then = (fn) => () => { wrap.replaceChildren(); fn(); };
-      const models = [['Komputer dan printer di lab sekolah', 'LAN'], ['Ponsel yang tersambung ke jam tangan pintar dan pengeras suara nirkabel pemiliknya', 'PAN'], ['Kamera lalu lintas di puluhan persimpangan satu kota', 'MAN'], ['Kantor pusat bank dengan kantor cabang di 30 provinsi', 'WAN']];
-      const model = (i) => (i < models.length ? ask(`Jenis jaringan: ${models[i][0]}?`, ['PAN', 'LAN', 'MAN', 'WAN'].map((m) => [m, m === models[i][1]]), 4, null, then(() => model(i + 1)))
-        : ask('Lab memakai topologi bintang. Apa akibatnya jika kabel PC3 putus, dan jika switch mati?', [['Kabel PC3 putus: hanya PC3 terputus. Switch mati: semua perangkat berkabel terputus, termasuk server ujian', true], ['Kabel PC3 putus: semua PC terputus. Switch mati: hanya PC3'], ['Keduanya hanya memutus PC3'], ['Keduanya tidak berakibat, karena ada Wi-Fi']]));
-      if (r === 0) matchRound(wrap, ctx, { done: next });
-      else if (r === 1) model(0);
-      else if (r === 2) addrRound(wrap, ctx, { done: then(() => ask('Paling banyak berapa perangkat yang bisa diberi alamat di jaringan 192.168.10.0 dengan subnet mask 255.255.255.0?', [[254, true], [256], [255], [253]], 4)) });
-      else if (r === 3) ask('DHCP membagikan alamat 192.168.10.100 sampai 192.168.10.199. Berapa perangkat yang bisa mendapat alamat otomatis?', [[100, true], [99], [199], [254]], 4, null,
-        then(() => ask('Semua alamat DHCP terpakai, lalu perangkat berikutnya memberi dirinya alamat 169.254.80.3. Bisakah ia membuka server ujian?', [['Tidak: 169.254.x.y bukan jaringan 192.168.10.x, jadi ia tidak bisa berkirim data dengan server maupun router', true], ['Bisa, karena server ada di dalam sekolah'], ['Bisa, asal DNS-nya benar'], ['Tidak, karena kabelnya pasti terlepas']], 1, null,
-          then(() => ask('Mengapa server ujian dan printer diberi alamat tetap di luar rentang DHCP?', [['Supaya alamatnya tidak berubah dan selalu ditemukan, dan DHCP tidak membagikan alamat yang sama ke perangkat lain', true], ['Supaya lebih cepat dari komputer murid'], ['Karena DHCP tidak bisa memberi alamat ke printer'], ['Supaya bisa dibuka dari internet']])))));
-      else if (r === 4) cardsRound(wrap, ctx, { done: next });
-      else if (r === 5) ask('PC4 (gateway 192.168.10.254) bisa membuka server ujian di 192.168.10.5, tetapi tidak bisa membuka situs di internet. Mengapa?', [['Server di jaringan yang sama, jadi data dikirim langsung lewat switch; gateway hanya dipakai untuk data ke luar jaringan', true], ['Server ujian tidak butuh kabel'], ['Gateway yang salah hanya mengganggu internet pada jam tertentu'], ['DNS PC4 kosong']], 1, el('div', { class: 'lj-kode' }, 'PC4 · IP 192.168.10.24 · mask 255.255.255.0 · gateway 192.168.10.254 · DNS 192.168.10.1'),
-        then(() => ask('PC6 (DNS kosong) bisa membuka server jika mengetik 192.168.10.5, tetapi tidak jika mengetik ujian.sekolah.example. Mengapa?', [['Tidak ada DNS yang menerjemahkan nama menjadi 192.168.10.5; alamat yang diketik langsung tidak butuh DNS', true], ['Nama situsnya salah ketik'], ['Gateway PC6 salah'], ['Server ujian hanya menerima alamat IP pada hari ujian']], 1, el('div', { class: 'lj-kode' }, 'PC6 · IP 192.168.10.26 · mask 255.255.255.0 · gateway 192.168.10.1 · DNS (kosong)'))));
-      else if (r === 6) {
-        const rep = (i) => { const R = REPORTS[i]; diagFlow(wrap, ctx, { net: reportNet(R), dev: R.dev, fault: R.fault, title: R.title, done: then(() => (i < 2 ? rep(i + 1) : ask('Esok pagi semua komputer bisa ping gateway, tetapi tidak ada yang bisa ping 203.0.113.10. Di mana masalahnya, dan bisakah ujian tetap berjalan?', [['Sambungan internet (modem atau penyedia); ujian tetap jalan karena server ujian ada di jaringan sekolah', true], ['Switch; ujian batal'], ['DNS semua komputer; ujian batal'], ['Sambungan internet; ujian batal karena soal ada di internet']]))) }); };
-        rep(0);
-      } else if (r === 7) {
-        const f = randomFault(ctx.rand);
-        diagFlow(wrap, ctx, { ...f, title: `Laporan acak: ${label(f.dev)}, "Internetnya tidak bisa!"`, done: then(() => ask('Mengapa pemeriksaan dimulai dari kabel, bukan langsung dari DNS?', [['Setiap langkah bergantung pada langkah di bawahnya; kalau kabel lepas semua uji gagal, dan memeriksa lampu paling cepat', true], ['Karena kabel paling sering rusak, lainnya jarang'], ['Karena DNS tidak bisa diperiksa'], ['Urutannya bebas, hasilnya sama']])) });
-      } else if (r === 8) wifiRound(wrap, ctx, { done: next });
-      else ask('Tantangan: 192.168.10.0 dibagi dua dengan subnet mask 255.255.255.128. Berapa alamat yang bisa dipakai perangkat di setiap bagian?', [[126, true], [128], [127], [254]], 4, subnetBar(),
-        then(() => ask('Komputer 192.168.10.100 dan 192.168.10.130 masuk bagian mana, dan bisakah keduanya berkirim data langsung lewat switch tanpa router?', [['.100 lab, .130 kantor; tidak bisa, karena kini berbeda jaringan dan data harus lewat gateway', true], ['Keduanya lab; bisa langsung'], ['.100 lab, .130 kantor; bisa langsung karena tersambung ke switch yang sama'], ['.100 kantor, .130 lab; tidak bisa']], 1, subnetBar([[100, '.100'], [130, '.130']]),
-          then(() => ask('Mengapa rentang DHCP 192.168.10.100–192.168.10.199 harus diubah?', [['Rentang itu melewati batas kedua bagian dan memuat .127 (alamat siaran) dan .128 (alamat jaringan); setiap bagian perlu rentang sendiri', true], ['Karena terlalu sedikit alamat'], ['Karena DHCP tidak boleh dipakai di lab'], ['Tidak perlu diubah']], 1, subnetBar([[100, '100'], [199, '199']]))))));
+      const next = (wait = 5200) => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, wait); } };
+      const head = (k, no) => wrap.append(misiHead(no, ...HEAD19[k], '🔌'));
+      if (r === 0) { head('medan', 1); jobRound(wrap, ctx, { done: () => next() }); }
+      else if (r === 1) { head('model', 1); modelRound(wrap, ctx, { done: () => next(6000) }); }
+      else if (r === 2) { head('alamat', 2); addrSortRound(wrap, ctx, { done: () => next(6000) }); }
+      else if (r === 3) { head('dhcp', 2); dhcpRound(wrap, ctx, { done: () => next(7000) }); }
+      else if (r === 4) { head('razia', 3); raidRound(wrap, ctx, { done: () => next(6400) }); }
+      else if (r === 5) { head('pohon', 4); reportChain(wrap, ctx, { list: LAPORAN.slice(0, 3), done: () => next(6000) }); }
+      else if (r === 6) { head('pohon', 4); reportChain(wrap, ctx, { list: LAPORAN.slice(3), done: () => next(6400) }); }
+      else if (r === 7) { head('acak', 4); reportChain(wrap, ctx, { list: acak, done: () => next(6000) }); }
+      else if (r === 8) { head('wifi', 5); wifiFort(wrap, ctx, { done: () => next(6400) }); }
+      else { head('boss', 'Bos'); subnetBoss(wrap, ctx, { done: () => next(7000) }); }
     }
     render();
   },

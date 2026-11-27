@@ -4,8 +4,8 @@
 // for a two-person committee.
 
 import { el, onTap, button, shake } from '../core/util.js';
-import { choice } from '../core/kit.js';
 import { say, pickTeams, scoreBar, finishBoard } from './sma-kit.js';
+import { misiHead, fill } from './misi-kit.js';
 
 export const TUGAS = {
   A: ['Rapat tema dan tanggal', 1, []],
@@ -56,7 +56,7 @@ export function findCycle(extra) {
   return found;
 }
 
-export function dagSvg({ lit = [], red = [], tap = false, extra = {}, slack = null, dur = {} } = {}) {
+export function dagSvg({ lit = [], red = [], ready = [], tap = false, extra = {}, slack = null, dur = {} } = {}) {
   const X = (c) => 50 + c * 108;
   const Y = (r) => 36 + r * 64;
   const arrows = [];
@@ -74,8 +74,9 @@ export function dagSvg({ lit = [], red = [], tap = false, extra = {}, slack = nu
   }
   const nodes = KODE.map((t) => {
     const [x, y] = [X(POS[t][0]), Y(POS[t][1])];
-    const fill = red.includes(t) ? '#fecaca' : lit.includes(t) ? '#fed7aa' : '#fff';
-    return `<g ${tap ? `data-t="${t}" class="ps8-ketuk"` : ''}><circle cx="${x}" cy="${y}" r="23" fill="${fill}" stroke="${lit.includes(t) ? '#ea580c' : '#475569'}" stroke-width="2.5"/><text x="${x}" y="${y + 2}" font-size="18" font-weight="900" text-anchor="middle" fill="#111827">${t}</text><text x="${x}" y="${y + 15}" font-size="9" text-anchor="middle" fill="#475569">${dur[t] ?? TUGAS[t][1]} hr</text>${slack ? `<text x="${x}" y="${y - 28}" font-size="11" font-weight="800" text-anchor="middle" fill="${slack[t] ? '#16a34a' : '#dc2626'}">${slack[t] ? `longgar ${slack[t]}` : 'kritis'}</text>` : ''}</g>`;
+    const rd = ready.includes(t);
+    const fill = red.includes(t) ? '#fecaca' : lit.includes(t) ? '#fed7aa' : rd ? '#dcfce7' : '#fff';
+    return `<g ${tap ? `data-t="${t}" class="ps8-ketuk"` : ''}><circle cx="${x}" cy="${y}" r="23" fill="${fill}" stroke="${lit.includes(t) ? '#ea580c' : rd ? '#16a34a' : '#475569'}" stroke-width="${rd ? 4 : 2.5}"${rd ? ' stroke-dasharray="5 3"' : ''}/><text x="${x}" y="${y + 2}" font-size="18" font-weight="900" text-anchor="middle" fill="#111827">${t}</text><text x="${x}" y="${y + 15}" font-size="9" text-anchor="middle" fill="#475569">${dur[t] ?? TUGAS[t][1]} hr</text>${slack ? `<text x="${x}" y="${y - 28}" font-size="11" font-weight="800" text-anchor="middle" fill="${slack[t] ? '#16a34a' : '#dc2626'}">${slack[t] ? `longgar ${slack[t]}` : 'kritis'}</text>` : ''}</g>`;
   });
   const mk = (id, c) => `<marker id="ps8-${id}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="${c}"/></marker>`;
   return `<svg viewBox="0 0 640 ${Object.keys(extra).length ? 300 : 260}" role="img" aria-label="Graf prasyarat"><defs>${mk('g', '#94a3b8')}${mk('o', '#f97316')}${mk('m', '#dc2626')}</defs>${arrows.join('')}${nodes.join('')}</svg>`;
@@ -146,23 +147,23 @@ function timeline(host, ctx, { staff = 'banyak', days = 20, onPlace, onDone, onB
   return b;
 }
 
-const taskTable = () => el('div', { class: 'ps8-tabel' }, KODE.map((t) => el('span', null, el('b', null, t), ` ${TUGAS[t][0]} · ${TUGAS[t][1]} hr${TUGAS[t][2].length ? ` · setelah ${TUGAS[t][2].join(', ')}` : ''}`)));
 
+const readyOf = (got) => KODE.filter((t) => !got.includes(t) && pre(t).every((p) => got.includes(p)));
 function orderRound(wrap, ctx, { done }) {
   const got = [];
   const out = el('div', { class: 'au-status' }, '…');
-  const msg = el('p', { class: 'reveal info' }, 'Ketuk tugas yang semua prasyaratnya sudah selesai.');
+  const msg = el('p', { class: 'reveal info' }, 'Lingkaran hijau bergaris: tugas yang sudah siap (semua panah masuknya selesai). Ketuk salah satu.');
   const box = dagBox({}, (t, b) => {
     if (got.includes(t)) return;
     const miss = pre(t).filter((p) => !got.includes(p));
     if (miss.length) { ctx.mistake(); shake(b); say(msg, 'bad', `${t} masih menunggu ${miss.join(', ')}.`); return; }
     got.push(t); ctx.sound.tap();
-    b.innerHTML = dagSvg({ lit: got, tap: true });
+    b.innerHTML = dagSvg({ lit: got, tap: true, ready: readyOf(got) });
     out.textContent = got.join(', ');
     if (got.length === KODE.length) { say(msg, '', 'Urutan sah! Ada 1.816 urutan sah yang berbeda.'); done(); }
   });
-  box.innerHTML = dagSvg({ tap: true });
-  wrap.append(el('p', { class: 'prompt' }, 'Susun urutan kerja yang sah untuk satu orang.'), box, out, msg);
+  box.innerHTML = dagSvg({ tap: true, ready: readyOf(got) });
+  wrap.append(box, out, msg);
 }
 
 function pathRound(wrap, ctx, { want, prompt, done, dur = {} }) {
@@ -187,6 +188,116 @@ function scheduleRound(wrap, ctx, { staff, days, target, prompt, done }) {
   tl = timeline(host, ctx, { staff, days, onDone(end) { if (end > target) { ctx.mistake(); say(msg, 'bad', `Sah, tetapi pentas hari ke-${end}. Bisa hari ke-${target}: angkat balok dan geser lebih awal.`); return; } tl.enabled = false; say(msg, '', `Jadwal sah: pentas hari ke-${end}.`); done(); } });
 }
 
+// ---- Papan Proyek Pentas: the missions ----
+
+// Misi Periksa Usulan: a proposed order is played card by card; judge each card
+// "siap" (all its arrows are done) or "belum siap".
+function proposalRound(wrap, ctx, { proposals, done }) {
+  let p = 0;
+  let k = 0;
+  const graph = el('div', { class: 'ps8-graf' });
+  const row = el('div', { class: 'pp8-usulan' });
+  const ctl = el('div', { class: 'kode-baris' });
+  const msg = el('p', { class: 'reveal info' }, 'Kartu usulan dimainkan satu per satu. Siap: semua panah yang masuk sudah selesai.');
+  const draw = () => {
+    const seq = proposals[p];
+    const doneT = seq.slice(0, k);
+    graph.innerHTML = dagSvg({ lit: doneT, red: k < seq.length ? [seq[k]] : [] });
+    fill(row, el('small', null, `Usulan ${p + 1}:`), seq.map((t, i) => el('span', { class: i < k ? 'sudah' : i === k ? 'kini' : '' }, t)));
+    fill(ctl, k < seq.length ? [
+      onTap(el('button', { class: 'btn primary', type: 'button', 'data-nilai': 'siap' }, `✔ ${seq[k]} siap`), () => judge(true)),
+      onTap(el('button', { class: 'btn', type: 'button', 'data-nilai': 'belum' }, `✖ ${seq[k]} belum siap`), () => judge(false))] : null);
+  };
+  function judge(ok) {
+    const seq = proposals[p];
+    const t = seq[k];
+    const miss = pre(t).filter((x) => !seq.slice(0, k).includes(x));
+    if (ok !== !miss.length) { ctx.mistake(); shake(row); say(msg, 'bad', miss.length ? `${t} masih menunggu ${miss.join(', ')}.` : `Semua prasyarat ${t} (${pre(t).join(', ') || 'tidak ada'}) sudah selesai.`); return; }
+    ctx.sound.tap();
+    if (!ok) {
+      say(msg, 'bad', `Usulan ${p + 1} ditolak: ${t} dikerjakan sebelum ${miss.join(' dan ')}.`);
+      setTimeout(advance, 2400);
+      return;
+    }
+    k++;
+    draw();
+    if (k === seq.length) { say(msg, 'info', `Usulan ${p + 1} sah: semua 12 kartu siap pada gilirannya.`); setTimeout(advance, 2000); }
+  }
+  function advance() {
+    p++;
+    k = 0;
+    if (p >= proposals.length) { say(msg, '', 'Semua usulan diperiksa. Urutan sah selalu menaruh setiap tugas sesudah semua prasyaratnya: urutan topologis.'); fill(ctl); done(); return; }
+    draw();
+    say(msg, 'info', `Usulan ${p + 1}.`);
+  }
+  draw();
+  wrap.append(row, graph, ctl, msg);
+}
+
+// Misi Kartu Kejadian: an event changes one task's length; predict how the show day moves.
+function eventRound(wrap, ctx, { events, showSlack = false, done }) {
+  const base = cpm();
+  let e = 0;
+  const graph = el('div', { class: 'ps8-graf' });
+  const card = el('div', { class: 'pp8-kejadian' });
+  const opts = el('div', { class: 'seg pp8-opsi' });
+  const msg = el('p', { class: 'reveal info' }, `Pentas semula hari ke-${base.end}. Jalur kritis ${base.critical.join(' → ')}.`);
+  const CH = [[-2, '⏪ maju 2'], [-1, '⏪ maju 1'], [0, '✅ aman'], [1, '⏩ mundur 1'], [2, '⏩ mundur 2'], [3, '⏩ mundur 3']];
+  const draw = (after = null) => {
+    const [t, d] = events[e];
+    graph.innerHTML = after ? dagSvg({ lit: after.critical, slack: after.slack, dur: { [t]: d } }) : dagSvg({ red: [t], slack: showSlack ? base.slack : null });
+    fill(card, el('small', null, `Kartu kejadian ${e + 1} dari ${events.length}`), el('b', null, `${t} (${TUGAS[t][0]}): ${TUGAS[t][1]} → ${d} hari`));
+    fill(opts, after ? null : CH.map(([v, l]) => onTap(el('button', { class: 'seg-btn', type: 'button', 'data-geser': v }, l), () => answer(v))));
+  };
+  function answer(v) {
+    const [t, d] = events[e];
+    const after = cpm({ [t]: d });
+    const want = after.end - base.end;
+    if (v !== want) { ctx.mistake(); shake(opts); say(msg, 'bad', `Belum. Kelonggaran ${t} semula ${base.slack[t]} hari, dan lamanya berubah ${d - TUGAS[t][1] > 0 ? '+' : ''}${d - TUGAS[t][1]} hari. Periksa juga jalur lain lewat ${t}.`); return; }
+    ctx.sound.good();
+    draw(after);
+    const path = after.critical.join(' → ');
+    say(msg, 'info', `${want === 0 ? 'Aman' : want > 0 ? `Mundur ${want} hari` : `Maju ${-want} hari`}: pentas hari ke-${after.end}. Jalur kritis kini ${path}.`);
+    e++;
+    if (e === events.length) { setTimeout(() => { say(msg, '', 'Tugas dengan kelonggaran boleh terlambat sebanyak kelonggarannya. Tugas di jalur kritis tidak boleh terlambat sehari pun, dan jalur kritis bisa berpindah.'); done(); }, 1600); return; }
+    setTimeout(() => draw(), 2600);
+  }
+  draw();
+  wrap.append(card, graph, opts, msg);
+}
+
+// Misi Siklus: with a new rule, tap the tasks that wait on each other in a circle.
+function cycleRound(wrap, ctx, { extra, done }) {
+  const want = [...new Set(findCycle(extra))];
+  const picked = new Set();
+  const graph = el('div', { class: 'ps8-graf' });
+  const msg = el('p', { class: 'reveal info' }, 'Aturan baru: E (susunan acara) baru boleh dibuat setelah H (menjual tiket) selesai. Rencana macet. Ketuk tugas-tugas yang saling menunggu melingkar, lalu periksa.');
+  const draw = (red = []) => { graph.innerHTML = dagSvg({ extra, lit: [...picked], red, tap: true }); };
+  graph.addEventListener('pointerdown', (ev) => { const g = ev.target.closest('[data-t]'); if (!g) return; ev.preventDefault(); const t = g.dataset.t; if (picked.has(t)) picked.delete(t); else picked.add(t); ctx.sound.tap(); draw(); });
+  const check = onTap(el('button', { class: 'btn primary', type: 'button', 'data-aksi': 'periksa' }, '🔍 Periksa lingkaran'), () => {
+    const ok = picked.size === want.length && want.every((t) => picked.has(t));
+    if (!ok) { ctx.mistake(); shake(graph); say(msg, 'bad', picked.size ? `Belum tepat. Mulai dari E dan ikuti panah keluar sampai kembali ke E.` : 'Ketuk dulu tugas-tugasnya.'); return; }
+    draw(want);
+    const c = findCycle(extra).slice(0, -1);
+    const i = Math.max(0, c.indexOf('E'));
+    say(msg, '', `Siklus ${[...c.slice(i), ...c.slice(0, i), c[i]].join(' → ')}: E menunggu H, H menunggu G, G menunggu E. Tidak ada yang boleh mulai, jadi tidak ada urutan sah sama sekali.`);
+    check.remove();
+    done();
+  });
+  draw();
+  wrap.append(graph, el('div', { class: 'kode-baris' }, check), msg);
+}
+
+const HEAD08 = {
+  urut: ['Urutan Sah', 'Satu orang mengerjakan semua tugas. Ketuk tugas yang sudah siap, satu per satu.'],
+  usul: ['Periksa Usulan', 'Dua anggota panitia mengusulkan urutan kerja. Mainkan kartunya dan putuskan.'],
+  waktu: ['Garis Waktu', 'Letakkan setiap tugas di garis waktu tanpa mendahului prasyaratnya.'],
+  kritis: ['Spidol Jalur Kritis', 'Tandai rangkaian tugas yang menentukan hari pentas.'],
+  kejadian: ['Kartu Kejadian', 'Lama satu tugas berubah. Apakah hari pentas aman, maju, atau mundur?'],
+  siklus: ['Rencana Mustahil', 'Satu aturan baru membuat rencana macet total.'],
+  boss: ['Panitia Dua Orang', 'Hanya dua orang yang bekerja. Pentas paling cepat hari ke-19.'],
+};
+
 export default {
   id: 'sma-08-pentas-seni',
   title: 'Jadwal Pentas Seni',
@@ -197,34 +308,34 @@ export default {
   source: null,
   rounds: 10,
   maxPlayers: 4,
-  goal: 'Murid menggambar prasyarat sebagai graf berarah, menyusun dan memeriksa urutan kerja yang sah, menghitung jadwal tercepat, jalur kritis, dan kelonggaran, melihat jalur kritis berpindah, mengenali siklus, serta menjadwalkan tugas untuk panitia dua orang.',
+  goal: 'Murid menjadi panitia pentas yang menempel kartu tugas di papan panah: menyusun dan memeriksa urutan kerja yang sah, meletakkan tugas di garis waktu, menandai jalur kritis, menghadapi kartu kejadian yang mengubah lama tugas, membongkar rencana yang mengandung siklus, dan menjadwalkan panitia dua orang.',
   extraModes: [
     { id: 'jadwal', icon: '🗓️', label: 'Garis Waktu', desc: 'Pilih banyak panitia (1, 2, 3, atau cukup banyak), lalu letakkan kartu tugas di garis waktu; pemeriksa menolak tugas yang mendahului prasyaratnya atau bentrok pada satu orang', create: createTimeline },
     { id: 'kritis', icon: '🔥', label: 'Jalur Kritis dan Siklus', desc: 'Ubah lama tugas dan lihat jalur kritis serta kelonggaran berpindah; tambah aturan E menunggu H untuk melihat siklus', create: createCritical },
     { id: 'giliran', icon: '🔁', label: 'Jadwal Bergiliran', desc: 'Tim bergantian meletakkan satu kartu tugas di garis waktu dua orang; peletakan yang melanggar membuat tim kehilangan giliran', create: createTeams },
   ],
   create(root, ctx) {
-    const wrap = el('div', { class: 'act pentas-seni' });
+    const wrap = el('div', { class: 'act pentas-seni pp8-main' });
     root.append(wrap);
+    const pool = [['H', 6], ['K', 6], ['B', 4], ['E', 3], ['J', 2], ['I', 7], ['G', 4], ['D', 4]];
+    const extraEvents = ctx.rand.shuffle(pool).slice(0, 3);
     function render() {
       wrap.replaceChildren();
       const r = ctx.round;
       let solved = false;
-      const next = () => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, 2400); } };
-      const ask = (prompt, opts, columns = 1, subject = null, onRight = next) => choice(wrap, { prompt, subject, ctx, shuffle: true, onRight, columns, options: opts.map(([l, correct]) => ({ label: String(l), correct })) });
-      const then = (fn) => () => { wrap.replaceChildren(); fn(); };
-      if (r === 0) ask('Panah menunjuk dari prasyarat ke tugas yang menunggunya. Tugas mana yang bisa dikerjakan pertama kali?', [['Hanya A, karena semua tugas lain punya prasyarat', true], ['A, B, dan C'], ['L, karena paling penting'], ['Bebas, tugas mana saja']], 2, dagBox({}));
-      else if (r === 1) orderRound(wrap, ctx, { done: next });
-      else if (r === 2) ask('Usulan 1: A, B, D, C, E, G, H, I, F, K, J, L. Usulan 2: A, C, E, F, J, B, D, I, G, H, K, L. Mana yang sah?', [['Usulan 1 sah; usulan 2 tidak, karena J dikerjakan sebelum D dan I', true], ['Keduanya sah'], ['Usulan 2 sah; usulan 1 tidak, karena D sebelum C'], ['Keduanya tidak sah']], 1, dagBox({}));
-      else if (r === 3) ask('Jika semua tugas dikerjakan satu orang, pentas paling cepat hari ke berapa?', [['Hari ke-35: jumlah semua lama tugas, apa pun urutannya', true], ['Hari ke-16'], ['Hari ke-12'], ['Tergantung urutannya']], 1, taskTable());
-      else if (r === 4) scheduleRound(wrap, ctx, { staff: 'banyak', days: 20, target: 16, prompt: 'Panitia cukup banyak: mulai setiap tugas sehari setelah prasyarat terakhirnya selesai.', done: next });
-      else if (r === 5) pathRound(wrap, ctx, { want: cpm().critical, prompt: 'Jalur kritis: rangkaian tugas yang tidak boleh terlambat sehari pun.', done: next });
-      else if (r === 6) ask('Hitung mundur dari hari pentas. Tugas mana yang paling longgar, dan berapa harinya?', [['D, 8 hari (selesai paling awal hari 6, paling lambat hari 14)', true], ['K, 5 hari'], ['H, 1 hari'], ['F, 8 hari']], 1, dagBox({ slack: null }),
-        then(() => ask('Mengapa kelonggaran tugas di jalur kritis selalu 0?', [['Jalur kritis adalah jalur terpanjang: terlambat sehari langsung menggeser hari pentas', true], ['Karena tugasnya paling penting'], ['Karena tugasnya paling pendek'], ['Karena dikerjakan orang yang sama']], 1, dagBox({ slack: cpm().slack }))));
-      else if (r === 7) ask('Latihan (F) dipersingkat dari 8 menjadi 6 hari. Pentas maju berapa hari?', [['Hanya 1 hari (hari ke-15): jalur A → C → E → G → H → L (15 hari) kini terpanjang', true], ['2 hari, menjadi hari ke-14'], ['Tidak maju sama sekali'], ['8 hari']], 1, dagBox({ lit: ['A', 'C', 'E', 'G', 'H', 'L'] }));
-      else if (r === 8) { const extra = { E: ['H'] }; ask('Aturan baru: susunan acara (E) baru boleh dibuat setelah penjualan tiket (H) selesai. Rangkaian mana yang membentuk siklus?', [['E → G → H → E', true], ['A → B → H → L'], ['E → F → J → L'], ['B → I → K → L']], 1, dagBox({ extra }),
-        then(() => ask('Mengapa rencana dengan siklus tidak punya urutan sah sama sekali?', [['E menunggu H, H menunggu G, G menunggu E: tidak ada yang boleh dimulai lebih dulu', true], ['Karena tugasnya terlalu banyak'], ['Karena H terlalu lama'], ['Sebenarnya ada, asal panitianya banyak']], 1, dagBox({ extra, red: findCycle(extra) })))); }
-      else scheduleRound(wrap, ctx, { staff: 2, days: 22, target: 19, prompt: 'Tantangan: panitia hanya dua orang. Susun jadwal dengan pentas hari ke-19.', done: next });
+      const next = (wait = 4200) => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, wait); } };
+      const head = (key, no) => wrap.append(misiHead(no, ...HEAD08[key], '🎭'));
+      wrap.classList.toggle('pp8-jadwal', [2, 7, 9].includes(r));
+      if (r === 0) { head('urut', 1); orderRound(wrap, ctx, { done: () => next(4600) }); }
+      else if (r === 1) { head('usul', 1); proposalRound(wrap, ctx, { proposals: ['ABDCEGHIFKJL'.split(''), 'ACEFJBDIGHKL'.split('')], done: () => next(4600) }); }
+      else if (r === 2) { head('waktu', 2); scheduleRound(wrap, ctx, { staff: 'banyak', days: 20, target: 16, prompt: 'Panitia cukup banyak: setiap tugas punya barisnya sendiri. Ketuk hari mulai.', done: () => next(4600) }); }
+      else if (r === 3) { head('kejadian', 3); eventRound(wrap, ctx, { events: [['I', 8], ['G', 5]], done: () => next(5200) }); }
+      else if (r === 4) { head('kritis', 2); pathRound(wrap, ctx, { want: cpm().critical, prompt: 'Ketuk tugas jalur kritis dari A sampai L: jalur yang jumlah harinya terbesar.', done: () => next(4600) }); }
+      else if (r === 5) { head('kejadian', 3); eventRound(wrap, ctx, { events: [['D', 7], ['C', 4], ['F', 6]], done: () => next(5200) }); }
+      else if (r === 6) { head('siklus', 4); cycleRound(wrap, ctx, { extra: { E: ['H'] }, done: () => next(5600) }); }
+      else if (r === 7) { head('waktu', 2); scheduleRound(wrap, ctx, { staff: 3, days: 20, target: 16, prompt: 'Panitia tiga orang. Pilih kartu tugas, lalu ketuk hari mulai di baris seorang panitia. Bisakah tetap hari ke-16?', done: () => next(4600) }); }
+      else if (r === 8) { head('kejadian', 3); eventRound(wrap, ctx, { events: extraEvents, showSlack: true, done: () => next(5200) }); }
+      else { head('boss', 'Bos'); scheduleRound(wrap, ctx, { staff: 2, days: 22, target: 19, prompt: 'Pilih kartu tugas, lalu ketuk hari mulai di baris seorang panitia. Ada 35 hari kerja untuk 2 orang.', done: () => next(5200) }); }
     }
     render();
   },

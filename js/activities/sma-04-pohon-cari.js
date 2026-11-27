@@ -3,8 +3,8 @@
 // comparison count, in-order traversal, skewed vs balanced trees, and deletion.
 
 import { el, onTap, button, shake } from '../core/util.js';
-import { choice } from '../core/kit.js';
 import { say, scoreBar, finishBoard } from './sma-kit.js';
+import { misiHead, fill } from './misi-kit.js';
 
 export const ARTI = { alas: 'hutan', banyu: 'air', dalan: 'jalan', geni: 'api', iwak: 'ikan', jaran: 'kuda', kali: 'sungai', kebo: 'kerbau', lemah: 'tanah', lintang: 'bintang', manuk: 'burung', omah: 'rumah', sega: 'nasi', udan: 'hujan', watu: 'batu', segara: 'laut' };
 export const URUTAN = ['lemah', 'dalan', 'sega', 'banyu', 'iwak', 'omah', 'watu', 'alas', 'geni', 'kali', 'manuk', 'udan', 'jaran', 'kebo', 'lintang'];
@@ -57,7 +57,7 @@ export function feasible(root, remaining, maxH) {
 const clone = (n) => (n ? { w: n.w, l: clone(n.l), r: clone(n.r) } : null);
 
 // Tree picture: x = alphabetical rank, y = depth. Empty slots sit in the gaps.
-export function treeSvg(root, { lit = [], done = [], slots = false, tap = false, arti = true } = {}) {
+export function treeSvg(root, { lit = [], done = [], slots = false, tap = false, arti = true, dim = [], mark = {} } = {}) {
   const order = inorder(root);
   const rank = new Map(order.map((w, i) => [w, i]));
   const h = Math.max(1, height(root));
@@ -82,7 +82,9 @@ export function treeSvg(root, { lit = [], done = [], slots = false, tap = false,
     }
     const on = lit.includes(n.w);
     const ok = done.includes(n.w);
-    nodes.push(`<g ${tap ? `data-w="${n.w}" class="pc-ketuk"` : ''}><rect x="${x - 34}" y="${y - 17}" width="68" height="${arti ? 36 : 30}" rx="8" fill="${ok ? '#bbf7d0' : on ? '#fed7aa' : '#fff'}" stroke="${on ? '#f97316' : '#64748b'}" stroke-width="${on ? 3 : 2}"/><text x="${x}" y="${y + 1}" font-size="15" font-weight="800" text-anchor="middle" fill="#111827">${n.w}</text>${arti ? `<text x="${x}" y="${y + 14}" font-size="10" text-anchor="middle" fill="#64748b">${ARTI[n.w] || ''}</text>` : ''}</g>`);
+    const off = dim.includes(n.w);
+    const tag = mark[n.w] ? `<circle cx="${x + 30}" cy="${y - 15}" r="11" fill="${mark[n.w] === '✓' ? '#16a34a' : '#1d4ed8'}"/><text x="${x + 30}" y="${y - 10}" font-size="13" font-weight="900" text-anchor="middle" fill="#fff">${mark[n.w]}</text>` : '';
+    nodes.push(`<g ${tap ? `data-w="${n.w}" class="pc-ketuk"` : ''}${off ? ' opacity="0.35"' : ''}><rect x="${x - 34}" y="${y - 17}" width="68" height="${arti ? 36 : 30}" rx="8" fill="${ok ? '#bbf7d0' : on ? '#fed7aa' : off ? '#e5e7eb' : '#fff'}" stroke="${on ? '#f97316' : '#64748b'}" stroke-width="${on ? 3 : 2}"/><text x="${x}" y="${y + 1}" font-size="15" font-weight="800" text-anchor="middle" fill="#111827"${off ? ' text-decoration="line-through"' : ''}>${n.w}</text>${arti ? `<text x="${x}" y="${y + 14}" font-size="10" text-anchor="middle" fill="#64748b">${ARTI[n.w] || ''}</text>` : ''}${tag}</g>`);
   };
   if (root) go(root, 0);
   return `<svg viewBox="0 0 ${width} ${height2}" role="img" aria-label="Pohon pencarian biner">${lines.join('')}${nodes.join('')}${slotEls.join('')}</svg>`;
@@ -92,105 +94,266 @@ function delegate(box, sel, fn) {
   box.addEventListener('pointerdown', (e) => { const g = e.target.closest(sel); if (!g) return; e.preventDefault(); fn(g); });
 }
 
-// Place each arriving word by tapping its empty slot.
-function insertRound(wrap, ctx, { start, words, done }) {
+// ---- Kebun Pohon Kamus: the missions ----
+
+const sisi = (k) => (k === 'l' ? 'kiri' : 'kanan');
+const abjad = (a, b) => (a < b ? 'sebelum' : 'sesudah');
+
+// Words per level, as chips: "Tingkat 1: 1 kata · …".
+function tierBar(root) {
+  const lv = root ? levels(root) : [];
+  return el('div', { class: 'kk-tingkat' },
+    ...lv.map((c, d) => el('span', null, el('small', null, `T${d + 1}`), el('b', null, String(c)))),
+    el('span', { class: 'kk-tinggi' }, `${lv.length} tingkat`));
+}
+
+// Misi Tanam Daun: the next word card waits at a gate; tap ◀ sebelum or sesudah ▶
+// until the card drops into an empty place.
+function plantRound(wrap, ctx, { start = [], words, done, end }) {
   let root = build(start);
   let i = 0;
+  let at = root;
+  let path = [];
   const box = svgBox();
-  const head = el('div', { class: 'pc-datang' });
-  const msg = el('p', { class: 'reveal info' }, 'Kiri: sebelum menurut abjad. Kanan: sesudahnya. Ketuk tempat kosong (+) yang tepat.');
-  const draw = () => {
-    box.innerHTML = treeSvg(root, { slots: i < words.length });
-    head.replaceChildren(...words.map((w, k) => el('span', { class: `pc-kata ${k < i ? 'sudah' : k === i ? 'kini' : ''}` }, w)));
-  };
-  delegate(box, '[data-slot]', (g) => {
-    if (i >= words.length) return;
+  const queue = el('div', { class: 'pc-datang' });
+  const tiers = el('div');
+  const gate = el('div', { class: 'kk-gerbang' });
+  const msg = el('p', { class: 'reveal info' }, 'Di setiap gerbang: kata yang menurut abjad lebih dulu belok kiri, yang lebih akhir belok kanan.');
+  const draw = (fresh = null) => {
+    box.innerHTML = treeSvg(root, { lit: [...path, ...(at ? [at.w] : [])], done: fresh ? [fresh] : [] });
+    fill(queue, words.map((w, k) => el('span', { class: `pc-kata ${k < i ? 'sudah' : k === i ? 'kini' : ''}` }, w)));
+    fill(tiers, tierBar(root));
+    if (i >= words.length) { fill(gate); return; }
     const w = words[i];
-    const want = slotOf(root, w);
-    if (g.dataset.slot !== want) {
-      const [p, k] = g.dataset.slot.split(':');
-      ctx.mistake(); shake(box);
-      say(msg, 'bad', `${w} tidak bisa menjadi cabang ${k === 'l' ? 'kiri' : 'kanan'} ${p}. Mulai dari akar: ${searchPath(root, w).path.map((x) => `${x} → ${w < x ? 'kiri' : 'kanan'}`).join(', ')}.`);
-      return;
-    }
+    fill(gate,
+      onTap(el('button', { class: 'kk-arah', type: 'button', 'data-arah': 'l' }, el('b', null, '◀'), el('span', null, `sebelum ${at.w}`)), () => step('l')),
+      el('div', { class: 'kk-daun' }, el('small', null, `di gerbang ${at.w}`), el('b', null, w), el('span', null, ARTI[w] || '')),
+      onTap(el('button', { class: 'kk-arah', type: 'button', 'data-arah': 'r' }, el('span', null, `sesudah ${at.w}`), el('b', null, '▶')), () => step('r')));
+  };
+  function land(w, note) {
     root = insert(root, w);
     i++;
+    at = root;
+    path = [];
+    ctx.sound.good();
+    if (i === words.length) {
+      draw(w);
+      say(msg, '', end ? end(root) : `Semua kata tertanam: ${inorder(root).length} kata, ${height(root)} tingkat.`);
+      done(root);
+      return;
+    }
+    say(msg, 'info', note);
+    draw(w);
+  }
+  function step(k) {
+    if (i >= words.length) return;
+    const w = words[i];
+    const want = w < at.w ? 'l' : 'r';
+    if (k !== want) { ctx.mistake(); shake(gate); say(msg, 'bad', `${w} ${abjad(w, at.w)} ${at.w} menurut abjad, jadi belok ${sisi(want)}.`); return; }
     ctx.sound.tap();
-    say(msg, 'info', `${w} (${ARTI[w] || ''}) masuk.`);
+    if (!at[k]) { land(w, `${w} (${ARTI[w] || ''}) mendarat di cabang ${sisi(k)} ${at.w}. Kartu berikutnya mulai lagi dari akar.`); return; }
+    path.push(at.w);
+    at = at[k];
     draw();
-    if (i === words.length) { say(msg, '', `Pohon berisi ${inorder(root).length} kata, ${height(root)} tingkat.`); done(root); }
-  });
-  draw();
-  wrap.append(el('p', { class: 'prompt' }, 'Sisipkan kata-kata yang datang ke pohon pencarian biner.'), head, box, msg);
+  }
+  if (!root) { root = { w: words[0] }; i = 1; at = root; say(msg, 'info', `Kebun masih kosong: ${words[0]} menjadi akar. Tanam kata berikutnya.`); }
+  wrap.append(queue, box, gate, tiers, msg);
+  draw(i === 1 && !start.length ? words[0] : null);
 }
 
-// Search by tapping the nodes visited.
-function searchRound(wrap, ctx, { root, target, done }) {
-  const want = searchPath(root, target).path;
-  const lit = [];
+// Misi Kata Rahasia: tap a word; the machine only answers "ketemu", "ke kiri"
+// (rahasia lebih dulu) or "ke kanan". Words that can no longer be it turn grey.
+function secretRound(wrap, ctx, { root, target, known = false, done }) {
+  let lo = '';
+  let hi = '~';
+  const guessed = [];
+  const mark = {};
+  let over = false;
   const box = svgBox();
-  const msg = el('p', { class: 'reveal info' }, 'Mulai dari akar. Ketuk simpul yang diperiksa, satu per satu.');
-  const draw = () => { box.innerHTML = treeSvg(root, { lit, tap: true }); };
+  const count = el('div', { class: 'kk-tebak' });
+  const msg = el('p', { class: 'reveal info' }, known ? `Buktikan apakah ${target} ada di kamus dengan tebakan sesedikit mungkin.` : 'Ketuk satu kata. Mesin menjawab: ketemu, rahasianya lebih dulu (kiri), atau lebih akhir (kanan) menurut abjad.');
+  const all = inorder(root);
+  const alive = () => all.filter((w) => w > lo && w < hi && !guessed.includes(w));
+  const draw = () => {
+    box.innerHTML = treeSvg(root, { tap: !over, lit: guessed, done: guessed.includes(target) ? [target] : [], dim: all.filter((w) => !(w > lo && w < hi) && !guessed.includes(w)), mark });
+    fill(count,
+      el('span', { class: 'kk-rahasia' }, known ? `🔎 ${target}` : guessed.includes(target) ? `🔓 ${target}` : '🂠 kata rahasia'),
+      el('span', null, `Tebakan: `, el('b', null, String(guessed.length))),
+      el('span', null, `Batas hemat: ${height(root)}`),
+      known && !over ? onTap(el('button', { class: 'kk-tidak', type: 'button' }, '🚫 Tidak ada di kamus'), absent) : null);
+  };
+  function absent() {
+    if (over) return;
+    const left = alive();
+    if (left.length) { ctx.mistake(); shake(count); say(msg, 'bad', `Belum pasti. Masih mungkin: ${left.join(', ')}.`); return; }
+    over = true;
+    ctx.sound.good();
+    say(msg, 'info', `Benar: setelah ${guessed.length} tebakan (${guessed.join(', ')}) tidak ada kata yang tersisa. Sekarang tanam ${target} di tempatnya: ketuk tanda + yang tepat.`);
+    box.innerHTML = treeSvg(root, { slots: true, lit: guessed, mark });
+    draw2();
+  }
+  function draw2() {
+    const want = slotOf(root, target);
+    const handler = (e) => {
+      const g = e.target.closest('[data-slot]');
+      if (!g) return;
+      e.preventDefault();
+      if (g.dataset.slot !== want) { ctx.mistake(); shake(box); const [p, k] = want.split(':'); say(msg, 'bad', `Ikuti jawaban mesin: pencarian berhenti di ${p}, dan ${target} ${abjad(target, p)} ${p}, jadi cabang ${sisi(k)} ${p}.`); return; }
+      box.removeEventListener('pointerdown', handler);
+      root = insert(root, target);
+      box.innerHTML = treeSvg(root, { done: [target], lit: guessed });
+      say(msg, '', `${target} ditanam di cabang ${sisi(want.split(':')[1])} ${want.split(':')[0]}. Pencarian yang gagal sekaligus menunjukkan tempat menanam.`);
+      ctx.sound.good();
+      done(guessed.length);
+    };
+    box.addEventListener('pointerdown', handler);
+    fill(count, el('span', { class: 'kk-rahasia' }, `🌱 ${target}`), el('span', null, `Tebakan: `, el('b', null, String(guessed.length))));
+  }
   delegate(box, '[data-w]', (g) => {
-    if (lit.length >= want.length) return;
+    if (over) return;
     const w = g.dataset.w;
-    if (w !== want[lit.length]) { ctx.mistake(); shake(box); say(msg, 'bad', lit.length ? `Dari ${lit.at(-1)}, ${target} ${target < lit.at(-1) ? 'sebelum' : 'sesudah'} ${lit.at(-1)}: ke ${target < lit.at(-1) ? 'kiri' : 'kanan'}.` : 'Pencarian selalu dimulai dari akar.'); return; }
-    lit.push(w);
+    if (guessed.includes(w)) return;
+    if (!(w > lo && w < hi)) { ctx.mistake(); shake(box); say(msg, 'bad', `${w} sudah pasti bukan: jawaban mesin sebelumnya mencoretnya.`); return; }
+    guessed.push(w);
+    if (w === target) {
+      over = true;
+      mark[w] = '✓';
+      ctx.sound.good();
+      draw();
+      const hemat = guessed.length <= height(root);
+      say(msg, '', `Ketemu: ${target} (${ARTI[target] || ''}) setelah ${guessed.length} tebakan${hemat ? '. Hemat!' : `. Mulai dari akar dan ikuti cabang: ${searchPath(root, target).path.length} tebakan cukup.`}`);
+      done(guessed.length);
+      return;
+    }
     ctx.sound.tap();
+    if (target < w) { hi = w; mark[w] = '◀'; } else { lo = w; mark[w] = '▶'; }
     draw();
-    say(msg, 'info', `${lit.length} perbandingan.`);
-    if (lit.length === want.length) { say(msg, '', `${target} ditemukan setelah ${want.length} perbandingan: ${want.join(' → ')}.`); done(); }
+    say(msg, 'info', `${w}: ${known ? target : 'rahasianya'} ${target < w ? 'lebih dulu (ke kiri)' : 'lebih akhir (ke kanan)'}. ${alive().length} kata masih mungkin.`);
   });
   draw();
-  wrap.append(el('p', { class: 'prompt' }, `Cari kata ${target} (${ARTI[target]}).`), box, msg);
+  wrap.append(count, box, msg);
 }
 
-// Tap the nodes in traversal order (left, node, right).
-function traverseRound(wrap, ctx, { root, done }) {
+// Misi Mesin Cetak: tap the words in the order left subtree, node, right subtree.
+function printRound(wrap, ctx, { root, done }) {
   const want = inorder(root);
   const got = [];
   const box = svgBox();
-  const out = el('div', { class: 'au-status pc-cetak' }, '…');
-  const msg = el('p', { class: 'reveal info' }, 'Telusuri cabang kiri, tulis kata di simpul, lalu telusuri cabang kanan.');
-  const draw = () => { box.innerHTML = treeSvg(root, { done: got, tap: true }); out.textContent = got.join(', ') || '…'; };
+  const tape = el('div', { class: 'kk-pita' });
+  const msg = el('p', { class: 'reveal info' }, 'Aturan mesin: cetak seluruh cabang kiri, lalu kata di simpul, lalu seluruh cabang kanan.');
+  const draw = () => {
+    box.innerHTML = treeSvg(root, { done: got, tap: true });
+    fill(tape, el('small', null, '🖨'), got.length ? got.map((w) => el('span', null, w)) : el('span', { class: 'kosong' }, 'kertas masih kosong'));
+  };
   delegate(box, '[data-w]', (g) => {
     if (got.length >= want.length) return;
-    if (g.dataset.w !== want[got.length]) { ctx.mistake(); shake(box); say(msg, 'bad', `Belum. Simpul ${g.dataset.w} ditulis setelah seluruh cabang kirinya selesai.`); return; }
-    got.push(g.dataset.w);
+    const w = g.dataset.w;
+    if (got.includes(w)) return;
+    if (w !== want[got.length]) {
+      ctx.mistake(); shake(box);
+      const left = inorder(findNode(root, w).l).filter((x) => !got.includes(x));
+      say(msg, 'bad', left.length ? `Cabang kiri ${w} belum habis dicetak: ${left.join(', ')}.` : `${w} belum boleh: masih ada kata yang harus dicetak lebih dulu.`);
+      return;
+    }
+    got.push(w);
     ctx.sound.tap();
     draw();
-    if (got.length === want.length) { say(msg, '', 'Hasilnya urut abjad: kamus bisa dicetak tanpa diurutkan ulang.'); done(); }
+    if (got.length === want.length) { say(msg, '', 'Hasil cetakan urut abjad tanpa perlu diurutkan lagi: itulah kegunaan pohon kamus.'); done(); }
   });
   draw();
-  wrap.append(el('p', { class: 'prompt' }, 'Cetak kamus: ketuk kata sesuai urutan penelusuran.'), box, out, msg);
+  wrap.append(box, tape, msg);
 }
+function findNode(n, w) { while (n && n.w !== w) n = w < n.w ? n.l : n.r; return n; }
 
-// Choose the arrival order to get a tree of 4 levels.
-function shortRound(wrap, ctx, { done }) {
-  const words = [...URUTAN].sort();
+// Misi Pohon Terpendek: choose the arrival order so the tree stays within maxH levels.
+function shortRound(wrap, ctx, { words, maxH, done }) {
+  const sorted = [...words].sort();
   let root = null;
-  let used = [];
+  const used = [];
   const box = svgBox();
   const pool = el('div', { class: 'seg pc-pool' });
-  const msg = el('p', { class: 'reveal info' }, 'Petunjuk: masukkan kata tengah lebih dulu.');
+  const tiers = el('div');
+  const msg = el('p', { class: 'reveal info' }, `Sasaran: ${sorted.length} kata dalam ${maxH} tingkat. Kata yang ditanam lebih dulu duduk lebih tinggi.`);
   const draw = () => {
-    box.innerHTML = root ? treeSvg(root, { arti: false }) : '';
-    pool.replaceChildren(...words.map((w) => onTap(el('button', { class: `seg-btn ${used.includes(w) ? 'pc-pakai' : ''}`, type: 'button', disabled: used.includes(w) }, w), () => add(w))));
+    box.innerHTML = root ? treeSvg(root, { arti: false, done: used.slice(-1) }) : '';
+    fill(tiers, tierBar(root));
+    fill(pool, sorted.map((w) => onTap(el('button', { class: `seg-btn ${used.includes(w) ? 'pc-pakai' : ''}`, type: 'button', disabled: used.includes(w) }, w), () => add(w))));
   };
   function add(w) {
-    if (used.includes(w)) return;
+    if (used.includes(w) || used.length === sorted.length) return;
     const next = insert(clone(root), w);
-    if (!feasible(next, words.filter((x) => x !== w && !used.includes(x)), 4)) { ctx.mistake(); shake(box); say(msg, 'bad', height(next) > 4 ? `Jika ${w} masuk sekarang, pohon menjadi ${height(next)} tingkat. Pilih kata lain.` : `Jika ${w} masuk sekarang, kata-kata sisanya tidak akan muat dalam 4 tingkat. Pilih kata yang lebih di tengah.`); return; }
+    if (!feasible(next, sorted.filter((x) => x !== w && !used.includes(x)), maxH)) {
+      ctx.mistake(); shake(box);
+      say(msg, 'bad', height(next) > maxH ? `Jika ${w} ditanam sekarang, pohon menjadi ${height(next)} tingkat.` : `Jika ${w} ditanam sekarang, sisa kata tidak muat dalam ${maxH} tingkat. Pilih kata yang lebih di tengah.`);
+      return;
+    }
     root = next;
     used.push(w);
     ctx.sound.tap();
     draw();
     say(msg, 'info', `Urutan datang: ${used.join(', ')}`);
-    if (used.length === words.length) { say(msg, '', `Pohon 4 tingkat dengan 15 kata: penuh, 1 + 2 + 4 + 8. Urutan: ${used.join(', ')}.`); done(); }
+    if (used.length === sorted.length) { say(msg, '', `${sorted.length} kata dalam ${maxH} tingkat, penuh di setiap tingkat. Urutan: ${used.join(', ')}.`); done(); }
   }
   draw();
-  wrap.append(el('p', { class: 'prompt' }, 'Pilih urutan datang supaya pohon hanya 4 tingkat.'), box, pool, el('div', { class: 'kode-baris' }, button('Ulang', () => { root = null; used = []; draw(); })), msg);
+  wrap.append(box, pool, tiers, el('div', { class: 'kode-baris' }, button('Ulang', () => { root = null; used.length = 0; draw(); say(msg, 'info', 'Mulai lagi: kata tengah dulu.'); })), msg);
 }
+
+// Misi Bos: pull out words that have two branches; tap the replacement
+// (the first word of the right branch), then the tree is checked by printing.
+function bossRound(wrap, ctx, done) {
+  let root = build(URUTAN);
+  const steps = ['dalan', 'sega'];
+  let s = 0;
+  const box = svgBox();
+  const tape = el('div', { class: 'kk-pita' });
+  const msg = el('p', { class: 'reveal info' });
+  const draw = (extra = {}) => {
+    box.innerHTML = treeSvg(root, { tap: s < steps.length, ...extra });
+    fill(tape, el('small', null, '🖨'), inorder(root).map((w) => el('span', null, w)));
+  };
+  const ask = () => {
+    const w = steps[s];
+    const n = findNode(root, w);
+    draw({ lit: [w], dim: [] });
+    say(msg, 'info', `Cabut ${w}: ia punya dua cabang (${n.l.w} dan ${n.r.w}). Ketuk kata yang naik menggantikannya, yaitu kata terkecil di cabang kanannya.`);
+  };
+  delegate(box, '[data-w]', (g) => {
+    if (s >= steps.length) return;
+    const w = steps[s];
+    const n = findNode(root, w);
+    let m = n.r;
+    while (m.l) m = m.l;
+    const pick = g.dataset.w;
+    if (pick === w) return;
+    if (pick !== m.w) {
+      let p = n.l;
+      while (p.r) p = p.r;
+      if (pick === p.w) { say(msg, 'info', `${pick} adalah kata terbesar di cabang kiri: itu juga menjaga urutan, tetapi aturan kebun ini memakai kata terkecil di cabang kanan.`); return; }
+      ctx.mistake(); shake(box);
+      say(msg, 'bad', inorder(n.r).includes(pick) ? `${pick} memang di cabang kanan ${w}, tetapi bukan yang terkecil. Dari ${n.r.w}, turun ke kiri terus sampai mentok.` : `${pick} tidak di cabang kanan ${w}. Pengganti harus lebih akhir dari semua kata kiri dan lebih dulu dari semua kata kanan.`);
+      return;
+    }
+    root = removeWord(root, w);
+    ctx.sound.good();
+    s++;
+    if (s < steps.length) { draw({ done: [m.w] }); say(msg, 'info', `${m.w} naik menggantikan ${w}. Cetakan di bawah tetap urut abjad.`); setTimeout(ask, 2200); return; }
+    draw({ done: [m.w] });
+    say(msg, '', `${m.w} naik menggantikan ${w}. Kedua kata tercabut dan cetakan masih urut abjad: aturan pohon tetap terjaga.`);
+    done();
+  });
+  wrap.append(box, tape, msg);
+  ask();
+}
+
+const HEAD04 = {
+  tanam: ['Tanam Daun', 'Antar setiap kartu kata dari akar melewati gerbang sampai mendarat.'],
+  rahasia: ['Kata Rahasia', 'Temukan kata yang disembunyikan mesin dengan tebakan sesedikit mungkin.'],
+  segara: ['Kata yang Hilang', 'Kata segara (laut) belum dikenal. Buktikan tidak ada, lalu tanam di tempatnya.'],
+  cetak: ['Mesin Cetak', 'Cetak kamus: ketuk kata sesuai aturan kiri, simpul, kanan.'],
+  miring: ['Kiriman Urut Abjad', 'Hari ini kartu datang sudah urut abjad. Tanam dan lihat bentuk pohonnya.'],
+  pendek: ['Pohon Terpendek', 'Atur urutan datang supaya pohon serendah mungkin.'],
+  boss: ['Cabut Kata Bercabang Dua', 'Dua kata harus dicabut tanpa merusak urutan kamus.'],
+};
 
 export default {
   id: 'sma-04-pohon-cari',
@@ -202,39 +365,34 @@ export default {
   source: null,
   rounds: 10,
   maxPlayers: 4,
-  goal: 'Murid menyisipkan kata ke pohon pencarian biner, mencari kata sambil menghitung perbandingan, menelusuri pohon untuk mencetak kamus urut abjad, membandingkan pohon miring dengan pohon seimbang, dan menghapus kata yang punya dua cabang.',
+  goal: 'Murid menanam kata ke pohon pencarian biner melewati gerbang kiri–kanan, menemukan kata rahasia dengan tebakan sesedikit mungkin, mencetak kamus urut abjad dengan penelusuran kiri–simpul–kanan, membandingkan pohon miring dengan pohon terpendek, dan mencabut kata yang punya dua cabang.',
   extraModes: [
     { id: 'kamus', icon: '📖', label: 'Kamus Sendiri', desc: 'Ketik kata-kata bahasa daerah setempat dan artinya; pohon dibangun menurut urutan datang, lalu cari kata dan telusuri pohonnya', create: createOwn },
     { id: 'giliran', icon: '🔁', label: 'Pendek lawan Tinggi', desc: 'Dua tim bergantian memilih kata berikutnya: satu tim berusaha membuat pohon terpendek, tim lain tertinggi, lalu peran ditukar', create: createTeams },
   ],
   create(root, ctx) {
-    const wrap = el('div', { class: 'act pohon-cari' });
+    const wrap = el('div', { class: 'act pohon-cari kk-main' });
     root.append(wrap);
-    const full = build(URUTAN);
-    const targets = ctx.rand.shuffle(['watu', 'alas', 'kebo', 'jaran', 'lintang', 'udan']);
+    const full = () => build(URUTAN);
+    const race = ctx.mode === 'race';
+    const mix = ctx.rand.shuffle([...URUTAN]).slice(0, race ? 8 : 10);
+    const secret = ctx.rand.pick(['alas', 'kebo', 'jaran', 'lintang', 'geni', 'banyu', 'manuk']);
     function render() {
       wrap.replaceChildren();
       const r = ctx.round;
       let solved = false;
-      const next = () => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, 2400); } };
-      const ask = (prompt, opts, columns = 1, subject = null, onRight = next) => choice(wrap, { prompt, subject, ctx, shuffle: true, onRight, columns, options: opts.map(([l, correct]) => ({ label: String(l), correct })) });
-      const then = (fn) => () => { wrap.replaceChildren(); fn(); };
-      const pic = (t, o) => el('div', { class: 'pc-pohon kecil', html: treeSvg(t, o) });
-      if (r === 0) insertRound(wrap, ctx, { start: ['lemah'], words: URUTAN.slice(1, 7), done: next });
-      else if (r === 1) insertRound(wrap, ctx, { start: URUTAN.slice(0, 7), words: URUTAN.slice(7), done: next });
-      else if (r === 2) searchRound(wrap, ctx, { root: full, target: targets[0], done: next });
-      else if (r === 3) ask('Kata segara (laut) belum ada. Berapa perbandingan sampai yakin tidak ada, dan di mana segara disisipkan?', [['4 perbandingan (lemah, sega, watu, udan); cabang kiri udan', true], ['2 perbandingan; cabang kiri sega'], ['4 perbandingan; cabang kanan sega'], ['15 perbandingan; di akhir daftar']], 1, pic(full, { lit: searchPath(full, 'segara').path, arti: false }));
-      else if (r === 4) ask('Banyak kata per tingkat: 1, 2, 4, 5, 3. Berapa rata-rata perbandingan di pohon, dibanding mencari di daftar menurut urutan datang?', [['Pohon 52 : 15 ≈ 3,47; daftar 120 : 15 = 8', true], ['Pohon 15 : 5 = 3; daftar 15'], ['Pohon 5; daftar 8'], ['Pohon 3,47; daftar 3,47']], 1, pic(full, { arti: false }));
-      else if (r === 5) traverseRound(wrap, ctx, { root: full, done: next });
-      else if (r === 6) ask('Kini kata-kata datang sudah urut abjad: alas, banyu, dalan, …, watu. Seperti apa pohonnya?', [['Garis miring ke kanan, 15 tingkat; mencari watu butuh 15 perbandingan, sama saja dengan daftar', true], ['Pohon seimbang 4 tingkat'], ['Garis miring ke kiri, 15 tingkat'], ['Pohon 5 tingkat, sama seperti soal 1']], 1, pic(build([...URUTAN].sort().slice(0, 5)), { arti: false }));
-      else if (r === 7) shortRound(wrap, ctx, { done: next });
-      else if (r === 8) ask('Pohon seimbang dengan t tingkat memuat paling banyak 2ᵗ − 1 kata. Kamus 1.000 kata dan 1.000.000 kata butuh paling sedikit berapa tingkat?', [['10 tingkat dan 20 tingkat', true], ['100 tingkat dan 1.000 tingkat'], ['10 tingkat dan 100 tingkat'], ['500 tingkat dan 500.000 tingkat']], 1, null,
-        then(() => ask('Mencari satu kata dari 1.000.000 kata satu per satu di daftar butuh rata-rata berapa perbandingan?', [['Sekitar 500.000, sedangkan di pohon seimbang paling banyak 20', true], ['20, sama dengan pohon'], ['1.000'], ['Sekitar 10']])));
-      else {
-        const after = removeWord(clone(full), 'dalan');
-        ask('Tantangan: dalan punya dua cabang dan akan dihapus. Ganti dengan kata terkecil di cabang kanannya. Kata penggantinya?', [['geni', true], ['banyu'], ['iwak'], ['alas']], 2, pic(full, { lit: ['dalan', 'iwak', 'geni'], arti: false }),
-          () => { wrap.append(pic(after, { lit: ['geni'], arti: false }), el('p', { class: 'reveal' }, `Penelusuran: ${inorder(after).join(', ')}. Masih urut abjad.`)); next(); });
-      }
+      const next = (wait = 3600) => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, wait); } };
+      const head = (key, no) => wrap.append(misiHead(no, ...HEAD04[key], '🌳'));
+      if (r === 0) { head('tanam', 1); plantRound(wrap, ctx, { start: ['lemah'], words: URUTAN.slice(1, 7), done: () => next() }); }
+      else if (r === 1) { head('tanam', 1); plantRound(wrap, ctx, { start: URUTAN.slice(0, 7), words: URUTAN.slice(7), done: () => next(5000), end: (t) => `Kebun penuh: 15 kata dalam ${height(t)} tingkat (${levels(t).join(', ')} kata per tingkat). Kata mana pun ditemukan dengan paling banyak ${height(t)} perbandingan.` }); }
+      else if (r === 2) { head('rahasia', 2); secretRound(wrap, ctx, { root: full(), target: 'watu', done: () => next(4200) }); }
+      else if (r === 3) { head('cetak', 3); printRound(wrap, ctx, { root: full(), done: () => next(4200) }); }
+      else if (r === 4) { head('segara', 2); secretRound(wrap, ctx, { root: full(), target: 'segara', known: true, done: () => next(4600) }); }
+      else if (r === 5) { head('tanam', 1); plantRound(wrap, ctx, { words: mix, done: () => next(4600), end: (t) => `${mix.length} kata, ${height(t)} tingkat. Urutan datang yang berbeda menumbuhkan pohon yang berbeda.` }); }
+      else if (r === 6) { head('rahasia', 2); secretRound(wrap, ctx, { root: full(), target: secret, done: () => next(4200) }); }
+      else if (r === 7) { head('miring', 4); plantRound(wrap, ctx, { words: [...URUTAN].sort().slice(0, 6), done: () => next(6000), end: (t) => `Pohon miring: 6 kata, ${height(t)} tingkat, seperti daftar biasa. Jika 15 kata datang urut abjad, pohonnya 15 tingkat dan mencari watu butuh 15 perbandingan.` }); }
+      else if (r === 8) { head('pendek', 4); shortRound(wrap, ctx, race ? { words: ['alas', 'dalan', 'iwak', 'kali', 'lemah', 'omah', 'udan'], maxH: 3, done: () => next(4600) } : { words: URUTAN, maxH: 4, done: () => next(4600) }); }
+      else { head('boss', 'Bos'); bossRound(wrap, ctx, () => next(4600)); }
     }
     render();
   },
