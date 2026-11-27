@@ -6488,7 +6488,7 @@ button.at-orang { font-size: clamp(0.55rem, 3.4cqmin, 1.8rem); }
 @container (max-height: 520px) { .tk9-main .kd-peta svg { max-height: 40cqh; } }
 @container (max-aspect-ratio: 1/1) { .tk9-main .kd-peta svg { max-height: 40cqh; } .tk9-main .tk9-antre { font-size: clamp(0.5rem, 2cqmin, 1rem); } }
 @container (max-width: 1000px) and (min-height: 600px) { .tk9-main .kd-peta svg { max-height: 38cqh; } .tk9-main .kode-baris .btn { font-size: clamp(0.7rem, 3cqmin, 1.4rem); } }
-:is(.kk-main, .rh-main, .pk6-main, .mph-main, .pp8-main, .tk9-main, .kb10-main, .gk11-main, .rk13-main, .nd14-main, .tp15-main, .ka16-main, .pl17-main, .dk18-main, .lj19-main, .wb20-main, .jm21-main, .aj22-main, .gp23-main, .bs24-main, .tu25-main, .sb26-main, .rd27-main, .bl28-main, .hc29-main, .hk30-main, .md31-main, .kj32-main, .dl33-main, .sq34-main, .rb36-main, .pr37-main, .bf38-main, .kl39-main, .rp40-main, .pb41-main, .ug42-main, .bk43-main, .lk44-main) .reveal { font-size: clamp(0.7rem, 3cqmin, 1.6rem); text-wrap: balance; }
+:is(.kk-main, .rh-main, .pk6-main, .mph-main, .pp8-main, .tk9-main, .kb10-main, .gk11-main, .rk13-main, .nd14-main, .tp15-main, .ka16-main, .pl17-main, .dk18-main, .lj19-main, .wb20-main, .jm21-main, .aj22-main, .gp23-main, .bs24-main, .tu25-main, .sb26-main, .rd27-main, .bl28-main, .hc29-main, .hk30-main, .md31-main, .kj32-main, .dl33-main, .sq34-main, .rb36-main, .pr37-main, .bf38-main, .kl39-main, .rp40-main, .pb41-main, .ug42-main, .bk43-main, .lk44-main, .pw45-main) .reveal { font-size: clamp(0.7rem, 3cqmin, 1.6rem); text-wrap: balance; }
 @container (max-width: 1000px) and (min-height: 600px) { .tk9-main .kd-peta svg { max-height: 46cqh; } }
 
 /* sma-10 Konter Bagasi */
@@ -9173,3 +9173,57 @@ button.lk44-kartu { cursor: pointer; }
   .lk44-area, .lk44-kolom { gap: 0.35em; }
 }
 @container (max-aspect-ratio: 1/1) { .lk44-dua { flex-direction: column; align-items: center; } }
+/* sma-45 Pabrik Wadah */
+.pw45-main { gap: 0.6cqmin; --mk: #7c3aed; --mk-muda: #f5f3ff; --mk-tua: #3b0764; }
+.pw45-main > .prompt { display: none; }
+.pw45-main .reveal { text-align: center; }
+.pw45-kepala { display: flex; align-items: center; justify-content: center; gap: 0.4em 1.2em; flex-wrap: wrap; width: 100%; }
+.pw45-kepala .misi-kepala { flex: 1 1 24em; min-width: 0; }
+.pw45-musuh { display: flex; align-items: center; gap: 0.5em; max-width: 100%; padding: 0.15em 0.8em; border: 2px dashed #b91c1c; border-radius: 0.6em; background: #fef2f2; color: #7f1d1d; font-size: clamp(0.6rem, 2.1cqmin, 1.1rem); transform: rotate(-1deg); }
+.pw45-musuh > span { min-width: 0; }
+.pw45-musuh.beres { border-style: solid; border-color: #16a34a; background: #f0fdf4; color: #14532d; transform: none; }
+.pw45-area { display: flex; flex-direction: column; align-items: center; gap: 0.7cqmin; width: 100%; min-width: 0; font-size: clamp(0.55rem, min(2.2cqmin, 1.55cqw), 1.3rem); }
+.pw45-area small { color: #5b21b6; }
+.pw45-dua { display: flex; gap: 1.6cqmin; align-items: flex-start; justify-content: center; width: 100%; max-width: 96em; }
+.pw45-dua > * { min-width: 0; }
+.pw45-kolom { display: flex; flex-direction: column; align-items: center; gap: 0.5em; min-width: 0; }
+.pw45-perintah { display: flex; flex-direction: column; gap: 0.15em; font-family: ui-monospace, Menlo, Consolas, monospace; }
+.pw45-perintah.baris { flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 0.25em 0.5em; max-width: 46em; }
+.pw45-perintah code { padding: 0.05em 0.45em; border-radius: 0.35em; color: #6b7280; }
+.pw45-perintah code.aktif { background: #fde047; color: #713f12; font-weight: 800; }
+.pw45-perintah code.beres { color: #15803d; text-decoration: line-through; }
+.pw45-teks-baris { display: flex; align-items: center; gap: 0.5em; }
+.pw45-teks { min-width: 6em; padding: 0.3em 0.8em; border: 2px solid var(--mk); border-bottom-width: 0.25em; border-radius: 0.5em; background: #fff; color: #111827; font-family: ui-monospace, Menlo, Consolas, monospace; font-weight: 700; white-space: pre; cursor: grab; touch-action: none; user-select: none; }
+.pw45-teks.selected, .pw45-nomor.selected, .pw45-kar.selected { outline: 0.22em solid #f59e0b; }
+.pw45-teks.dragging, .pw45-nomor.dragging, .pw45-kar.dragging { opacity: 0.35; }
+.pw45-tumpuk-tumpuk { display: flex; gap: 1em; align-items: flex-end; justify-content: center; }
+.pw45-tumpuk { display: flex; flex-direction: column; align-items: center; gap: 0.2em; min-width: 12em; min-height: 7em; padding: 0.3em 0.5em 0; border: 3px solid var(--mk); border-top: none; border-radius: 0 0 0.7em 0.7em; background: var(--mk-muda); justify-content: flex-end; }
+.pw45-piring { display: flex; flex-direction: column; align-items: stretch; gap: 0.15em; width: 100%; }
+.pw45-piring i { color: #9ca3af; text-align: center; }
+.pw45-kotak { padding: 0.15em 0.6em; border: 2px solid #c4b5fd; border-radius: 0.4em; background: #fff; color: #111827; font: inherit; font-family: ui-monospace, Menlo, Consolas, monospace; white-space: pre; text-align: center; }
+.pw45-kotak.puncak { border-color: var(--mk); background: #ede9fe; font-weight: 800; cursor: pointer; }
+.pw45-kotak.depan { border-color: #16a34a; background: #dcfce7; font-weight: 800; cursor: pointer; }
+.pw45-kotak.pergi { opacity: 0.3; text-decoration: line-through; }
+.pw45-kotak.belum { border-color: #f59e0b; background: #fef3c7; cursor: pointer; }
+.pw45-kotak.sudah { border-color: #16a34a; }
+button.pw45-kotak { cursor: pointer; }
+.pw45-antre { display: flex; align-items: center; gap: 0.3em; flex-wrap: wrap; justify-content: center; padding: 0.4em 0.6em; border-bottom: 4px solid var(--mk-tua); }
+.pw45-loket { font-size: 1.4em; }
+.pw45-antre { font-size: 1.15em; }
+.pw45-belakang { padding: 0.3em 0.6em; border: 2px dashed var(--mk); border-radius: 0.4em; color: var(--mk); }
+.pw45-baki { display: flex; flex-wrap: wrap; gap: 0.35em; justify-content: center; }
+.pw45-nomor { padding: 0.2em 0.6em; border: 2px solid var(--mk); border-bottom-width: 0.22em; border-radius: 0.5em; background: #fff; color: #111827; font-family: ui-monospace, Menlo, Consolas, monospace; font-weight: 800; cursor: grab; touch-action: none; user-select: none; }
+.pw45-rumus { display: flex; gap: 0.1em; align-items: center; padding: 0.3em 0.8em; border-radius: 0.6em; background: #1e1b4b; color: #c4b5fd; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 1.3em; white-space: pre; }
+.pw45-rumus .lewat { color: #6b7280; }
+.pw45-kar { padding: 0 0.25em; border-radius: 0.3em; background: #fde047; color: #713f12; cursor: grab; touch-action: none; user-select: none; }
+.pw45-tombol { display: flex; flex-wrap: wrap; gap: 0.4em; justify-content: center; }
+.pw45-pilih { padding: 0.3em 0.8em; border: 2px solid var(--mk); border-bottom-width: 0.25em; border-radius: 0.6em; background: #fff; color: var(--mk-tua); font: inherit; font-weight: 700; cursor: pointer; }
+.pw45-token { padding: 0.15em 0.7em; border-radius: 999px; background: #fef3c7; color: #78350f; font-weight: 800; font-family: ui-monospace, Menlo, Consolas, monospace; }
+.pw45-area .mk-layar { max-width: 30em; white-space: pre-wrap; overflow-wrap: anywhere; }
+@container (max-height: 520px) {
+  .pw45-main .misi-tujuan { display: none; }
+  .pw45-main { gap: 0.35cqmin; }
+  .pw45-area, .pw45-kolom { gap: 0.35em; }
+  .pw45-tumpuk { min-height: 5em; }
+}
+@container (max-aspect-ratio: 1/1) { .pw45-dua { flex-direction: column; align-items: center; } }
