@@ -6,6 +6,7 @@
 import { el, onTap, button, shake } from '../core/util.js';
 import { choice } from '../core/kit.js';
 import { say, pickTeams, scoreBar, finishBoard } from './sma-kit.js';
+import { misiHead, fill } from './misi-kit.js';
 
 export const SITE = 'osis.sekolah.example';
 export const IP = '198.51.100.20';
@@ -77,69 +78,323 @@ function journeyAnim(host, done) {
   requestAnimationFrame(step);
 }
 
-// Play the server: reply to each request card with the rule book.
-function serverRound(wrap, ctx, { done }) {
-  const sessions = new Set(); const ans = {};
-  const res = CARDS.map((q) => serve(q, sessions));
-  const box = el('div', { class: 'ht-server' });
-  const msg = el('p', { class: 'reveal info' }, 'Kamu servernya. Pilih balasan untuk setiap kartu menurut buku aturan.');
-  const draw = () => box.replaceChildren(...CARDS.map((q, i) => el('div', { class: `ht-minta ${i in ans ? 'beres' : ''}` }, el('b', null, `${i + 1}`), el('code', null, reqText(q)),
-    i in ans ? el('span', { class: `ht-kode k${String(res[i].code)[0]}` }, `${res[i].code} ${res[i].set ? `· Set-Cookie: ${res[i].set}` : res[i].loc ? `→ ${res[i].loc}` : ''}`)
-      : el('span', { class: 'seg' }, REPLIES.map(([l, ok]) => onTap(el('button', { class: 'seg-btn', type: 'button' }, l), () => {
-        if (!ok(res[i])) { ctx.mistake(); shake(box); say(msg, 'bad', q.cookie === 'sesi=AAAA11' ? 'Kode AAAA11 tidak pernah dibuat server.' : q.path === '/pengurus' && !q.cookie ? 'Tanpa cookie, server tidak tahu peminta adalah pengurus.' : `Periksa baris buku aturan untuk ${q.method} ${q.path}.`); return; }
-        ans[i] = true; ctx.sound.tap(); draw();
-        if (Object.keys(ans).length === CARDS.length) { say(msg, '', 'Balasan: 200, 301, 404, 403, 200 dengan cookie, 200, 403.'); done(); }
-      }))))));
-  wrap.append(el('p', { class: 'prompt' }, 'Bermain peran: peramban mengirim kartu permintaan, kamu menjadi server.'), rulebook(true), box, msg);
-  draw();
-}
 const rulebook = (open = false) => el('details', { class: 'ht-buku', open }, el('summary', null, '📘 Buku aturan server'), el('table', { class: 'ht-tabel' },
   ...[['GET /jadwal, /pengumuman, /galeri, /masuk', '200 dan halamannya'], ['GET /pengumuman-lama', '301, pindah ke /pengumuman'], ['POST /masuk dengan sandi benar', '200, "Selamat datang", cookie sesi acak baru'], ['GET /pengurus dengan cookie sesi berlaku', '200 dan halaman pengurus'], ['GET /pengurus tanpa cookie atau cookie tidak berlaku', '403'], ['Alamat lain', '404']].map(([a, b]) => el('tr', null, el('td', null, a), el('td', null, b)))));
 
-function sniffRound(wrap, ctx, { done }) {
-  const ans = {};
-  const box = el('div', { class: 'ht-sadap' });
-  const msg = el('p', { class: 'reveal info' }, 'HTTP seperti kartu pos; HTTPS seperti amplop bersandi yang hanya bagian luarnya terlihat.');
-  const cell = (i, proto) => {
-    const k = `${i}${proto}`; const vis = proto === 'http' ? true : SNIFF[i][1];
-    if (k in ans) return el('span', { class: `ht-sel ${vis ? 'lihat' : 'tutup'}` }, vis ? '👁 terlihat' : '🔒 tersembunyi');
-    return el('span', { class: 'seg' }, [[true, '👁'], [false, '🔒']].map(([v, l]) => onTap(el('button', { class: 'seg-btn', type: 'button', title: v ? 'terlihat' : 'tersembunyi' }, l), () => {
-      if (v !== vis) { ctx.mistake(); shake(box); say(msg, 'bad', proto === 'http' ? 'Pada HTTP semua pesan bisa dibaca seperti kartu pos.' : vis ? 'Bagian luar amplop tetap terlihat: ke mana dan seberapa besar.' : 'Isi amplop HTTPS tersandi.'); return; }
-      ans[k] = v; ctx.sound.tap(); draw();
-      if (Object.keys(ans).length === SNIFF.length * 2) { say(msg, '', 'HTTPS menyembunyikan isi percakapan, tetapi tidak menyembunyikan bahwa Dina membuka situs OSIS.'); done(); }
+// ---------- Permainan: Estafet Pesan Web ----------
+// Three desks (Peramban, DNS, Server OSIS) and a courier who carries cards
+// through the park where the eavesdropping team sits.
+
+// A short courier run along the desk line.
+function courier(host, { from = 0, to = 2, icon = '✉️', label = '', cb } = {}) {
+  const st = [['📱', 'Peramban'], ['🕵️', 'Taman'], ['🗄️', 'Server OSIS']];
+  const k = el('span', { class: 'wb20-kurir', style: { left: `${from * 50}%` } }, icon, label ? el('small', null, label) : null);
+  fill(host, el('div', { class: 'wb20-jalur' }, st.map(([i, n], j) => el('span', { class: 'wb20-meja', style: { left: `${j * 50}%` } }, el('b', null, i), el('small', null, n))), k));
+  requestAnimationFrame(() => requestAnimationFrame(() => { k.style.left = `${to * 50}%`; }));
+  setTimeout(() => { if (host.isConnected) cb?.(); }, 900);
+}
+
+const STAMPS = [[200, 'OK'], [301, 'Pindah'], [403, 'Dilarang'], [404, 'Tak ada'], [500, 'Server rusak']];
+const stampBtn = (c, n, fn) => onTap(el('button', { type: 'button', class: `wb20-cap k${String(c)[0]}` }, el('b', null, c), el('small', null, n)), fn);
+
+// Misi 2: event cards; stamp the reply code. 404 and 500 also ask who fixes it.
+function stampRound(wrap, ctx, { events, done }) {
+  let n = 0;
+  const area = el('div', { class: 'wb20-area' });
+  wrap.append(el('div', { class: 'wb20-golongan' }, ['2xx berhasil', '3xx pindah', '4xx permintaan bermasalah', '5xx server bermasalah'].map((t, i) => el('span', { class: `k${i + 2}` }, t))), area);
+  function show() {
+    const [text, code] = events[n];
+    const msg = el('p', { class: 'reveal info' }, 'Server menjawab dengan cap apa?');
+    const tools = el('div', { class: 'wb20-cap-cap' });
+    const reply = el('div', { class: 'wb20-balas' });
+    fill(area, el('div', { class: 'pp8-kejadian' }, el('small', null, `📨 Kejadian ${n + 1} dari ${events.length}`), el('b', null, text)), reply, tools, msg);
+    let busy = false;
+    fill(tools, STAMPS.map(([c, nm]) => stampBtn(c, nm, (e) => {
+      if (busy) return;
+      if (c !== code) { ctx.mistake(); shake(e.currentTarget); say(msg, 'bad', c >= 500 ? 'Servernya baik-baik saja; lihat lagi permintaannya.' : code >= 500 ? 'Permintaannya wajar; ada yang rusak di sisi server.' : c === 404 && code === 403 ? 'Halamannya ada, tetapi peminta tidak berhak.' : c === 403 && code === 404 ? 'Peminta tidak dilarang; halamannya yang tidak ada.' : 'Bandingkan dengan golongan kodenya.'); return; }
+      busy = true; ctx.sound.tap();
+      fill(reply, el('span', { class: `wb20-stempel k${String(c)[0]}` }, `${c} ${CODES[c]}`));
+      fill(tools);
+      const next = () => { n++; if (n < events.length) setTimeout(() => { if (area.isConnected) show(); }, 1600); else { ctx.sound.good(); done(); } };
+      if (code === 404 || code === 500) {
+        say(msg, 'info', 'Siapa yang perlu memperbaikinya?');
+        fill(tools, [['👧 Peminta atau pembuat tautan', 404], ['🛠️ Pengelola server', 500]].map(([l, w]) => button(l, (ev) => {
+          if (w !== code) { ctx.mistake(); shake(ev?.currentTarget || tools); say(msg, 'bad', code === 404 ? 'Servernya benar: alamat yang diminta memang tidak ada.' : 'Peminta tidak berbuat salah.'); return; }
+          fill(tools); say(msg, '', code === 404 ? `${code}: peminta memperbaiki alamatnya.` : `${code}: pengelola server memperbaiki programnya.`); next();
+        })));
+      } else { say(msg, '', `${c} ${CODES[c]}.`); next(); }
     })));
-  };
-  const draw = () => box.replaceChildren(el('div', { class: 'ht-sadap-baris kepala' }, el('b', null, 'Yang dikirim atau diterima Dina'), el('b', null, 'HTTP'), el('b', null, 'HTTPS')),
-    ...SNIFF.map(([t], i) => el('div', { class: 'ht-sadap-baris' }, el('span', null, t), cell(i, 'http'), cell(i, 'https'))));
-  wrap.append(el('p', { class: 'prompt' }, 'Penyadap di Wi-Fi taman: apa yang terlihat (👁) dan tersembunyi (🔒)?'), box, msg);
-  draw();
+  }
+  show();
 }
 
-// Waterfall of requests: each bar is one question-and-answer of 0.2 s.
-export function waterfall(par = 1) {
-  const rows = [['DNS', 0], ['HTML', 1]]; const files = ['gaya.css', 'foto1.jpg', 'foto2.jpg', 'foto3.jpg'];
-  files.forEach((f, i) => rows.push([f, 2 + Math.floor(i / par)]));
-  return el('div', { class: 'ht-air' }, ...rows.map(([n, s]) => el('div', { class: 'ht-air-baris' }, el('span', null, n), el('div', { class: 'ht-air-jalur' }, el('i', { style: { left: `${(s / 6) * 100}%`, width: `${100 / 6}%` } })))),
-    el('div', { class: 'ht-air-baris' }, el('span', null, 'detik'), el('div', { class: 'ht-air-jalur skala' }, ...[0, 1, 2, 3, 4, 5, 6].map((x) => el('small', { style: { left: `${(x / 6) * 100}%` } }, (x * 0.2).toFixed(1).replace('.', ','))))));
-}
-
-function urlRound(wrap, ctx, { done }) {
-  const ask = URL_PARTS.filter((p) => p[1]).map((p) => p[1]);
-  let k = 0; const got = new Set();
-  const box = el('div', { class: 'ht-url' });
+// Misi 3: the request composer. Build the request card, predict the stamp, the server answers.
+const GOALS = [
+  { text: 'Dina ingin membuka halaman jadwal.', want: { method: 'GET', path: '/jadwal', cookie: null } },
+  { text: 'Dina mengetuk tautan lama /pengumuman-lama di grup kelas.', want: { method: 'GET', path: '/pengumuman-lama', cookie: null } },
+  { text: 'Dina salah ketik: /jadwl.', want: { method: 'GET', path: '/jadwl', cookie: null } },
+  { text: 'Dina mencoba membuka halaman pengurus sebelum masuk.', want: { method: 'GET', path: '/pengurus', cookie: null } },
+  { text: 'Dina masuk dengan nama pengguna dina dan kata sandi yang benar.', want: { method: 'POST', path: '/masuk', cookie: null } },
+  { text: 'Dina membuka halaman pengurus dengan cookie dari dompetnya.', want: { method: 'GET', path: '/pengurus', cookie: 'sesi=7QK2MX' } },
+  { text: 'Rudi mencoba cookie temuan sesi=AAAA11.', want: { method: 'GET', path: '/pengurus', cookie: 'sesi=AAAA11' } },
+  { text: 'Dina sudah menekan "Keluar". Rudi mencoba sesi=7QK2MX yang sempat ia salin.', want: { method: 'GET', path: '/pengurus', cookie: 'sesi=7QK2MX' }, logout: true },
+];
+const PREDICT = [['200', (r) => r.code === 200 && !r.set], ['200 + cookie', (r) => r.code === 200 && !!r.set], ['301', (r) => r.code === 301], ['403', (r) => r.code === 403], ['404', (r) => r.code === 404]];
+function relayRound(wrap, ctx, { goals, sessions, wallet, summary = '', paths = ['/jadwal', '/pengumuman-lama', '/jadwl', '/pengurus', '/masuk'], book = true, done }) {
+  let n = 0; let q;
+  const goalBox = el('div', { class: 'pp8-kejadian' });
+  const comp = el('div', { class: 'wb20-susun' });
+  const road = el('div', { class: 'wb20-jalan' });
+  const tools = el('div', { class: 'wb20-cap-cap' });
   const msg = el('p', { class: 'reveal info' });
-  const draw = () => {
-    box.replaceChildren(...URL_PARTS.map(([t, name], i) => (name ? onTap(el('button', { class: `ht-bagian ${got.has(i) ? 'kena' : ''}`, type: 'button' }, t, got.has(i) ? el('small', null, name) : null), () => {
-      if (got.has(i) || k >= ask.length) return;
-      if (name !== ask[k]) { ctx.mistake(); shake(box); say(msg, 'bad', `"${t}" bukan ${ask[k]}.`); return; }
-      got.add(i); k++; ctx.sound.tap(); draw();
-      if (k === ask.length) { say(msg, '', 'Protokol https, nama situs, jalur /galeri, kueri ?tahun=2026, fragmen #foto3.'); done(); }
-    }) : el('span', { class: 'ht-pisah' }, t))));
-    if (k < ask.length) say(msg, 'info', `Ketuk bagian: ${ask[k]}.`);
-  };
-  wrap.append(el('p', { class: 'prompt' }, 'Tantangan: tandai bagian-bagian alamat ini.'), box, msg);
+  const purse = el('div', { class: 'wb20-dompet' });
+  const drawPurse = () => fill(purse, el('b', null, '👛 Dompet cookie'), wallet.length ? wallet.map((c) => el('code', null, c)) : el('small', null, '(kosong)'));
+  function show() {
+    const g = goals[n];
+    if (g.logout) sessions.delete('7QK2MX');
+    q = { method: 'GET', path: null, cookie: null };
+    fill(goalBox, el('small', null, `🎯 Kartu tugas ${n + 1} dari ${goals.length}`), el('b', null, g.text));
+    courier(road, { from: 0, to: 0, icon: '' }); fill(tools); drawPurse(); draw();
+    say(msg, 'info', 'Susun kartu permintaannya, lalu kirim.');
+  }
+  function row(name, items, key) {
+    return el('div', { class: 'wb20-baris' }, el('small', null, name), items.map(([v, l]) => onTap(el('button', { type: 'button', class: `wb20-chip ${q[key] === v ? 'on' : ''}` }, l), () => { q[key] = v; ctx.sound.tap(); draw(); })));
+  }
+  function draw() {
+    fill(comp, row('Metode', [['GET', 'GET'], ['POST', 'POST']], 'method'), row('Jalur', paths.map((p) => [p, p]), 'path'),
+      row('Cookie', [[null, 'tanpa'], ...[...new Set([...wallet, 'sesi=AAAA11'])].map((c) => [c, c === 'sesi=AAAA11' ? `${c} (temuan)` : c])], 'cookie'),
+      el('div', { class: 'wb20-kartu-minta' }, el('code', null, `${q.method} ${q.path || '…'}${q.cookie ? `\nCookie: ${q.cookie}` : ''}`)),
+      button('✉️ Kirim', (e) => send(e?.currentTarget), 'primary'));
+  }
+  function send(node) {
+    const w = goals[n].want;
+    if (!q.path) { shake(node); say(msg, 'info', 'Pilih jalurnya dulu.'); return; }
+    if (q.method !== w.method || q.path !== w.path || q.cookie !== w.cookie) {
+      ctx.mistake(); shake(comp);
+      say(msg, 'bad', q.path !== w.path ? 'Jalurnya belum sesuai kartu tugas.' : q.method !== w.method ? (w.method === 'POST' ? 'Mengirim isian formulir memakai POST.' : 'Membuka halaman memakai GET.') : w.cookie ? `Sertakan cookie ${w.cookie}.` : 'Kartu tugas ini tidak memakai cookie.');
+      return;
+    }
+    fill(comp, el('div', { class: 'wb20-kartu-minta kirim' }, el('code', null, `${q.method} ${q.path}${q.cookie ? `\nCookie: ${q.cookie}` : ''}`)));
+    courier(road, { icon: '✉️', label: `${q.method} ${q.path}`, cb: () => predict() });
+  }
+  function predict() {
+    const res = serve({ ...q, cookie: q.cookie }, sessions, () => '7QK2MX');
+    say(msg, 'info', `Server menerima ${q.method} ${q.path}. Tebak capnya.`);
+    let busy = false;
+    fill(tools, PREDICT.map(([l, ok]) => onTap(el('button', { type: 'button', class: `wb20-cap k${l[0]}` }, el('b', null, l)), (e) => {
+      if (busy) return;
+      if (!ok(res)) { ctx.mistake(); shake(e.currentTarget); say(msg, 'bad', q.cookie === 'sesi=AAAA11' ? 'Server tidak pernah membuat kode AAAA11.' : goals[n].logout ? 'Saat Dina keluar, server membatalkan kode itu.' : q.path === '/pengurus' && !q.cookie ? 'Tanpa cookie, server tidak tahu peminta adalah pengurus.' : 'Baca buku aturan server.'); return; }
+      busy = true; ctx.sound.tap(); fill(tools);
+      if (res.set && !wallet.includes(res.set)) wallet.push(res.set);
+      const back = () => {
+        const extra = res.loc ? serve({ method: 'GET', path: res.loc }, sessions) : null;
+        say(msg, '', `${res.code} ${CODES[res.code]}${res.set ? `, Set-Cookie: ${res.set} disimpan di dompet` : ''}${res.loc ? `. Peramban otomatis mengirim GET ${res.loc} → ${extra.code}` : ''}.`);
+        drawPurse(); n++;
+        if (n < goals.length) setTimeout(() => { if (wrap.isConnected) show(); }, 2400); else { ctx.sound.good(); if (summary) say(msg, '', `${msg.textContent} ${summary}`); done(); }
+      };
+      courier(road, { from: 2, to: 0, icon: '📨', label: `${res.code}${res.set ? ' + cookie' : ''}`, cb: back });
+    })));
+  }
+  wrap.append(book ? rulebook(false) : null, goalBox, el('div', { class: 'wb20-meja-kerja' }, comp, purse), road, tools, msg);
+  show();
+}
+
+// Misi 4: Rudi guesses session codes.
+function sessionGuess(wrap, ctx, { done }) {
+  const secret = ctx.rand.int(0, 99);
+  const tried = new Set();
+  const grid = el('div', { class: 'wb20-papan-kode' });
+  const msg = el('p', { class: 'reveal info' }, 'Kamu Tim Rudi. Kode sesi Dina hanya 2 angka. Ketuk 3 tebakan.');
+  const area = el('div', { class: 'wb20-area' });
+  const p2 = (x) => String(x).padStart(2, '0');
+  const draw = (reveal = false) => fill(grid, Array.from({ length: 100 }, (_, i) => onTap(el('button', { type: 'button', class: `wb20-sel ${tried.has(i) ? (i === secret ? 'kena' : 'meleset') : ''} ${reveal && i === secret ? 'rahasia' : ''}` }, p2(i)), () => guess(i))));
+  function guess(i) {
+    if (tried.size >= 3 || tried.has(i)) return;
+    tried.add(i); ctx.sound.tap(); draw(tried.size >= 3 || i === secret);
+    if (i === secret) { say(msg, 'bad', `Tebakan ${p2(i)} kena! Rudi masuk sebagai Dina.`); setTimeout(() => { if (area.isConnected) wheels(); }, 2000); return; }
+    if (tried.size === 3) { say(msg, 'info', `Kode Dina ${p2(secret)}. 3 tebakan dari 100 kemungkinan: peluang Rudi 3%, terlalu besar.`); setTimeout(() => { if (area.isConnected) wheels(); }, 2600); }
+    else say(msg, 'info', `${p2(i)} salah. Sisa ${3 - tried.size} tebakan.`);
+  }
+  function wheels() {
+    let base = 10; let len = 2;
+    const out = el('div', { class: 'wb20-hitung' });
+    const set = el('div', { class: 'wb20-roda' });
+    const drawW = () => {
+      const total = base ** len;
+      fill(set, el('div', { class: 'wb20-baris' }, el('small', null, 'Karakter'), [[10, '0–9'], [26, 'A–Z'], [36, 'A–Z dan 0–9']].map(([v, l]) => onTap(el('button', { type: 'button', class: `wb20-chip ${base === v ? 'on' : ''}` }, `${l} (${v})`), () => { base = v; drawW(); }))),
+        el('div', { class: 'wb20-baris' }, el('small', null, 'Panjang'), button('−', () => { len = Math.max(1, len - 1); drawW(); }), el('b', { class: 'wb20-angka' }, len), button('+', () => { len = Math.min(8, len + 1); drawW(); })));
+      fill(out, el('code', null, `${base}`, el('sup', null, len), ` = ${total.toLocaleString('id-ID')} kemungkinan`));
+    };
+    fill(area, el('div', { class: 'pp8-kejadian' }, el('small', null, '🔧 Server diperbarui'), el('b', null, 'Kode sesi baru: 6 karakter dari A–Z dan 0–9, misalnya 7QK2MX.')), set, out,
+      el('div', { class: 'wb20-cap-cap' }, button('✓ Ini ukuran kodenya', (e) => {
+        if (base !== 36 || len !== 6) { ctx.mistake(); shake(e?.currentTarget || area); say(msg, 'bad', 'Atur roda sesuai kode baru: jenis karakter dan panjangnya.'); return; }
+        ctx.sound.good(); fill(area.lastChild);
+        say(msg, '', `36⁶ = 2.176.782.336 kemungkinan. 3 tebakan ≈ 1 banding 726 juta. Kode sesi harus acak dan panjang supaya tidak bisa ditebak.`);
+        done();
+      }, 'primary')));
+    say(msg, 'info', 'Atur roda: berapa banyak kemungkinan kode sesi yang baru?');
+    drawW();
+  }
+  wrap.append(grid, area, msg);
   draw();
 }
+
+// Misi 5: the eavesdropper in the park sorts what the sealed envelope still shows.
+function sniffGame(wrap, ctx, { done }) {
+  const area = el('div', { class: 'wb20-area' });
+  const msg = el('p', { class: 'reveal info' }, 'Kurir membawa kartu pos HTTP melewati taman. Kamu penyadapnya: semuanya terbaca. Ganti sakelar ke HTTPS.');
+  const post = el('div', { class: 'wb20-pos' }, el('b', null, '📮 Kartu pos (HTTP)'), SNIFF.map(([t]) => el('span', null, `👁 ${t}`)));
+  const sw = el('div', { class: 'wb20-cap-cap' }, button('🔒 Ganti ke HTTPS', () => { ctx.sound.tap(); fill(sw); post.remove(); sortIt(); }, 'primary'));
+  wrap.append(area, msg);
+  fill(area, post, sw);
+  function sortIt() {
+    say(msg, 'info', 'Kini amplop bersandi. Pilah: apa yang masih terlihat dari luar amplop?');
+    sortCards(area, ctx, {
+      cards: SNIFF.map(([t, vis], i) => ({ id: `s${i}`, label: t, bin: vis ? 'lihat' : 'tutup' })),
+      bins: [{ id: 'lihat', label: '👁 Masih terlihat (luar amplop)' }, { id: 'tutup', label: '🔒 Tersembunyi (isi amplop)' }],
+      msg,
+      why: (c, b) => (b === 'tutup' ? 'Bagian luar amplop tetap terlihat: ke mana dan seberapa besar.' : 'Isi amplop HTTPS tersandi.'),
+      win: 'HTTPS menyembunyikan isi percakapan, tetapi tidak menyembunyikan bahwa Dina membuka situs OSIS, kapan, dan seberapa banyak datanya.',
+      done,
+    });
+  }
+}
+// Tap a card, then a bin (shared by several missions).
+function sortCards(host, ctx, { cards, bins, msg, why, win, done }) {
+  let sel = null; const placed = {};
+  const tray = el('div', { class: 'wb20-baki' });
+  const box = el('div', { class: 'wb20-kotak-kotak' });
+  function draw() {
+    fill(tray, cards.filter((c) => !(c.id in placed)).map((c) => onTap(el('button', { type: 'button', class: `wb20-kartu ${sel === c.id ? 'pilih' : ''}` }, c.label), () => { sel = c.id; ctx.sound.tap(); draw(); })));
+    fill(box, bins.map((b) => onTap(el('div', { class: `wb20-kotak ${b.id}` }, el('b', null, b.label), el('div', { class: 'wb20-isi' }, cards.filter((c) => placed[c.id] === b.id).map((c) => el('span', null, c.label)))), (e) => {
+      if (!sel) { say(msg, 'info', 'Ketuk kartu dulu, lalu kotaknya.'); return; }
+      const c = cards.find((x) => x.id === sel);
+      if (c.bin !== b.id) { ctx.mistake(); shake(e.currentTarget); say(msg, 'bad', why(c, b.id)); return; }
+      placed[c.id] = b.id; sel = null; ctx.sound.tap(); draw();
+      if (Object.keys(placed).length === cards.length) { ctx.sound.good(); say(msg, '', win); done(); }
+    })));
+  }
+  host.append(tray, box);
+  draw();
+}
+
+// Misi 6: gallery race. Place each request in a courier lane and time slot.
+const BERKAS = [['dns', 'DNS'], ['html', 'HTML'], ['css', 'gaya.css'], ['f1', 'foto1'], ['f2', 'foto2'], ['f3', 'foto3']];
+function galleryRace(wrap, ctx, { done }) {
+  const area = el('div', { class: 'wb20-area' });
+  const msg = el('p', { class: 'reveal info' });
+  wrap.append(area, msg);
+  function stage(lanes) {
+    let sel = null; const at = {};
+    const tray = el('div', { class: 'wb20-baki' });
+    const board = el('div', { class: 'wb20-galeri', style: { '--jalur': lanes } });
+    const tools = el('div', { class: 'wb20-cap-cap' });
+    const slotOf = (id) => at[id]?.[1];
+    function draw() {
+      fill(tray, BERKAS.filter(([id]) => !(id in at)).map(([id, l]) => onTap(el('button', { type: 'button', class: `wb20-kartu ${sel === id ? 'pilih' : ''}` }, l), () => { sel = id; ctx.sound.tap(); draw(); })));
+      fill(board, el('span', { class: 'wb20-sudut' }, ''), Array.from({ length: 6 }, (_, s) => el('small', { class: 'wb20-waktu' }, `${(s * 0.2).toFixed(1).replace('.', ',')}–${((s + 1) * 0.2).toFixed(1).replace('.', ',')} d`)),
+        Array.from({ length: lanes }, (_, l) => [el('b', { class: 'wb20-nama-kurir' }, `🏃 Kurir ${l + 1}`), Array.from({ length: 6 }, (_, s) => {
+          const here = Object.entries(at).find(([, [a, b]]) => a === l && b === s);
+          return onTap(el('div', { class: `wb20-petak ${here ? 'isi' : ''}` }, here ? BERKAS.find((x) => x[0] === here[0])[1] : ''), (e) => put(l, s, e.currentTarget, here));
+        })]).flat(2));
+    }
+    function put(l, s, node, here) {
+      if (here) { delete at[here[0]]; ctx.sound.tap(); draw(); return; }
+      if (!sel) { say(msg, 'info', 'Ketuk berkas dulu, lalu petaknya.'); return; }
+      const need = sel === 'dns' ? null : sel === 'html' ? 'dns' : 'html';
+      if (need && !(need in at)) { ctx.mistake(); shake(node); say(msg, 'bad', need === 'dns' ? 'Peramban belum tahu alamat server: DNS dulu.' : 'Peramban baru tahu ada foto dan gaya.css setelah membaca HTML.'); return; }
+      if (need && s <= slotOf(need)) { ctx.mistake(); shake(node); say(msg, 'bad', `${BERKAS.find((x) => x[0] === sel)[1]} harus menunggu ${need === 'dns' ? 'jawaban DNS' : 'HTML tiba'}.`); return; }
+      at[sel] = [l, s]; sel = null; ctx.sound.tap(); draw();
+      if (Object.keys(at).length === BERKAS.length) finish();
+    }
+    function finish() {
+      const end = (Math.max(...Object.values(at).map(([, s]) => s)) + 1) * 0.2;
+      const t = end.toFixed(1).replace('.', ',');
+      if (lanes === 1) { say(msg, '', `Satu kurir: (1 DNS + 5 GET) × 0,2 = ${t} detik.`); ctx.sound.good(); setTimeout(() => { if (area.isConnected) stage(4); }, 2600); return; }
+      if (end > 0.61) { ctx.mistake(); say(msg, 'bad', `Galeri tampil ${t} detik. Empat kurir bisa berangkat bersamaan setelah HTML tiba.`); fill(tools, button('🔄 Susun ulang', () => { for (const k of Object.keys(at)) if (k !== 'dns' && k !== 'html') delete at[k]; fill(tools); draw(); say(msg, 'info', 'Letakkan gaya.css dan foto di kurir yang berbeda.'); })); return; }
+      ctx.sound.good(); say(msg, '', `Empat kurir: DNS 0,2 + HTML 0,2 + empat berkas bersamaan 0,2 = ${t} detik, separuh waktu satu kurir.`); done();
+    }
+    fill(area, el('div', { class: 'pp8-kejadian' }, el('small', null, `🏁 Balapan galeri · ${lanes === 1 ? 'satu kurir' : 'empat kurir'}`), el('b', null, '1 HTML + 1 gaya.css + 3 foto. Setiap tanya-jawab 0,2 detik.')), tray, board, tools);
+    say(msg, 'info', lanes === 1 ? 'Ketuk berkas, lalu petak waktunya. Satu kurir hanya membawa satu pesan setiap 0,2 detik.' : 'Kini ada empat kurir setelah HTML tiba. Buat galeri tampil secepat mungkin.');
+    draw();
+  }
+  stage(1);
+}
+
+// Misi 7 and Bos: label the URL parts, then decide where each goes.
+function urlLabels(host, ctx, { parts, msg, done }) {
+  let sel = null; const got = {};
+  const tray = el('div', { class: 'wb20-baki' });
+  const line = el('div', { class: 'wb20-url' });
+  const names = parts.filter((p) => p[1]).map((p) => p[1]);
+  function draw() {
+    fill(tray, ctx.rand.shuffle(names.filter((n) => !Object.values(got).includes(n))).map((n) => onTap(el('button', { type: 'button', class: `wb20-kartu ${sel === n ? 'pilih' : ''}` }, n), () => { sel = n; ctx.sound.tap(); draw(); })));
+    fill(line, parts.map(([t, name], i) => (name ? onTap(el('button', { type: 'button', class: `wb20-bagian ${got[i] ? 'kena' : ''}` }, el('code', null, t), el('small', null, got[i] || '?')), (e) => {
+      if (got[i]) return;
+      if (!sel) { say(msg, 'info', 'Ketuk label dulu, lalu bagian alamatnya.'); return; }
+      if (sel !== name) { ctx.mistake(); shake(e.currentTarget); say(msg, 'bad', `"${t}" bukan ${sel}.`); return; }
+      got[i] = name; sel = null; ctx.sound.tap(); draw();
+      if (Object.keys(got).length === names.length) done();
+    }) : el('code', { class: 'wb20-pisah' }, t))));
+  }
+  host.append(line, tray);
+  draw();
+  return { clear: () => tray.remove() };
+}
+function urlRound20(wrap, ctx, { done }) {
+  const area = el('div', { class: 'wb20-area' });
+  const msg = el('p', { class: 'reveal info' }, 'Tempelkan label ke bagian alamat yang tepat.');
+  wrap.append(area, msg);
+  const u = urlLabels(area, ctx, { parts: URL_PARTS, msg, done: () => {
+    u.clear(); ctx.sound.good();
+    say(msg, 'info', 'Label lengkap. Sekarang: bagian mana dikirim ke DNS, ke server, atau tidak pernah dikirim?');
+    sortCards(area, ctx, {
+      cards: [['nama', SITE, 'dns'], ['jalur', '/galeri', 'server'], ['kueri', '?tahun=2026', 'server'], ['frag', '#foto3', 'tidak']].map(([id, label, bin]) => ({ id, label, bin })),
+      bins: [{ id: 'dns', label: '📒 Ke meja DNS' }, { id: 'server', label: '🗄️ Ke server (di dalam GET)' }, { id: 'tidak', label: '🚫 Tidak pernah dikirim' }],
+      msg,
+      why: (c) => (c.id === 'frag' ? 'Fragmen hanya dipakai peramban untuk melompat ke bagian halaman.' : c.id === 'nama' ? 'Nama situs ditanyakan dulu untuk mendapat alamat IP.' : 'Server perlu tahu halaman dan kuerinya.'),
+      win: 'DNS menerima nama situs; server menerima GET /galeri?tahun=2026; #foto3 tetap di peramban.',
+      done,
+    });
+  } });
+}
+function bossUrl(wrap, ctx, { done }) {
+  const parts = [['https', 'protokol'], ['://', null], ['coding-unplugged-panel.vercel.app', 'nama situs'], ['/', 'jalur'], ['#/sma-20-kode-http', 'fragmen']];
+  const area = el('div', { class: 'wb20-area' });
+  const msg = el('p', { class: 'reveal info' }, 'Alamat halaman yang sedang kamu buka. Tempelkan labelnya.');
+  wrap.append(el('div', { class: 'pp8-kejadian' }, el('small', null, '🪞 Alamat aktivitas ini'), el('b', null, `Fragmen di peramban ini: ${(location.hash.split('?')[0] || '#/sma-20-kode-http')}`)), area, msg);
+  const u = urlLabels(area, ctx, { parts, msg, done: () => {
+    u.clear(); ctx.sound.good();
+    say(msg, 'info', 'Kartu permintaan apa yang dibawa kurir ke server Vercel?');
+    fill(area, area.firstChild, el('div', { class: 'wb20-cap-cap' }, ctx.rand.shuffle([['GET /', true], ['GET /sma-20-kode-http', 'Itu fragmen, bukan jalur.'], ['GET /#/sma-20-kode-http', 'Fragmen tidak pernah dikirim.']]).map(([l, ok]) => button(l, (e) => {
+      if (ok !== true) { ctx.mistake(); shake(e?.currentTarget || area); say(msg, 'bad', ok); return; }
+      ctx.sound.tap();
+      const road = el('div', { class: 'wb20-jalan' });
+      fill(area, area.firstChild, road);
+      courier(road, { icon: '✉️', label: 'GET /', cb: () => courier(road, { from: 2, to: 0, icon: '📨', label: '200 + halaman utama', cb: who }) });
+    }))));
+  } });
+  function who() {
+    say(msg, 'info', 'Server mengirim halaman utama yang sama untuk semua aktivitas. Siapa yang memilih aktivitas sma-20?');
+    area.append(el('div', { class: 'wb20-cap-cap' }, ctx.rand.shuffle([['🗄️ Server Vercel', false], ['🧠 Program di halaman, membaca fragmen', true], ['📒 Server DNS', false]]).map(([l, ok]) => button(l, (e) => {
+      if (!ok) { ctx.mistake(); shake(e?.currentTarget || area); say(msg, 'bad', 'Pihak itu tidak pernah melihat fragmen.'); return; }
+      ctx.sound.good(); fill(e.currentTarget.parentNode);
+      say(msg, '', 'Server hanya menerima GET /. Program di halaman membaca #/sma-20-kode-http lalu memilih aktivitasnya, jadi semua aktivitas bisa dibuka tanpa server pintar.');
+      done();
+    }))));
+  }
+}
+
+const HEAD20 = {
+  urut: ['Perjalanan Halaman', 'Urutkan perjalanan halaman dari Enter sampai tampil.'],
+  kode: ['Tebak Kode Balasan', 'Server menjawab dengan cap kode. Pilih capnya.'],
+  estafet: ['Estafet Peramban dan Server', 'Susun kartu permintaan, kirim lewat kurir, tebak cap balasannya.'],
+  sesi: ['Cap Tangan Digital', 'Tim Rudi menebak kode sesi. Seberapa sulit?'],
+  sadap: ['Penyadap di Taman', 'Kartu pos atau amplop bersandi: apa yang terbaca penyadap?'],
+  galeri: ['Balapan Galeri', 'Bawa semua berkas galeri secepat mungkin.'],
+  alamat: ['Bedah Alamat', 'Tempelkan label pada bagian alamat web.'],
+  boss: ['Alamat Aktivitas Ini', 'Apa yang diterima server saat halaman ini dibuka?'],
+};
 
 export default {
   id: 'sma-20-kode-http',
@@ -158,35 +413,25 @@ export default {
     { id: 'giliran', icon: '🔁', label: 'Peramban lawan Server', desc: 'Satu tim menjadi peramban yang memilih permintaan, tim lain menjadi server yang memilih balasan; balasan benar mendapat poin, lalu peran bertukar', create: createTeams },
   ],
   create(root, ctx) {
-    const wrap = el('div', { class: 'act kode-http' });
+    const wrap = el('div', { class: 'act kode-http wb20-main' });
     root.append(wrap);
+    const acak = ctx.rand.shuffle([...MORE_EVENTS]).slice(0, 6);
     function render() {
       wrap.replaceChildren();
       const r = ctx.round;
       let solved = false;
-      const next = () => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, 2400); } };
-      const ask = (prompt, opts, columns = 1, subject = null, onRight = next) => choice(wrap, { prompt, subject, ctx, shuffle: true, onRight, columns, options: opts.map(([l, correct]) => ({ label: String(l), correct })) });
-      const then = (fn) => () => { wrap.replaceChildren(); fn(); };
-      const codes = (i) => (i < EVENTS.length ? ask(`Kode balasan: ${EVENTS[i][0]}`, Object.keys(CODES).map((c) => [c, Number(c) === EVENTS[i][1]]), 5, el('div', { class: 'ht-golongan' }, '2xx berhasil · 3xx pindah · 4xx permintaan bermasalah · 5xx server bermasalah'), then(() => codes(i + 1)))
-        : ask('Siapa yang perlu memperbaiki salah ketik /jadwl (404), dan siapa yang memperbaiki program server yang rusak (500)?', [['404: peminta (atau pembuat tautan); 500: pengelola server', true], ['Keduanya pengelola server'], ['Keduanya peminta'], ['404: pengelola server; 500: peminta']]));
-      if (r === 0) orderRound(wrap, ctx, { done: next });
-      else if (r === 1) codes(0);
-      else if (r === 2) serverRound(wrap, ctx, { done: next });
-      else if (r === 3) ask('Setelah menerima 301 untuk kartu 2, apa yang dikirim peramban berikutnya?', [['GET /pengumuman, otomatis', true], ['GET /pengumuman-lama sekali lagi'], ['POST /masuk'], ['Tidak ada; Dina harus mengetik alamat baru']], 1, el('code', { class: 'ht-pesan' }, '301 Moved Permanently · Location: /pengumuman'),
-        then(() => ask('Kartu 4 dan kartu 6 sama-sama GET /pengurus. Mengapa balasannya 403 dan 200?', [['Kartu 6 membawa cookie sesi yang dibuat server saat Dina masuk; kartu 4 belum', true], ['Server sedang sibuk saat kartu 4'], ['Kartu 6 memakai HTTPS'], ['Server mengingat permintaan sebelumnya tanpa cookie']])));
-      else if (r === 4) ask('Server tidak mengingat permintaan sebelumnya. Tanpa cookie, apa yang harus dilakukan Dina setiap kali membuka halaman pengurus?', [['Mengirim nama pengguna dan kata sandi lagi', true], ['Tidak perlu apa-apa'], ['Menunggu 301'], ['Mengganti alamat IP']], 1, null,
-        then(() => ask('Mengapa kode sesi dibuat acak dan panjang, bukan sesi=dina?', [['Kode yang mudah ditebak bisa dipalsukan siapa pun untuk masuk sebagai Dina', true], ['Supaya mudah diingat Dina'], ['Supaya halaman lebih cepat'], ['Karena cookie harus berupa huruf kapital']], 1, el('code', { class: 'ht-pesan' }, 'GET /pengurus · Cookie: sesi=dina  →  ?'),
-          then(() => ask('Mengapa Dina sebaiknya menekan "Keluar" setelah memakai komputer perpustakaan?', [['Server membatalkan kode sesinya, sehingga orang berikutnya tidak bisa membuka halaman pengurus sebagai Dina', true], ['Supaya komputernya mati'], ['Supaya kata sandinya berubah'], ['Tidak perlu; cookie hilang sendiri saat Dina berdiri']])))));
-      else if (r === 5) sniffRound(wrap, ctx, { done: next });
-      else if (r === 6) ask('Situs memakai HTTP dan penyadap mendapat cookie sesi Dina. Apa yang bisa ia lakukan?', [['Masuk sebagai Dina tanpa tahu kata sandinya, sampai sesinya berakhir', true], ['Tidak ada, cookie tidak berguna tanpa kata sandi'], ['Mengubah kata sandi Dina tanpa masuk'], ['Hanya melihat nama situsnya']], 1, null,
-        then(() => ask('hadiah-pulsa.example memakai HTTPS dan menampilkan gembok. Apakah situsnya bisa dipercaya?', [['Belum tentu: gembok hanya berarti sambungan tersandi ke pemilik nama itu; penipu pun bisa punya sertifikat', true], ['Ya, gembok berarti situs diperiksa pemerintah'], ['Ya, karena memakai HTTPS'], ['Tidak, semua situs HTTPS adalah penipuan']], 1, null,
-          then(() => ask('Di Wi-Fi taman muncul "Sambungan tidak aman: sertifikat tidak sah" saat membuka dompet digital. Apa yang sebaiknya Dina lakukan?', [['Jangan dilanjutkan; putuskan Wi-Fi itu dan pakai jaringan tepercaya seperti data seluler', true], ['Tekan "Lanjutkan saja", karena biasa terjadi'], ['Masukkan PIN lebih cepat sebelum disadap'], ['Matikan peringatan di pengaturan peramban']])))));
-      else if (r === 7) ask('Galeri: 1 HTML, 1 gaya.css, dan 3 foto, masing-masing satu GET. Berapa permintaan GET?', [[5, true], [4], [6], [3]], 4, null,
-        then(() => ask('Setiap tanya-jawab 0,2 detik, termasuk satu DNS di awal. Jika berkas diminta satu per satu, berapa detik sampai galeri tampil?', [['1,2', true], ['1,0'], ['0,6'], ['1,4']], 4, waterfall(1),
-          then(() => ask('Setelah HTML dibaca, peramban boleh meminta empat berkas sekaligus. Berapa detik sekarang?', [['0,6', true], ['0,4'], ['0,8'], ['1,2']], 4, waterfall(4))))));
-      else if (r === 8) ask('Mengapa situs dengan puluhan foto besar terasa lambat pada sinyal lemah, dan apa yang bisa dilakukan pembuatnya?', [['Banyak dan besar berkas memperlama kiriman; perkecil foto, kurangi berkas, muat foto saat akan dilihat, izinkan cache', true], ['Karena HTTPS; ganti ke HTTP'], ['Karena DNS; tambah server DNS di ponsel'], ['Karena kode 301; hapus semua pengalihan']]);
-      else urlRound(wrap, ctx, { done: then(() => ask('Bagian mana yang dikirim ke server dalam GET, dan mana yang tidak pernah dikirim?', [['Dikirim: GET /galeri?tahun=2026; tidak pernah: #foto3', true], ['Dikirim: semuanya'], ['Dikirim: GET /galeri; tidak pernah: ?tahun=2026 dan #foto3'], ['Dikirim: osis.sekolah.example; tidak pernah: /galeri']], 1, el('code', { class: 'ht-pesan' }, 'https://osis.sekolah.example/galeri?tahun=2026#foto3'),
-        then(() => ask('Halaman ini dibuka di alamat dengan fragmen #/sma-20-kode-http. Permintaan GET apa yang diterima servernya, dan bagaimana aktivitas ini dipilih?', [['GET /, halaman utama yang sama; program di halaman membaca fragmen dan memilih aktivitasnya', true], ['GET /sma-20-kode-http; server memilih aktivitasnya'], ['GET /#/sma-20-kode-http; server membaca fragmen'], ['Tidak ada GET; halaman dibuat oleh DNS']], 1, el('code', { class: 'ht-pesan' }, `Fragmen di peramban ini sekarang: ${location.hash.split('?')[0] || '#/sma-20-kode-http'}`))))) });
+      const next = (wait = 5200) => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, wait); } };
+      const head = (k, no) => wrap.append(misiHead(no, ...HEAD20[k], '🌐'));
+      if (r === 0) { head('urut', 1); orderRound(wrap, ctx, { done: () => next(3000) }); }
+      else if (r === 1) { head('kode', 2); stampRound(wrap, ctx, { events: EVENTS, done: () => next(3000) }); }
+      else if (r === 2) { head('estafet', 3); relayRound(wrap, ctx, { goals: GOALS.slice(0, 4), sessions: new Set(), wallet: [], summary: 'Empat kartu: 200, 301 lalu 200, 404, 403.', done: () => next(4000) }); }
+      else if (r === 3) { head('estafet', 3); relayRound(wrap, ctx, { goals: GOALS.slice(4), sessions: new Set(), wallet: [], summary: 'Sesi yang dibatalkan saat keluar tidak berlaku lagi, walau kodenya disalin.', done: () => next(5000) }); }
+      else if (r === 4) { head('sesi', 4); sessionGuess(wrap, ctx, { done: () => next(6000) }); }
+      else if (r === 5) { head('sadap', 5); sniffGame(wrap, ctx, { done: () => next(6400) }); }
+      else if (r === 6) { head('galeri', 6); galleryRace(wrap, ctx, { done: () => next(6000) }); }
+      else if (r === 7) { head('alamat', 7); urlRound20(wrap, ctx, { done: () => next(6000) }); }
+      else if (r === 8) { head('kode', 2); stampRound(wrap, ctx, { events: acak, done: () => next(3000) }); }
+      else { head('boss', 'Bos'); bossUrl(wrap, ctx, { done: () => next(7000) }); }
     }
     render();
   },

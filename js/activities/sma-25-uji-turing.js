@@ -1,10 +1,13 @@
 // Manusia atau Mesin? — SMA/SMK (16–18 tahun), chatbot dan model bahasa.
-// A rule-book chatbot (Sekar), the Turing test, rule order, a bigram model
-// built from two pantun with a die, and how fluent sentences can be wrong.
+// Stan Manusia atau Mesin?: run a rule-book chatbot (Sekar), stamp the replies
+// that give it away, a Turing booth, patch the rule order, a bigram model
+// built from two pantun with a die, a probability tree, fluent-but-wrong
+// sentences, who is responsible, and the loop that never ends.
 
 import { el, onTap, button, shake } from '../core/util.js';
-import { choice } from '../core/kit.js';
+import { dnd } from '../core/kit.js';
 import { say, pickTeams, scoreBar, finishBoard } from './sma-kit.js';
+import { misiHead, fill } from './misi-kit.js';
 
 const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const hasWord = (msg, w) => new RegExp(`(^|[^a-z0-9])${esc(w.toLowerCase())}($|[^a-z0-9])`).test(msg.toLowerCase());
@@ -68,50 +71,8 @@ const diceWord = (w, d) => DICE[w].find(([a, b]) => d >= a && d <= b)[2];
 export const COUNT_WORDS = ['ke', 'kain', 'belajar', 'setiap', 'padi'];
 export const LOOP = ['ke', 'pasar', 'membeli', 'kain', 'dibawa', 'pulang'];
 
-// --- pieces ---
-function rulebook(hi = -1, rules = RULES) {
-  return el('table', { class: 'tu-aturan' }, el('tr', null, el('th', null, 'No.'), el('th', null, 'Jika pesan memuat…'), el('th', null, 'Balas dengan…')),
-    rules.map((r, i) => el('tr', { class: i === hi ? 'kena' : '' }, el('td', null, i + 1), el('td', null, ruleText(r)), el('td', null, r.reply.replace('{sesudah}', '(kata sesudah "suka")')))));
-}
+
 function chatLine(who, text, cls = '') { return el('div', { class: `tu-balon ${cls}` }, el('b', null, who), el('span', null, text)); }
-
-function ruleRound(wrap, ctx, { msgs, done }) {
-  let k = 0;
-  const host = el('div', { class: 'tu-dua' });
-  const msg = el('p', { class: 'reveal info' }, 'Periksa aturan dari atas ke bawah; pakai aturan pertama yang cocok.');
-  const log = el('div', { class: 'tu-chat' });
-  const draw = (hi = -1) => {
-    const m = msgs[k];
-    host.replaceChildren(rulebook(hi), el('div', { class: 'tu-kanan' }, log, m ? el('div', null, el('p', { class: 'tu-tanya' }, `Pesan ${m[0]}: aturan nomor berapa?`), el('div', { class: 'seg tu-nomor' }, RULES.map((_, i) => onTap(el('button', { class: 'seg-btn', type: 'button' }, i + 1), () => {
-      if (i !== m[2]) { ctx.mistake(); shake(host); const fits = !RULES[i].keys.length || RULES[i].keys.some((x) => keyMatch(m[1], x)); say(msg, 'bad', fits ? `Aturan ${i + 1} memang cocok, tetapi ada aturan di atasnya yang cocok lebih dulu.` : `Aturan ${i + 1} tidak cocok: pesannya tidak memuat ${ruleText(RULES[i])}.`); return; }
-      const s = sekar(m[1]); log.append(chatLine('Pengunjung', m[1], 'kiri'), chatLine(`Sekar · aturan ${i + 1}`, s.reply, 'kanan')); ctx.sound.tap();
-      say(msg, '', m[0] === 'c' ? 'Pesan c juga memuat "?", tetapi aturan 6 lebih dulu cocok.' : m[0] === 'e' ? 'Aturan tidak mengerti kata "tidak": Sekar salah paham.' : m[0] === 'f' ? 'Ditanya nama guru, Sekar menjawab namanya sendiri.' : m[0] === 'g' ? 'Tidak ada aturan yang cocok, jadi Sekar tidak bisa bercerita.' : 'Tepat.');
-      k++; draw(i); if (k === msgs.length) setTimeout(done, 1800);
-    })))) : null));
-  };
-  draw();
-  wrap.append(el('p', { class: 'prompt' }, 'Menjalankan Buku Aturan Sekar'), host, msg);
-}
-
-function insertRound(wrap, ctx, { done }) {
-  const NEW = { keys: ['tidak suka'], reply: 'Oh, kamu tidak suka {sesudah}? Kenapa?' };
-  const msg = el('p', { class: 'reveal info' }, 'Aturan baru: jika pesan memuat "tidak suka", balas "Oh, kamu tidak suka (kata sesudahnya)? Kenapa?". Ketuk celah tempat aturan itu disisipkan.');
-  const host = el('div', { class: 'tu-dua' });
-  let fin = false;
-  const draw = (pos = -1) => {
-    const rules = pos < 0 ? RULES : [...RULES.slice(0, pos), NEW, ...RULES.slice(pos)];
-    const s = pos < 0 ? null : sekar('Aku tidak suka hujan.', rules);
-    host.replaceChildren(el('div', { class: 'tu-sisip' }, ...RULES.flatMap((r, i) => [onTap(el('button', { class: `tu-celah ${pos === i ? 'on' : ''}`, type: 'button' }, pos === i ? `➕ ${ruleText(NEW)}` : '＋ sisipkan di sini'), () => {
-      if (fin) return; draw(i);
-      const ok = sekar('Aku tidak suka hujan.', [...RULES.slice(0, i), NEW, ...RULES.slice(i)]).rule === i;
-      if (!ok) { ctx.mistake(); say(msg, 'bad', `Di posisi ini aturan "suka" (sekarang nomor ${i < 3 ? 4 : 3}) cocok lebih dulu, jadi aturan baru tidak pernah dipakai.`); return; }
-      fin = true; ctx.sound.good(); say(msg, '', `Aturan baru menjadi nomor ${i + 1}, sebelum aturan "suka", sehingga cocok lebih dulu.`); setTimeout(done, 2200);
-    }), el('div', { class: 'tu-baris-aturan' }, el('b', null, i + 1), `${ruleText(r)} → ${r.reply.replace('{sesudah}', '…')}`)])),
-    el('div', { class: 'tu-kanan' }, el('div', { class: 'tu-chat' }, chatLine('Pengunjung', 'Aku tidak suka hujan.', 'kiri'), s ? chatLine(`Sekar · aturan ${s.rule + 1}`, s.reply, 'kanan') : null)));
-  };
-  draw();
-  wrap.append(el('p', { class: 'prompt' }, 'Memperbaiki buku aturan: di mana aturan "tidak suka" diletakkan?'), host, msg);
-}
 
 // Tap every occurrence of the word in the corpus; the table fills itself.
 function countRound(wrap, ctx, { done }) {
@@ -138,7 +99,7 @@ function countRound(wrap, ctx, { done }) {
       COUNT_WORDS.map((w, i) => el('tr', { class: i === t ? 'kini' : '' }, el('td', null, w), el('td', null, [...tally[i]].map(([a, b]) => `${a} (${b})`).join(', ') || (i === t ? '?' : ''))))));
   };
   draw();
-  wrap.append(el('p', { class: 'prompt' }, 'Model bigram: lengkapi tabel kata berikutnya dari korpus pantun.'), host, msg);
+  wrap.append(host, msg);
 }
 
 function diceTable() {
@@ -176,18 +137,258 @@ function diceRound(wrap, ctx, { starts, done }) {
   wrap.append(el('p', { class: 'prompt' }, `Buat kalimat dengan dadu, mulai dari "${starts.join('" lalu "')}".`), host, msg);
 }
 
-function truthRound(wrap, ctx, { done }) {
-  const S = allSentences(TEACHERS, 'bu rina', 1).map(([s]) => s);
-  const res = {};
-  const msg = el('p', { class: 'reveal info' }, 'Tandai setiap kalimat buatan model: benar atau salah menurut korpus.');
-  const rows = el('div', { class: 'tu-benar' });
-  const draw = () => rows.replaceChildren(...S.map((s, i) => { const ok = TEACHERS.includes(s); return el('div', { class: `tu-b-baris ${i in res ? 'beres' : ''}` }, el('span', null, s), i in res ? el('b', { class: ok ? 'ya' : 'tidak' }, ok ? '✓ Benar' : '✗ Salah') : el('div', { class: 'seg' }, [[true, 'Benar'], [false, 'Salah']].map(([v, l]) => onTap(el('button', { class: 'seg-btn', type: 'button' }, l), () => {
-    if (v !== ok) { ctx.mistake(); say(msg, 'bad', ok ? 'Kalimat ini persis ada di korpus.' : 'Bu Rina mengajar matematika di kelas sepuluh. Kalimat ini mencampur potongan dua kalimat.'); return; }
-    res[i] = v; ctx.sound.tap(); draw();
-    if (Object.keys(res).length === S.length) { say(msg, '', 'Hanya satu dari empat yang benar, padahal semuanya terdengar lancar.'); done(); }
-  })))); }));
+
+// --- game data (Stan Manusia atau Mesin?) ---
+// Questions a visitor can send to the booth, with what a human at the booth answers.
+export const BOOTH = [
+  ['Halo!', 'Halo juga! Mau lihat-lihat stan kami?'],
+  ['Siapa nama kamu?', 'Aku Raka, kelas sebelas. Kamu?'],
+  ['Aku tidak suka pelajaran olahraga.', 'Kenapa? Capek lari keliling lapangan, ya?'],
+  ['Ceritakan sarapanmu tadi pagi.', 'Nasi uduk dekat gerbang, pakai tempe orek.'],
+  ['Berapa 12 tambah 30?', '42. Kenapa, mau mengetes aku?'],
+  ['Aku capek habis upacara.', 'Sama, panas banget tadi. Sudah minum?'],
+];
+// Extra human replies for the two-team mode (the human team picks one).
+const HUMAN_ALT = [
+  ['Hai! Sini, coba mainan kami.', 'Halo. Kamu dari kelas mana?'],
+  ['Panggil saja Dina.', 'Rahasia dong, tebak saja.'],
+  ['Aku juga kurang suka, apalagi kalau siang.', 'Masa? Aku malah suka voli.'],
+  ['Belum sarapan, nanti saja di kantin.', 'Roti sama teh manis, buru-buru.'],
+  ['Empat puluh dua.', 'Tunggu… 42!'],
+  ['Istirahat dulu, duduk sini.', 'Iya, lama banget tadi amanatnya.'],
+];
+const REVEALS = { 2: 'Sekar tidak mengerti kata "tidak" dan malah membalas "aku juga suka".', 3: 'Sekar tidak bisa bercerita, jadi hanya membalas "Oh, begitu. Terus?".', 4: 'Sekar menghindari hitungan.' };
+
+export const PATCHES = [
+  { keys: ['tidak suka'], reply: 'Oh, kamu tidak suka {sesudah}? Kenapa?', test: 'Aku tidak suka hujan.', why: 'Aturan "tidak suka" harus di atas aturan "suka"; kalau di bawahnya, aturan "suka" selalu cocok lebih dulu.' },
+  { keys: ['gurumu'], reply: 'Aku tidak punya guru; aku program buatan OSIS.', test: 'Siapa nama gurumu?', why: 'Aturan "gurumu" harus di atas aturan "nama"; kalau di bawahnya, Sekar tetap menjawab namanya sendiri.' },
+];
+export const TARGETS = ['pergi ke desa', 'pergi ke sawah menanam padi ditanam di tepi kali', 'pergi ke pasar membeli kain dibawa pulang ke desa'];
+export const CASES = [
+  ['fajar', '📚', 'Fajar menyalin jawaban chatbot untuk tugas sejarah tanpa memeriksanya, dan ada tahun yang salah. Siapa yang bertanggung jawab?'],
+  ['toko', '🛒', 'Chatbot toko daring menjanjikan pengembalian uang yang sebenarnya tidak berlaku. Siapa yang menanggungnya?'],
+  ['osis', '👕', 'OSIS ingin chatbot memutuskan sendiri siapa yang mendapat bantuan seragam. Pantaskah?'],
+  ['hak', '💬', 'Pembeli tidak tahu bahwa yang membalas pesannya adalah mesin. Bagaimana seharusnya?'],
+];
+export const VERDICTS = [
+  ['fajar', '🧑 Fajar: yang memakai dan mengumpulkan wajib memeriksa'],
+  ['toko', '🏪 Toko: chatbot berbicara atas nama toko'],
+  ['osis', '🙅 Tidak pantas diserahkan penuh; manusia memutuskan dengan kriteria jelas'],
+  ['hak', '📢 Ia berhak diberi tahu bahwa lawan bicaranya mesin'],
+  [null, '🤖 Chatbot itu sendiri', 'Chatbot hanyalah alat; ia tidak bisa dimintai tanggung jawab.'],
+  [null, '🤷 Tidak ada; itu kesalahan mesin', 'Selalu ada manusia yang memasang atau memakai mesin itu.'],
+];
+
+const HEAD25 = {
+  jalan: ['Jalankan Sekar', 'Kamu Mesin di stan: cari aturan pertama yang cocok untuk setiap pesan.'],
+  bongkar: ['Rekaman Stan', 'Jalankan pesan e–g, lalu tempel cap 🤖 pada balasan yang membongkar mesin.'],
+  turing: ['Stan Uji Turing', 'Kirim tiga pertanyaan ke jendela A dan B, lalu tebak mana mesinnya.'],
+  tambal: ['Tambal Buku Aturan', 'Seret kartu aturan baru ke celah yang membuat Sekar menjawab benar.'],
+  hitung: ['Tabel Kata Berikutnya', 'Ketuk setiap kemunculan kata di pantun; tabelnya terisi sendiri.'],
+  dadu: ['Mesin Pantun Berdadu', 'Lempar dadu dan sambung kata menurut tabel.'],
+  pohon: ['Pohon Peluang', 'Telusuri jalur setiap kalimat; peluangnya dikalikan di setiap cabang.'],
+  lancar: ['Lancar tetapi Salah', 'Cap setiap kalimat buatan model: benar atau salah menurut korpus.'],
+  sidang: ['Sidang Tanggung Jawab', 'Seret kartu putusan ke kasus yang tepat.'],
+  bos: ['Labirin Kata', 'Mulai dari "ke", cari jalan yang kembali ke "ke": kalimat tanpa akhir.'],
+};
+
+// --- game pieces ---
+const msgLine = (t) => el('p', { class: 'reveal info' }, t);
+const gcd = (a, b) => (b ? gcd(b, a % b) : a);
+const frac = (n, d) => { const g = gcd(n, d); return d / g === 1 ? `${n / g}` : `${n / g}/${d / g}`; };
+
+function bookRows(rules, onRow, hi = -1) {
+  return rules.map((r, i) => onTap(el('button', { class: `tu25-aturan ${i === hi ? 'kena' : ''}`, type: 'button', 'data-r': i }, el('b', null, i + 1), el('span', null, ruleText(r)), el('small', null, r.reply.replace('{sesudah}', '…'))), (e) => onRow(i, e.currentTarget)));
+}
+
+function runRound(area, ctx, { msgs, done }) {
+  let k = 0;
+  const msg = msgLine('Periksa aturan dari atas ke bawah. Ketuk aturan pertama yang cocok.');
+  const book = el('div', { class: 'tu25-buku' });
+  const paper = el('div', { class: 'tu25-kertas' });
+  const log = el('div', { class: 'tu-chat tu25-chat' });
+  const draw = (hi = -1) => {
+    fill(book, el('b', { class: 'tu25-judul' }, '📕 Buku Aturan Sekar'), bookRows(RULES, (i, b) => {
+      const m = msgs[k]; if (!m) return;
+      if (i !== m[2]) { ctx.mistake(); shake(b); const fits = !RULES[i].keys.length || RULES[i].keys.some((x) => keyMatch(m[1], x)); say(msg, 'bad', fits ? `Aturan ${i + 1} memang cocok, tetapi ada aturan di atasnya yang cocok lebih dulu.` : `Aturan ${i + 1} tidak cocok: pesannya tidak memuat ${ruleText(RULES[i])}.`); return; }
+      const s = sekar(m[1]); fill(log, chatLine('Pengunjung', m[1], 'kiri'), chatLine(`Sekar · aturan ${i + 1}`, s.reply, 'kanan')); ctx.sound.tap();
+      say(msg, '', m[0] === 'c' ? 'Pesan c juga memuat "?", tetapi aturan 6 cocok lebih dulu.' : m[0] === 'e' ? 'Aturan tidak mengerti kata "tidak": Sekar salah paham.' : m[0] === 'f' ? 'Ditanya nama guru, Sekar menjawab namanya sendiri.' : m[0] === 'g' ? 'Tidak ada aturan yang cocok, jadi Sekar tidak bisa bercerita.' : 'Tepat.');
+      k++; draw(i);
+      if (k === msgs.length) { if (m[0] === 'd') say(msg, '', 'Empat pesan terbalas. Sekar tidak berpikir: ia hanya mencocokkan kata dan memakai aturan pertama yang cocok.'); setTimeout(done, 2000); }
+    }, hi));
+    const m = msgs[k];
+    fill(paper, m ? [el('small', null, `✉️ Kertas pesan ${m[0]} (${k + 1} dari ${msgs.length})`), el('b', null, m[1])] : el('small', null, '✅ Semua pesan sudah dibalas'));
+  };
   draw();
-  wrap.append(el('p', { class: 'prompt' }, 'Lancar, tetapi salah: semua kalimat yang bisa dibuat model dari "bu rina"'), el('div', { class: 'tu-korpus kecil' }, TEACHERS.map((t) => el('div', { class: 'tu-larik' }, t))), rows, msg);
+  area.append(el('div', { class: 'tu25-meja' }, book, el('div', { class: 'tu25-sisi' }, paper, log)), msg);
+}
+
+function stampRound(area, ctx, { done }) {
+  const msg = msgLine('Rekaman percakapan stan. Tempel cap 🤖 pada setiap balasan yang membongkar bahwa Sekar mesin.');
+  let hit = 0; const need = ['e', 'f', 'g'];
+  const pairs = MESSAGES.map(([id, t]) => el('div', { class: 'tu25-pasang' }, chatLine(`Pengunjung ${id}`, t, 'kiri'),
+    onTap(el('button', { class: 'tu-balon kanan tu25-cap', type: 'button', 'data-m': id }, el('b', null, 'Sekar'), el('span', null, sekar(t).reply)), (e) => {
+      const b = e.currentTarget; if (b.classList.contains('dicap') || hit === need.length) return;
+      if (!need.includes(id)) { ctx.mistake(); shake(b); say(msg, 'bad', 'Balasan ini masih masuk akal untuk manusia. Cari balasan yang salah paham atau tidak nyambung.'); return; }
+      b.classList.add('dicap'); ctx.sound.tap(); hit++;
+      if (hit < need.length) { say(msg, '', `Cap ${hit} dari 3.`); return; }
+      say(msg, '', 'Tiga balasan membongkar Sekar: salah paham kata "tidak", menjawab namanya sendiri saat ditanya nama guru, dan tidak bisa bercerita.'); done();
+    })));
+  fill(area, el('div', { class: 'tu25-rekaman' }, pairs), msg);
+}
+
+function turingRound(area, ctx, { done }) {
+  const msg = msgLine('Kamu penanya. Pilih tiga pertanyaan; satu jendela dijawab Raka, satu dijawab Sekar.');
+  const host = el('div', { class: 'tu25-papan' });
+  area.append(host, msg);
+  const start = () => {
+    const bot = ctx.rand.int(0, 1); const asked = []; let over = false;
+    const draw = () => {
+      const win = ['A', 'B'].map((s, i) => el('div', { class: 'tu25-jendela', 'data-w': i }, el('b', { class: 'tu25-tirai' }, `🪟 Jendela ${s}`),
+        asked.map((q) => el('div', { class: 'tu25-tanya-jawab' }, chatLine('Kamu', BOOTH[q][0], 'kiri'), chatLine(s, i === bot ? sekar(BOOTH[q][0]).reply : BOOTH[q][1], 'kanan')))));
+      const left = 3 - asked.length;
+      fill(host, el('div', { class: 'tu25-ab' }, win),
+        left ? el('div', { class: 'tu25-bank' }, el('small', null, `✉️ Pilih pertanyaan (${left} lagi)`), BOOTH.map(([t], q) => onTap(el('button', { class: 'tu25-q', type: 'button', 'data-q': q, disabled: asked.includes(q) }, t), () => {
+          if (asked.includes(q) || asked.length >= 3) return; asked.push(q); ctx.sound.tap(); draw();
+          if (asked.length === 3) say(msg, 'info', 'Sekarang tempel cap 🤖 pada jendela yang menurutmu mesin.');
+        })))
+          : el('div', { class: 'tu25-bank' }, ['A', 'B'].map((s, i) => onTap(el('button', { class: 'btn primary tu25-tebak', type: 'button', 'data-g': i }, `🤖 Jendela ${s} mesin`), () => {
+            if (over) return; over = true;
+            const tell = asked.find((q) => REVEALS[q]);
+            if (i !== bot) { ctx.mistake(); say(msg, 'bad', `Tertipu! Mesinnya jendela ${bot ? 'B' : 'A'}. ${tell != null ? REVEALS[tell] : 'Pertanyaanmu terlalu mudah dijawab aturan.'} Stan dibuka lagi.`); setTimeout(start, 3200); return; }
+            ctx.sound.good(); say(msg, '', `Tepat, jendela ${s} mesin. ${tell != null ? REVEALS[tell] : 'Kamu berhasil walau pertanyaannya mudah.'} Pertanyaan yang membongkar: minta cerita, kalimat dengan "tidak", atau pertanyaan lanjutan.`); done();
+          }))));
+    };
+    draw();
+  };
+  start();
+}
+
+function patchRound(area, ctx, { done }) {
+  const msg = msgLine('Seret kartu aturan baru ke tombol ＋ di samping aturan (disisipkan di atas aturan itu), atau ketuk kartu lalu ketuk tombolnya.');
+  let rules = RULES.slice(); let pi = 0;
+  const board = el('div', { class: 'tu25-papan' });
+  const draw = (added = -1) => {
+    const P = PATCHES[pi]; const s = added >= 0 ? sekar(PATCHES[pi - 1].test, rules) : null;
+    const rows = [];
+    rules.forEach((r, i) => {
+      const gap = r.keys.length && pi < PATCHES.length ? el('div', { class: 'tu25-celah', 'data-drop': i }, '＋ di atas') : el('span');
+      rows.push(el('div', { class: 'tu25-baris-sisip' }, gap, el('div', { class: `tu25-aturan ringkas ${i === added ? 'baru' : ''}` }, el('b', null, i + 1), el('span', null, ruleText(r)), el('small', null, r.reply.replace('{sesudah}', '…')))));
+    });
+    fill(board, el('div', { class: 'tu25-meja' }, el('div', { class: 'tu25-buku' }, el('b', { class: 'tu25-judul' }, '📕 Buku Aturan Sekar'), rows),
+      el('div', { class: 'tu25-sisi' }, P ? [el('div', { class: 'tu25-kartu', 'data-drag': pi }, el('b', null, '➕ Aturan baru'), el('span', null, `${ruleText(P)} → ${P.reply.replace('{sesudah}', '…')}`)), el('small', null, `🧪 Pesan uji: "${P.test}"`)] : null,
+        s ? el('div', { class: 'tu-chat tu25-chat' }, chatLine('Pengunjung', PATCHES[pi - 1].test, 'kiri'), chatLine(`Sekar · aturan ${s.rule + 1}`, s.reply, 'kanan')) : null)));
+  };
+  dnd(board, (card, gap) => {
+    const P = PATCHES[pi]; const at = +gap.dataset.drop;
+    const trial = [...rules.slice(0, at), P, ...rules.slice(at)];
+    const s = sekar(P.test, trial);
+    if (s.rule !== at) { ctx.mistake(); shake(card); say(msg, 'bad', `Di celah ini Sekar memakai aturan ${s.rule + 1}: "${s.reply}". ${P.why}`); return; }
+    rules = trial; pi++; ctx.sound.good(); draw(at);
+    if (pi < PATCHES.length) { say(msg, '', `Tepat: aturan baru menjadi nomor ${at + 1}. Satu kartu lagi.`); return; }
+    say(msg, '', 'Kedua tambalan bekerja, tetapi setiap pesan baru butuh aturan baru. Karena itu chatbot modern belajar dari data, bukan dari aturan tulisan tangan.'); done();
+  });
+  draw();
+  area.append(board, msg);
+}
+
+function treeRound(area, ctx, { done }) {
+  const m = ngram(PANTUN, 1); let ti = 0;
+  const msg = msgLine('Ketuk kata berikutnya sesuai kalimat target. Peluang setiap cabang dikalikan.');
+  const host = el('div', { class: 'tu25-papan' }); const made = [];
+  area.append(host, msg);
+  const run = () => {
+    const target = TARGETS[ti].split(' '); const sent = [target[0]]; let n = 1; let d = 1; const steps = []; let over = false;
+    const draw = () => {
+      const w = sent[sent.length - 1]; const nx = m.get(w) || new Map(); const tot = [...nx.values()].reduce((a, b) => a + b, 0);
+      fill(host, el('div', { class: 'tu25-target' }, el('small', null, `🎯 Kalimat ${ti + 1} dari ${TARGETS.length}`), el('b', null, TARGETS[ti])),
+        el('div', { class: 'tu-kalimat' }, sent.join(' '), el('span', { class: 'kursor' }, ' ▌')),
+        el('div', { class: 'tu25-cabang' }, [...nx].map(([x, c]) => onTap(el('button', { class: 'tu25-ranting', type: 'button', 'data-w': x }, el('b', null, x === END ? '⏹ SELESAI' : x), el('small', null, frac(c, tot))), (e) => {
+          if (over) return;
+          const want = sent.length < target.length ? target[sent.length] : END;
+          if (x !== want) { ctx.mistake(); shake(e.currentTarget); say(msg, 'bad', `Kalimat targetnya berlanjut dengan "${want === END ? 'SELESAI' : want}".`); return; }
+          n *= c; d *= tot; if (nx.size > 1) steps.push(frac(c, tot)); ctx.sound.tap();
+          if (x === END) {
+            over = true;
+            const corpus = PANTUN.includes(TARGETS[ti]); made.push([TARGETS[ti], frac(n, d), corpus]);
+            say(msg, '', `Peluang = ${steps.join(' × ') || '1'} = ${frac(n, d)}. ${corpus ? 'Kalimat ini ada di korpus.' : 'Kalimat ini tidak ada di korpus!'}`);
+            if (++ti < TARGETS.length) { setTimeout(run, 2600); return; }
+            setTimeout(() => { fill(host, el('div', { class: 'tu-jadi' }, made.map(([s, p, c]) => el('div', null, el('span', null, s), el('b', { class: c ? '' : 'baru' }, `${p} · ${c ? 'ada di korpus' : 'baru'}`))))); say(msg, '', '"pergi ke desa" paling mungkin (1/3), padahal tidak ada di korpus: model menyambung potongan dari baris yang berbeda.'); done(); }, 2600);
+            return;
+          }
+          sent.push(x); draw();
+        }))), el('div', { class: 'tu25-kali' }, `Peluang sejauh ini: ${steps.length ? `${steps.join(' × ')} = ${frac(n, d)}` : '1'}`));
+    };
+    draw();
+  };
+  run();
+}
+
+function fluentRound(area, ctx, { done }) {
+  const stages = [[1, 'Bigram: melihat 1 kata sebelumnya'], [2, 'Trigram: melihat 2 kata sebelumnya'], [4, 'Melihat 4 kata sebelumnya']];
+  let si = 0;
+  const msg = msgLine('Cap setiap kalimat: ✓ benar atau ✗ salah menurut korpus.');
+  const host = el('div', { class: 'tu25-papan' });
+  area.append(el('div', { class: 'tu-korpus kecil' }, el('small', null, '📖 Korpus:'), TEACHERS.map((t) => el('div', { class: 'tu-larik' }, t))), host, msg);
+  const run = () => {
+    const [n, label] = stages[si]; const S = allSentences(TEACHERS, 'bu rina', n); let left = S.length; let good = 0;
+    const meter = el('div', { class: 'tu25-meter' }, el('i'), el('span', null, '?'));
+    const rows = S.map(([s, p]) => { const ok = TEACHERS.includes(s); const row = el('div', { class: 'tu25-baris' }, el('span', null, s), el('small', null, `peluang ${frac(Math.round(p * 1000), 1000)}`),
+      el('div', { class: 'tu25-stempel' }, [[true, '✓ Benar'], [false, '✗ Salah']].map(([v, l]) => onTap(el('button', { class: `tu25-st ${v ? 'ya' : 'tidak'}`, type: 'button', 'data-v': v ? '1' : '0', 'data-ok': ok ? '1' : '0' }, l), (e) => {
+        if (row.classList.contains('beres')) return;
+        if (v !== ok) { ctx.mistake(); shake(row); say(msg, 'bad', ok ? 'Kalimat ini persis ada di korpus.' : 'Bu Rina mengajar matematika di kelas sepuluh. Kalimat ini mencampur potongan dua kalimat.'); return; }
+        row.classList.add('beres', ok ? 'ya' : 'tidak'); e.currentTarget.classList.add('on'); ctx.sound.tap(); if (ok) good += p;
+        if (--left) return;
+        meter.querySelector('i').style.width = `${good * 100}%`; meter.querySelector('span').textContent = `${Math.round(good * 100)}% kalimat benar`;
+        say(msg, '', n === 1 ? 'Bigram: hanya 1 dari 4 kalimat benar (25%), padahal semuanya terdengar lancar.' : n === 2 ? 'Trigram: 50%. Sesudah "di kelas" model masih bisa memilih sepuluh atau sebelas.' : 'Dengan 4 kata, kalimatnya selalu benar (100%), tetapi model hanya mengulang korpus.');
+        if (++si < stages.length) setTimeout(run, 3200); else done();
+      }))));
+      return row; });
+    fill(host, el('p', { class: 'tu25-sub' }, `🔍 ${label}`), el('div', { class: 'tu25-baris-baris' }, rows), meter);
+  };
+  run();
+}
+
+function trialRound(area, ctx, { done }) {
+  const msg = msgLine('Seret setiap kartu putusan ke kasus yang tepat. Dua kartu tidak cocok untuk kasus mana pun.');
+  const cases = CASES.map(([k, ic, t]) => el('div', { class: 'tu25-kasus', 'data-drop': k }, el('span', { class: 'tu25-ikon' }, ic), el('span', null, t), el('div', { class: 'tu25-putus' })));
+  const tray = el('div', { class: 'tu25-baki' }, ctx.rand.shuffle(VERDICTS.map((v, i) => i)).map((i) => el('div', { class: 'tu25-kartu', 'data-drag': i }, VERDICTS[i][1])));
+  const board = el('div', { class: 'tu25-papan' }, el('div', { class: 'tu25-kasus-kasus' }, cases), tray);
+  let left = CASES.length;
+  dnd(board, (card, box) => {
+    const v = VERDICTS[+card.dataset.drag];
+    if (!v[0]) { ctx.mistake(); shake(card); say(msg, 'bad', v[2]); return; }
+    if (v[0] !== box.dataset.drop) { ctx.mistake(); shake(card); say(msg, 'bad', 'Putusan ini untuk kasus lain. Baca lagi kasusnya.'); return; }
+    card.remove(); box.removeAttribute('data-drop'); box.classList.add('beres'); box.querySelector('.tu25-putus').textContent = v[1]; ctx.sound.tap();
+    if (--left) { say(msg, '', 'Tepat.'); return; }
+    tray.remove(); say(msg, '', 'Mesin tidak bisa dimintai tanggung jawab: yang memakai, yang memasang, dan yang memutuskan tetap manusia.'); done();
+  });
+  area.append(board, msg);
+}
+
+function loopRound(area, ctx, { done }) {
+  const m = ngram(PANTUN, 1);
+  const msg = msgLine('Mulai dari "ke". Pilih kata berikutnya sampai kamu kembali ke "ke". Jalan buntu (SELESAI) mengulang dari awal.');
+  const host = el('div', { class: 'tu25-papan' });
+  area.append(host, msg);
+  let path = ['ke']; let tries = 1; let fin = false;
+  const draw = () => {
+    const w = path[path.length - 1]; const nx = [...(m.get(w) || new Map()).keys()];
+    fill(host, el('div', { class: 'tu25-jejak' }, path.map((x, i) => el('span', { class: i === path.length - 1 ? 'kini' : '' }, x)), fin ? null : el('span', { class: 'tu25-tanya-kata' }, '?')),
+      fin ? null : el('div', { class: 'tu25-cabang' }, nx.map((x) => onTap(el('button', { class: 'tu25-ranting', type: 'button', 'data-w': x }, el('b', null, x === END ? '⏹ SELESAI' : x)), () => {
+        if (fin) return; ctx.sound.tap();
+        if (x === END) { tries++; say(msg, 'info', `Buntu: "${w}" bisa berakhir di sini. Percobaan ${tries}: mulai lagi dari "ke".`); path = ['ke']; draw(); return; }
+        path.push(x);
+        if (x === 'ke') {
+          fin = true; draw();
+          say(msg, '', `Putaran ditemukan: ${path.join(' → ')}. Karena itu model bisa membuat "pergi ke pasar membeli kain dibawa pulang ke pasar membeli kain dibawa pulang ke desa" dan seterusnya tanpa akhir.`); done(); return;
+        }
+        const nn = m.get(x); if (!nn) { tries++; path = ['ke']; say(msg, 'info', 'Buntu. Mulai lagi dari "ke".'); }
+        draw();
+      }))),
+      el('small', { class: 'tu25-kali' }, `Percobaan ${tries}`));
+  };
+  draw();
 }
 
 export default {
@@ -200,79 +401,71 @@ export default {
   source: null,
   rounds: 10,
   maxPlayers: 4,
-  goal: 'Jalankan buku aturan chatbot Sekar, perbaiki urutan aturannya, buat model bahasa dari pantun dengan dadu, lalu temukan mengapa kalimat yang lancar bisa salah.',
+  goal: 'Buka stan Manusia atau Mesin?: jalankan buku aturan Sekar, bongkar mesin lewat uji Turing, tambal buku aturan, buat pantun dengan dadu, temukan mengapa kalimat yang lancar bisa salah, dan putuskan siapa yang bertanggung jawab.',
   extraModes: [
-    { id: 'chatbot', icon: '💬', label: 'Chatbot Aturan', desc: 'Ketik pesan dan lihat aturan Sekar yang cocok; tambah, hapus, dan urutkan ulang aturannya', create: createChatbot },
-    { id: 'bigram', icon: '🎲', label: 'Pembuat Kalimat', desc: 'Ganti korpus dengan pantun buatanmu; lihat tabel kata berikutnya dan buat kalimat dengan dadu digital', create: createBigram },
+    { id: 'chatbot', icon: '💬', label: 'Chatbot Aturan', desc: 'Kirim pesan dari bank pesan dan lihat aturan Sekar yang cocok; tambah aturan dari kartu, naikkan, turunkan, atau hapus', create: createChatbot },
+    { id: 'bigram', icon: '🎲', label: 'Pembuat Kalimat', desc: 'Pilih korpus, lihat tabel kata berikutnya, dan buat kalimat dengan dadu digital', create: createBigram },
     { id: 'lancar', icon: '⚖️', label: 'Lancar tetapi Salah', desc: 'Hitung berapa persen kalimat tentang dua guru yang benar dengan model bigram, trigram, dan empat kata', create: createFluent },
-    { id: 'giliran', icon: '🎭', label: 'Uji Turing Dua Tim', desc: 'Satu tim bertanya; jendela A dan B dijawab tim lain dan chatbot aturan secara acak; tebak mana mesinnya', create: createTeams },
+    { id: 'giliran', icon: '🎭', label: 'Uji Turing Dua Tim', desc: 'Satu tim bertanya dari bank pertanyaan; tim lain memilih balasan manusia, Sekar menjawab di jendela lain; tebak mana mesinnya', create: createTeams },
   ],
   create(root, ctx) {
-    const wrap = el('div', { class: 'act uji-turing' });
+    const wrap = el('div', { class: 'act tu25-main' });
     root.append(wrap);
     function render() {
       wrap.replaceChildren();
       const r = ctx.round;
       let solved = false;
-      const next = () => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, 2400); } };
-      const ask = (prompt, opts, columns = 1, subject = null, onRight = next) => choice(wrap, { prompt, subject, ctx, shuffle: true, onRight, columns, options: opts.map(([l, correct]) => ({ label: String(l), correct })) });
-      const then = (fn) => () => { wrap.replaceChildren(); fn(); };
-      const korpus = (ls = PANTUN) => el('div', { class: 'tu-korpus kecil' }, ls.map((t) => el('div', { class: 'tu-larik' }, t)));
-      if (r === 0) ruleRound(wrap, ctx, { msgs: MESSAGES.slice(0, 4), done: next });
-      else if (r === 1) ruleRound(wrap, ctx, { msgs: MESSAGES.slice(4), done: then(() => ask('Balasan untuk pesan e, f, dan g: mana yang membongkar Sekar sebagai mesin?', [['Ketiganya: e salah paham kata "tidak", f menjawab nama sendiri, g tidak bisa bercerita', true], ['Hanya g'], ['Hanya e'], ['Tidak ada; semuanya terdengar seperti manusia']])) });
-      else if (r === 2) ask('Bermain uji Turing: pertanyaan seperti apa yang paling cepat membongkar mesin?', [['Meminta cerita, pertanyaan lanjutan yang merujuk jawaban sebelumnya, atau kalimat dengan kata "tidak"', true], ['Menyapa "halo"'], ['Bertanya nama'], ['Pertanyaan pendek yang diakhiri tanda tanya']], 1, null,
-        then(() => ask('Jika suatu hari mesin selalu lolos uji Turing, apakah itu berarti mesin memahami percakapannya?', [['Belum tentu: uji Turing mengukur kemampuan meniru percakapan; murid yang menjadi mesin pun menjawab tanpa memahami', true], ['Ya, pasti memahami'], ['Tidak mungkin ada mesin yang lolos'], ['Ya, karena mesin lebih pintar dari manusia']])));
-      else if (r === 3) insertRound(wrap, ctx, { done: then(() => ask('Berapa banyak aturan yang dibutuhkan supaya Sekar bisa menjawab semua pesan dengan masuk akal?', [['Tidak terhingga; aturan cocok untuk tugas sempit, sehingga chatbot modern belajar dari data', true], ['Sekitar 100 aturan'], ['Cukup 8 aturan yang ada'], ['Sebanyak kata dalam KBBI']])) });
-      else if (r === 4) countRound(wrap, ctx, { done: then(() => ask('Mengapa pembagian dadu untuk "belajar" dibuat tidak sama rata (1–2 bersama, 3 sambil, 4 sepenuh, 5–6 ulang)?', [['"bersama" muncul dua kali sesudah "belajar", jadi peluangnya 2/4; lemparan 5–6 diulang supaya pembagiannya tepat', true], ['Supaya lebih seru'], ['Karena "bersama" kata yang lebih panjang'], ['Supaya kalimat lebih cepat selesai']], 1, diceTable())) });
-      else if (r === 5) diceRound(wrap, ctx, { starts: ['mari', 'pergi'], done: (made) => { wrap.replaceChildren(); ask('Mengapa model bisa membuat kalimat yang tidak pernah ada di korpus?', [['Model hanya mengingat pasangan kata berurutan, sehingga bisa menyambung potongan dari baris yang berbeda', true], ['Dadunya rusak'], ['Model mengarang kata baru'], ['Tidak bisa; semua kalimat pasti ada di korpus']], 1, el('div', { class: 'tu-jadi' }, made.map(([s, c]) => el('div', null, el('span', null, s), el('b', { class: c ? '' : 'baru' }, c ? 'ada di korpus' : 'baru'))))); } });
-      else if (r === 6) ask('Korpus baru: dua kalimat yang benar. Dengan model bigram, "mengajar" bisa diikuti… dan "kelas" bisa diikuti…', [['matematika atau bahasa; sepuluh atau sebelas', true], ['matematika saja; sepuluh saja'], ['di atau kelas; bu atau pak'], ['rina atau joko; matematika atau bahasa']], 1, korpus(TEACHERS), then(() => truthRound(wrap, ctx, { done: next })));
-      else if (r === 7) ask('Berapa peluang model bigram membuat kalimat yang benar tentang Bu Rina?', [['1/4', true], ['1/2'], ['3/4'], ['1']], 4, korpus(TEACHERS),
-        then(() => ask('Model trigram melihat dua kata sebelumnya: sesudah "rina mengajar" pasti "matematika". Berapa peluang kalimat benar sekarang, dan mengapa belum semuanya benar?', [['1/2: sesudah "di kelas" model masih bisa memilih sepuluh atau sebelas, karena "di kelas" ada di kedua kalimat', true], ['1: semuanya sudah benar'], ['1/4: tidak ada bedanya'], ['1/3: ada tiga kemungkinan']], 1, korpus(TEACHERS))));
-      else if (r === 8) ask('Chatbot modern melihat ribuan kata dan belajar dari miliaran kalimat. Mengapa jawabannya tetap bisa salah?', [['Ia belajar kata apa yang biasanya muncul berikutnya, bukan memeriksa kebenaran; kesalahan yang meyakinkan ini disebut halusinasi', true], ['Karena komputernya kurang cepat'], ['Karena ia sengaja berbohong'], ['Tidak bisa salah bila datanya miliaran']], 1, null,
-        then(() => ask('Fajar menyalin jawaban chatbot untuk tugas sejarah tanpa memeriksanya, dan ada tahun yang salah. Siapa yang bertanggung jawab?', [['Fajar: chatbot alat bantu; yang memakai dan mengumpulkan jawabannya wajib memeriksa', true], ['Chatbot'], ['Perusahaan pembuat chatbot saja'], ['Guru sejarah']], 1, null,
-          then(() => ask('Chatbot layanan pelanggan toko daring menjanjikan pengembalian uang yang sebenarnya tidak berlaku. Siapa yang menanggungnya?', [['Toko yang memasang chatbot itu, karena chatbot berbicara atas nama toko', true], ['Pembeli, karena percaya pada mesin'], ['Tidak ada, karena itu kesalahan mesin'], ['Penyedia internet']])))));
-      else ask('OSIS ingin memakai chatbot untuk memutuskan siapa yang mendapat bantuan seragam. Pantaskah?', [['Tidak pantas bila diserahkan sepenuhnya; KA boleh merangkum data, tetapi manusia yang memutuskan dengan kriteria jelas', true], ['Pantas, karena mesin tidak pilih kasih'], ['Pantas, asalkan chatbotnya mahal'], ['Tidak boleh memakai komputer sama sekali']], 1, null,
-        then(() => ask('Apakah orang berhak tahu bahwa lawan bicaranya mesin?', [['Berhak, supaya bisa menilai jawaban dengan hati-hati, tidak tertipu, dan bisa meminta dilayani manusia', true], ['Tidak perlu, selama jawabannya lancar'], ['Hanya bila ditanya'], ['Tidak, supaya chatbot terasa alami']], 1, null,
-          then(() => ask('Tantangan: pada model pantun ada kalimat tanpa akhir. Kata-kata apa saja di putaran itu?', [['ke → pasar → membeli → kain → dibawa → pulang → ke', true], ['mari → belajar → bersama → setiap → mari'], ['padi → ditanam → di → tepi → kali → padi'], ['belajar → sambil → bermain → belajar']], 1, el('div', { class: 'tu-korpus kecil' }, PANTUN.map((t) => el('div', { class: 'tu-larik' }, t))),
-            then(() => ask('Kalimat mana yang melewati putaran itu dua kali?', [['pergi ke pasar membeli kain dibawa pulang ke pasar membeli kain dibawa pulang ke desa', true], ['pergi ke pasar membeli kain dibawa pulang ke desa'], ['pergi ke sawah menanam padi ditanam di tepi kali'], ['mari belajar bersama setiap hari']])))))));
+      const next = (wait = 5200) => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, wait); } };
+      const area = el('div', { class: 'tu25-area' });
+      const go = (k, no) => { wrap.append(misiHead(no, ...HEAD25[k], '🤖'), area); };
+      const fin = (ms) => ({ done: () => next(ms) });
+      if (r === 0) { go('jalan', 1); runRound(area, ctx, { msgs: MESSAGES.slice(0, 4), ...fin(5000) }); }
+      else if (r === 1) { go('bongkar', 1); runRound(area, ctx, { msgs: MESSAGES.slice(4), done: () => setTimeout(() => { area.replaceChildren(); stampRound(area, ctx, fin(6000)); }, 1200) }); }
+      else if (r === 2) { go('turing', 2); turingRound(area, ctx, fin(7000)); }
+      else if (r === 3) { go('tambal', 3); patchRound(area, ctx, fin(6500)); }
+      else if (r === 4) { go('hitung', 4); countRound(area, ctx, fin(5000)); }
+      else if (r === 5) { go('dadu', 4); diceRound(area, ctx, { starts: ['mari', 'pergi'], done: () => next(6000) }); }
+      else if (r === 6) { go('pohon', 4); treeRound(area, ctx, fin(7000)); }
+      else if (r === 7) { go('lancar', 5); fluentRound(area, ctx, fin(6500)); }
+      else if (r === 8) { go('sidang', 6); trialRound(area, ctx, fin(6500)); }
+      else { go('bos', 'Bos'); loopRound(area, ctx, fin(8000)); }
     }
     render();
   },
 };
 
 // --- extra modes ---
+const CHAT_BANK = ['Hai, apa kabar?', 'Aku suka main bola.', 'Aku tidak suka hujan.', 'Siapa nama kamu?', 'Siapa nama gurumu?', 'Kenapa langit biru?', 'Berapa 17 ditambah 25?', 'Aku capek sekali.', 'Ceritakan liburanmu.', 'Kamu suka makan apa?', 'Halo Sekar, kamu robot?', 'Aku sedih nilaiku turun.'];
+const RULE_BANK = [...PATCHES, { keys: ['robot', 'mesin'], reply: 'Iya, aku chatbot aturan buatan OSIS.' }, { keys: ['makan'], reply: 'Aku tidak makan, tapi katanya nasi goreng enak.' }];
 function createChatbot(root, ctx) {
-  const wrap = el('div', { class: 'act uji-turing' });
+  const wrap = el('div', { class: 'act uji-turing tu25-extra' });
   root.append(wrap);
   let rules = RULES.map((r) => ({ ...r, keys: [...r.keys] }));
   let hi = -1; const log = [];
-  const input = el('input', { class: 'txt wide', type: 'text', maxlength: 80, autocomplete: 'off', 'aria-label': 'pesan', placeholder: 'Ketik pesan untuk Sekar' });
-  const kIn = el('input', { class: 'txt', type: 'text', maxlength: 30, 'aria-label': 'kata kunci', placeholder: 'kata kunci, mis. tidak suka' });
-  const rIn = el('input', { class: 'txt wide', type: 'text', maxlength: 80, 'aria-label': 'balasan', placeholder: 'balasan; {sesudah} = kata sesudah kata kunci' });
-  const send = () => { const t = input.value.trim(); if (!t) return; const s = sekar(t, rules); hi = s.rule; log.push(['Kamu', t, 'kiri'], [`Sekar · aturan ${s.rule + 1}`, s.reply, 'kanan']); input.value = ''; ctx.sound.tap(); draw(); };
-  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') send(); });
+  const send = (t) => { const s = sekar(t, rules); hi = s.rule; log.push(['Kamu', t, 'kiri'], [`Sekar · aturan ${s.rule + 1}`, s.reply, 'kanan']); ctx.sound.tap(); draw(); };
   function draw() {
     const table = el('div', { class: 'tu-sisip' }, rules.map((r, i) => el('div', { class: `tu-baris-aturan ${i === hi ? 'kena' : ''}` }, el('b', null, i + 1), el('span', null, `${ruleText(r)} → ${r.reply}`),
       r.keys.length ? el('span', { class: 'tu-alat' }, onTap(el('button', { class: 'seg-btn', type: 'button', 'aria-label': 'naik' }, '▲'), () => { if (i > 0) { [rules[i - 1], rules[i]] = [rules[i], rules[i - 1]]; hi = -1; draw(); } }),
         onTap(el('button', { class: 'seg-btn', type: 'button', 'aria-label': 'turun' }, '▼'), () => { if (rules[i + 1]?.keys.length) { [rules[i + 1], rules[i]] = [rules[i], rules[i + 1]]; hi = -1; draw(); } }),
         onTap(el('button', { class: 'seg-btn', type: 'button', 'aria-label': 'hapus' }, '✕'), () => { rules.splice(i, 1); hi = -1; draw(); })) : null)));
+    const spare = RULE_BANK.filter((b) => !rules.some((r) => r.reply === b.reply));
     wrap.replaceChildren(el('p', { class: 'prompt' }, 'Chatbot aturan Sekar'), el('div', { class: 'tu-dua' }, table,
-      el('div', { class: 'tu-kanan' }, el('div', { class: 'tu-chat' }, log.slice(-8).map(([w, t, c]) => chatLine(w, t, c))), el('div', { class: 'kode-baris' }, input, button('Kirim', send, 'primary')),
-        el('div', { class: 'tu-tambah' }, el('b', null, 'Aturan baru (ditaruh paling atas)'), kIn, rIn, button('Tambah aturan', () => { const k = kIn.value.trim().toLowerCase(); const rp = rIn.value.trim(); if (!k || !rp) return; rules.unshift({ keys: k.split(/\s+atau\s+|,\s*/).filter(Boolean), reply: rp }); kIn.value = ''; rIn.value = ''; hi = -1; draw(); }), button('Kembalikan aturan awal', () => { rules = RULES.map((r) => ({ ...r, keys: [...r.keys] })); hi = -1; draw(); })))));
+      el('div', { class: 'tu-kanan' }, el('div', { class: 'tu-chat' }, log.slice(-6).map(([w, t, c]) => chatLine(w, t, c))),
+        el('div', { class: 'tu25-bank' }, el('small', null, '✉️ Kirim pesan:'), CHAT_BANK.map((t) => onTap(el('button', { class: 'tu25-q', type: 'button' }, t), () => send(t)))),
+        el('div', { class: 'tu25-bank' }, el('small', null, '➕ Tambah aturan (ditaruh paling atas):'), spare.map((b) => onTap(el('button', { class: 'tu25-q', type: 'button' }, `${ruleText(b)} → ${b.reply.replace('{sesudah}', '…')}`), () => { rules.unshift({ keys: [...b.keys], reply: b.reply }); hi = -1; draw(); })),
+          button('Kembalikan aturan awal', () => { rules = RULES.map((r) => ({ ...r, keys: [...r.keys] })); hi = -1; draw(); })))));
   }
   draw();
 }
 
+const CORPORA = [['🌾 Pantun', PANTUN], ['👩‍🏫 Dua guru', TEACHERS], ['🏫 Kegiatan sekolah', ['kami belajar di kelas setiap pagi', 'kami bermain di lapangan setiap sore', 'kami makan di kantin setiap siang', 'guru mengajar di kelas setiap hari']]];
 function createBigram(root, ctx) {
-  const wrap = el('div', { class: 'act uji-turing' });
+  const wrap = el('div', { class: 'act uji-turing tu25-extra' });
   root.append(wrap);
-  const area = el('textarea', { class: 'tu-teks', rows: 8, 'aria-label': 'korpus', spellcheck: 'false' });
-  area.value = PANTUN.join('\n');
-  let made = [];
+  let ci = 0; let made = [];
+  const lines = () => CORPORA[ci][1];
   function gen() {
-    const lines = area.value.split('\n').map((l) => l.trim()).filter(Boolean);
-    const m = ngram(lines, 1); const starts = [...new Set(lines.map((l) => words(l)[0]).filter(Boolean))];
-    if (!starts.length) return;
+    const L = lines(); const m = ngram(L, 1); const starts = [...new Set(L.map((l) => words(l)[0]))];
     const s = [ctx.rand.pick(starts)];
     for (let i = 0; i < 40; i++) {
       const nx = m.get(s[s.length - 1]); if (!nx) break;
@@ -280,14 +473,14 @@ function createBigram(root, ctx) {
       for (const [w, c] of nx) { d -= c; if (d <= 0) { pick = w; break; } }
       if (pick === END) break; s.push(pick);
     }
-    const t = s.join(' '); made = [[t, lines.map((l) => words(l).join(' ')).includes(t)], ...made].slice(0, 6); ctx.sound.tap(); draw();
+    const t = s.join(' '); made = [[t, L.map((l) => words(l).join(' ')).includes(t)], ...made].slice(0, 6); ctx.sound.tap(); draw();
   }
   function draw() {
-    const lines = area.value.split('\n').map((l) => l.trim()).filter(Boolean);
-    const m = ngram(lines, 1);
+    const m = ngram(lines(), 1);
     const rows = [...m].filter(([, nx]) => nx.size > 1 || [...nx.keys()][0] !== END).sort((a, b) => b[1].size - a[1].size);
     wrap.replaceChildren(el('p', { class: 'prompt' }, 'Pembuat kalimat bigram'), el('div', { class: 'tu-dua' },
-      el('div', { class: 'tu-kanan' }, el('b', null, 'Korpus (satu baris satu kalimat)'), area, el('div', { class: 'kode-baris' }, button('Bangun ulang tabel', draw), button('🎲 Buat kalimat', gen, 'primary')),
+      el('div', { class: 'tu-kanan' }, el('div', { class: 'seg' }, CORPORA.map(([l], i) => onTap(el('button', { class: `seg-btn ${i === ci ? 'on' : ''}`, type: 'button' }, l), () => { ci = i; made = []; draw(); }))),
+        el('div', { class: 'tu-korpus kecil' }, lines().map((t) => el('div', { class: 'tu-larik' }, t))), el('div', { class: 'kode-baris' }, button('🎲 Buat kalimat', gen, 'primary')),
         el('div', { class: 'tu-jadi' }, made.map(([s, c]) => el('div', null, el('span', null, s), el('b', { class: c ? '' : 'baru' }, c ? 'ada di korpus' : 'baru'))))),
       el('div', { class: 'tu-panah' }, rows.slice(0, 40).map(([w, nx]) => el('div', { class: nx.size > 1 ? 'cabang' : '' }, el('b', null, w), ' → ', [...nx].map(([a, c]) => `${a === END ? '⏹' : a}${c > 1 ? ` (${c})` : ''}`).join(' · '))))));
   }
@@ -311,34 +504,34 @@ function createFluent(root, ctx) {
 }
 
 function createTeams(root, ctx) {
-  const wrap = el('div', { class: 'act uji-turing' });
+  const wrap = el('div', { class: 'act uji-turing tu25-extra' });
   root.append(wrap);
   function start(nT) {
     const pts = Array(nT).fill(0); let k = 0;
     function turn() {
       if (k >= nT) { finishBoard(wrap, ctx, { title: 'Uji Turing selesai', pts, again: () => pickTeams(wrap, 'Uji Turing Dua Tim', start) }); return; }
       const a = k; const b = (k + 1) % nT; const botSide = ctx.rand.int(0, 1); const log = [];
+      const board = () => el('div', { class: 'tu25-ab' }, ['A', 'B'].map((s, i) => el('div', { class: 'tu25-jendela' }, el('b', { class: 'tu25-tirai' }, `🪟 Jendela ${s}`), log.map(([q, ans]) => el('div', { class: 'tu25-tanya-jawab' }, chatLine('Tanya', BOOTH[q][0], 'kiri'), chatLine(s, ans[i], 'kanan'))))));
       const ask = () => {
-        const q = el('input', { class: 'txt wide', type: 'text', maxlength: 80, autocomplete: 'off', 'aria-label': 'pertanyaan', placeholder: 'Tulis pertanyaan untuk A dan B' });
-        const go = () => { const t = q.value.trim(); if (!t) return; answer(t); };
-        q.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
-        wrap.replaceChildren(scoreBar(pts, a), el('p', { class: 'prompt' }, `Tim ${a + 1} (penanya): pertanyaan ${log.length + 1} dari 3`), board(), el('div', { class: 'kode-baris' }, q, button('Kirim', go, 'primary')),
+        wrap.replaceChildren(scoreBar(pts, a), el('p', { class: 'prompt' }, `Tim ${a + 1} (penanya): pertanyaan ${log.length + 1} dari 3`), board(),
+          el('div', { class: 'tu25-bank' }, BOOTH.map(([t], q) => onTap(el('button', { class: 'tu25-q', type: 'button', disabled: log.some((x) => x[0] === q) }, t), () => { if (!log.some((x) => x[0] === q)) answer(q); }))),
           log.length ? el('div', { class: 'kode-baris' }, button('Sudah bisa menebak ➜', guess)) : null);
-        q.focus();
       };
-      const answer = (t) => {
-        const h = el('input', { class: 'txt wide', type: 'text', maxlength: 80, autocomplete: 'off', 'aria-label': 'jawaban', placeholder: 'Jawab dengan pikiranmu sendiri' });
-        const go = () => { const v = h.value.trim(); if (!v) return; const bot = sekar(t).reply; log.push([t, botSide === 0 ? [bot, v] : [v, bot]]); ctx.sound.tap(); if (log.length >= 3) guess(); else ask(); };
-        h.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
-        wrap.replaceChildren(scoreBar(pts, b), el('p', { class: 'prompt' }, `Tim ${b + 1} (manusia) menjawab. Tim ${a + 1} berpaling!`), el('div', { class: 'tu-chat' }, chatLine('Pertanyaan', t, 'kiri')), el('div', { class: 'kode-baris' }, h, button('Kirim', go, 'primary')));
-        h.focus();
+      const answer = (q) => {
+        const opts = ctx.rand.shuffle([BOOTH[q][1], ...HUMAN_ALT[q]]);
+        wrap.replaceChildren(scoreBar(pts, b), el('p', { class: 'prompt' }, `Tim ${b + 1} (manusia) memilih balasan. Tim ${a + 1} berpaling!`), el('div', { class: 'tu-chat' }, chatLine('Pertanyaan', BOOTH[q][0], 'kiri')),
+          el('div', { class: 'tu25-bank' }, opts.map((v) => onTap(el('button', { class: 'tu25-q', type: 'button' }, v), () => {
+            const bot = sekar(BOOTH[q][0]).reply; log.push([q, botSide === 0 ? [bot, v] : [v, bot]]); ctx.sound.tap();
+            if (log.length >= 3) guess(); else ask();
+          }))));
       };
-      const board = () => el('div', { class: 'tu-ab' }, ['A', 'B'].map((s, i) => el('div', { class: 'tu-jendela' }, el('b', null, `Jendela ${s}`), log.map(([t, ans]) => el('div', null, chatLine('Tanya', t, 'kiri'), chatLine(s, ans[i], 'kanan'))))));
       const guess = () => {
-        wrap.replaceChildren(scoreBar(pts, a), el('p', { class: 'prompt' }, `Tim ${a + 1}: mana mesinnya?`), board(), el('div', { class: 'opts', style: { '--cols': 2 } }, ['A', 'B'].map((s, i) => onTap(el('button', { class: 'opt', type: 'button' }, el('span', { class: 'opt-label' }, `Jendela ${s} mesin`)), (e) => {
-          const ok = i === botSide; e.currentTarget.classList.add(ok ? 'right' : 'wrong'); ctx.sound[ok ? 'good' : 'bad']();
+        let over = false;
+        wrap.replaceChildren(scoreBar(pts, a), el('p', { class: 'prompt' }, `Tim ${a + 1}: mana mesinnya?`), board(), el('div', { class: 'tu25-bank' }, ['A', 'B'].map((s, i) => onTap(el('button', { class: 'btn primary', type: 'button' }, `🤖 Jendela ${s} mesin`), () => {
+          if (over) return; over = true;
+          const ok = i === botSide; ctx.sound[ok ? 'good' : 'bad']();
           if (ok) pts[a] += 2; else pts[b] += 2;
-          wrap.append(el('p', { class: 'reveal' }, ok ? `Tepat! Tim ${a + 1} +2.` : `Mesinnya jendela ${botSide ? 'B' : 'A'}. Tim ${b + 1} +2 karena penanya tertipu.`));
+          wrap.append(el('p', { class: `reveal ${ok ? '' : 'bad'}` }, ok ? `Tepat! Tim ${a + 1} +2.` : `Mesinnya jendela ${botSide ? 'B' : 'A'}. Tim ${b + 1} +2 karena penanya tertipu.`));
           k++; setTimeout(turn, 3200);
         }))));
       };

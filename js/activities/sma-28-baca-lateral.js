@@ -4,8 +4,9 @@
 // fact-checking ecosystem, and how to answer in the class group.
 
 import { el, onTap, button, shake } from '../core/util.js';
-import { choice } from '../core/kit.js';
+import { dnd } from '../core/kit.js';
 import { say, pickTeams, scoreBar, finishBoard } from './sma-kit.js';
+import { misiHead, fill } from './misi-kit.js';
 
 const SVG = 'http://www.w3.org/2000/svg';
 function svg(tag, attrs = {}, ...kids) { const n = document.createElementNS(SVG, tag); for (const [k, v] of Object.entries(attrs || {})) if (v != null) n.setAttribute(k, v); for (const c of kids.flat()) if (c != null) n.append(c instanceof Node ? c : document.createTextNode(String(c))); return n; }
@@ -18,7 +19,8 @@ export const ARTICLE = [
   ['penulis', 'Redaksi', true, 'Tidak ada nama penulis yang bisa dimintai tanggung jawab.'],
   ['tanggal', 'Rabu, 21 Oktober 2026', false, 'Tanggal terbit wajar dan tidak mencurigakan.'],
   ['foto', 'Keterangan: "Fajar membagikan jajan yang dibeli dengan uang kas kelas, Selasa (20/10) pukul 07.00 di kantin sekolah."', false, 'Keterangan foto perlu diverifikasi nanti; dari halaman ini saja belum terlihat salah.'],
-  ['anonim', 'Seorang murid yang tidak mau disebut namanya mengatakan bahwa Fajar memakai uang kas kelas 11-3 untuk membeli jajan bagi calon pemilihnya. "Semua orang di kelas sudah tahu," katanya.', true, 'Satu-satunya sumber anonim, dan tidak ada konfirmasi dari Fajar, bendahara, atau panitia.'],
+  ['anonim', 'Seorang murid yang tidak mau disebut namanya mengatakan bahwa Fajar memakai uang kas kelas 11-3 untuk membeli jajan bagi calon pemilihnya. "Semua orang di kelas sudah tahu," katanya.', true, 'Satu-satunya sumber anonim yang tidak bisa diperiksa.'],
+  ['konfirmasi', 'Hingga berita ini diturunkan, redaksi tidak menghubungi Fajar maupun panitia pemilihan.', true, 'Tidak ada konfirmasi dari pihak yang diberitakan.'],
   ['video', 'Dalam video yang beredar, Fajar bahkan berteriak "Pokoknya kas kelas dipakai!"', false, 'Video perlu diperiksa rekaman lengkapnya; itu langkah lateral.'],
   ['emosi', 'Sungguh memalukan! Apakah calon seperti ini pantas memimpin OSIS?', true, 'Kalimat emosional yang menghakimi, bukan melaporkan.'],
   ['bagikan', 'BAGIKAN SEBELUM DIHAPUS!', true, 'Ajakan mendesak supaya orang menyebarkan tanpa berpikir.'],
@@ -40,7 +42,7 @@ export const EXTRA = [
 const RATE = [['lemah', 'Melemahkan'], ['dukung', 'Mendukung'], ['netral', 'Netral']];
 const RATE_HINT = { T1: 'Bandingkan tanggal pendaftaran dengan "sejak 2010" dan tanggal artikel.', T2: 'Bila situs berita sungguhan, apakah media lain pernah mengutipnya?', T3: 'Apakah kartu ini membuktikan atau membantah pemakaian kas? Atau hanya identitas?', T4: 'Siapa yang menulis ini, dan apa yang mereka periksa?', T5: 'Adakah pengeluaran untuk jajan atau kampanye? Cocokkah hitungannya?', T6: 'Kapan akun dibuat, siapa pengelolanya, dan siapa yang diserangnya?', G: 'Kapan dan untuk acara apa foto itu pertama muncul?', V: 'Apa isi rapat yang sebenarnya?' };
 
-export const CLUES = [['spanduk', 'Spanduk di belakang bertuliskan "…akti Sosial 2025", bukan kegiatan Oktober 2026.'], ['bayangan', 'Bayangannya pendek, kira-kira setengah tinggi badan: sekitar tengah hari. Pukul 07.00 bayangan lebih dari tiga kali tinggi badan.'], ['kantin', 'Kantin beratap seng di latar sudah dibongkar pada Januari 2026 (kartu K).']];
+export const CLUES = [['spanduk', 'Spanduk di belakang bertuliskan "…akti Sosial 2025", bukan kegiatan Oktober 2026.'], ['bayangan', 'Bayangannya pendek, kira-kira setengah tinggi badan: sekitar tengah hari. Pukul 07.00 bayangan kira-kira dua kali tinggi badan.'], ['kantin', 'Kantin beratap seng di latar sudah dibongkar pada Januari 2026 (kartu K).']];
 export const CARD_K = 'Kartu K · Pengumuman sekolah, Januari 2026: kantin lama beratap seng dibongkar dan diganti gedung kantin baru berdinding kaca.';
 
 export const FULL = [['FAJAR', 'Minggu lalu Dimas dirawat di puskesmas.', true], ['FAJAR', 'Jadi kesepakatannya begini: kalau ada teman kita yang sakit dan dirawat,', true], ['FAJAR', 'pokoknya kas kelas dipakai! Setuju?', false], ['MURID-MURID', 'Setujuuu!', false], ['FAJAR', 'Satu lagi. Aku memang mau mencalonkan diri jadi ketua OSIS,', true], ['FAJAR', 'tapi untuk kampanye aku tidak akan memakai kas kelas sepeser pun.', true]];
@@ -65,7 +67,7 @@ function articleView({ tap = null, found = new Set() } = {}) {
   return el('div', { class: 'bl-artikel' }, el('div', { class: 'bl-kepala' }, part('situs', 'situs'), part('url', 'url')),
     part('judul', 'judul', 'h3'), el('div', { class: 'bl-meta' }, part('penulis', ''), ' · ', part('tanggal', '')),
     el('div', { class: 'bl-foto-kecil' }, photo({ small: true }), part('foto', 'ket')),
-    el('p', null, part('anonim', ''), ' ', part('video', ''), ' ', part('emosi', '')), part('bagikan', 'bagikan', 'p'), part('tentang', 'tentang', 'p'));
+    el('p', null, part('anonim', ''), ' ', part('konfirmasi', ''), ' ', part('video', ''), ' ', part('emosi', '')), part('bagikan', 'bagikan', 'p'), part('tentang', 'tentang', 'p'));
 }
 
 // The photo: an old canteen with a zinc roof, a 2025 banner and short noon shadows.
@@ -83,10 +85,11 @@ function photo({ small = false, onClue = null, found = new Set() } = {}) {
     hot('bayangan', person(170, 120, '#2563eb'), person(370, 90, '#16a34a'), person(420, 84, '#db2777')));
 }
 function shadowSim(time) {
-  const len = time === 7 ? 3.4 : 0.5; const h = 60;
-  return svg('svg', { class: 'bl-bayang', viewBox: '0 0 300 120' }, svg('rect', { x: 0, y: 0, width: 300, height: 120, fill: time === 7 ? '#fed7aa' : '#bae6fd' }), svg('circle', { cx: time === 7 ? 18 : 150, cy: time === 7 ? 80 : 14, r: 10, fill: '#facc15' }),
-    svg('rect', { x: 0, y: 100, width: 300, height: 20, fill: '#a3a3a3' }), svg('ellipse', { cx: 90 + (h * len) / 2, cy: 101, rx: (h * len) / 2, ry: 4, fill: '#00000066' }), svg('rect', { x: 84, y: 100 - h, width: 12, height: h, rx: 5, fill: '#2563eb' }), svg('circle', { cx: 90, cy: 100 - h - 7, r: 7, fill: '#a16207' }),
-    svg('text', { x: 290, y: 20, 'font-size': 14, 'font-weight': 800, 'text-anchor': 'end', fill: '#0f172a' }, `pukul ${time === 7 ? '07.00' : '12.00'}`));
+  const len = { 7: 2, 9: 1, 12: 0.5, 15: 1 }[time] ?? 1; const h = 44;
+  const sx = 18 + ((time - 6) / 12) * 264; const sy = 14 + (Math.abs(time - 12) / 5) * 66; const dir = time < 12 ? 1 : -1;
+  return svg('svg', { class: 'bl-bayang', viewBox: '0 0 300 120' }, svg('rect', { x: 0, y: 0, width: 300, height: 120, fill: time <= 7 ? '#fed7aa' : '#bae6fd' }), svg('circle', { cx: sx, cy: sy, r: 10, fill: '#facc15' }),
+    svg('rect', { x: 0, y: 100, width: 300, height: 20, fill: '#a3a3a3' }), svg('ellipse', { cx: 150 + (dir * h * len) / 2, cy: 101, rx: (h * len) / 2, ry: 4, fill: '#00000066' }), svg('rect', { x: 144, y: 100 - h, width: 12, height: h, rx: 5, fill: '#2563eb' }), svg('circle', { cx: 150, cy: 100 - h - 7, r: 7, fill: '#a16207' }),
+    svg('text', { x: 290, y: 116, 'font-size': 13, 'font-weight': 800, 'text-anchor': 'end', fill: '#0f172a' }, `pukul ${String(time).padStart(2, '0')}.00`));
 }
 
 function tabCard([id, name, icon, text], rated) {
@@ -174,6 +177,282 @@ function factCardRound(wrap, ctx, { done }) {
   wrap.append(el('p', { class: 'prompt' }, 'Tantangan: kartu cek fakta untuk grup kelas'), host, msg);
 }
 
+// ---------- Tahan Hoaks Sebelum Pemilihan: the ten missions ----------
+export const RESULTS = [['r1', 'Juni 2025', 'Situs resmi SMA Wanasari', '"Bakti sosial kelas 10-3: membagikan makanan ringan kepada anak-anak panti asuhan."'], ['r2', 'Juli 2025', 'Blog alumni (unggah ulang)', '"Kenangan bakti sosial tahun ini 💛"'], ['r3', '21 Okt 2026 · 06.30', 'wanasari-terkini.example', '"Fajar membagikan jajan yang dibeli dengan uang kas kelas…"'], ['r4', '21 Okt 2026 · 07.15', '@infoosis_wanasari', '"Lihat kelakuan calon ketua OSIS ini! Bagikan!"']];
+export const KINDS = [['konteks', '📎 Foto asli, konteks keliru', true, 'Fotonya asli dari bakti sosial Juni 2025, lalu dipakai dengan keterangan baru yang salah.'], ['sunting', '✂️ Hasil suntingan', false, 'Foto yang sama sudah ada sejak Juni 2025 dengan isi yang sama; tidak ada yang disunting, hanya keterangannya yang diganti.'], ['ka', '🤖 Buatan KA', false, 'Foto ini sudah terbit di situs sekolah pada Juni 2025 dengan kejadian nyata, jadi bukan gambar buatan.']];
+export const PROFILE = [['nama', '@infoosis_wanasari', false, 'Nama akun bisa dibuat siapa saja; nama saja belum membuktikan apa pun.'], ['bio', 'Info terpercaya seputar OSIS Wanasari ✅', false, 'Akun bisa menulis apa saja tentang dirinya, termasuk tanda centang di bio. Ini bukan bukti, tetapi juga bukan tanda bahaya yang kuat.'], ['dibuat', '📅 Bergabung Sabtu, 17 Oktober 2026', true, 'Akun baru dibuat beberapa hari sebelum pemilihan.'], ['pengelola', '👤 Pengelola: tidak dicantumkan', true, 'Tidak ada orang yang bisa dimintai tanggung jawab.'], ['u1', '"TERBONGKAR! Calon nomor 2 pakai kas kelas!" (tautan)', true, 'Unggahan ini menyerang Fajar.'], ['u2', '"Calon nomor 2 cuma pencitraan, jangan dipilih!"', true, 'Unggahan ini juga menyerang Fajar.'], ['u3', '"Masih mau pilih calon nomor 2? Mikir!"', true, 'Ketiga unggahannya menyerang satu calon yang sama.']];
+export const CHAT1 = [['a', 'Kuteruskan ke grup lain: "Benar nggak sih ini?"', false, 'Tautannya tetap sampai ke lebih banyak orang, dan banyak yang hanya membaca judulnya. +100 penerima.'], ['b', '(Diam saja, tidak membalas apa pun.)', false, 'Hoaks tetap beredar di grup ini tanpa ada yang meluruskan.'], ['c', 'Teman-teman, artikel itu keliru: fotonya bakti sosial Juni 2025, videonya dipotong dari rapat kelas, dan panitia sudah mengumumkan tidak ada kas kelas untuk kampanye. Yuk jangan diteruskan, aku lapor ke panitia ya.', true, 'Sopan, berbukti, bersumber, mengajak berhenti, dan melapor.'], ['d', 'Pembuat artikel ini pasti anak kelas sebelah, dasar pengecut!', false, 'Menuduh dan menghina tanpa bukti justru menambah masalah baru.']];
+export const CHAT2 = [['e', 'Iya, teruskan saja supaya adil, biar mereka menilai sendiri.', false, 'Banyak orang hanya membaca judulnya, jadi hoaksnya tetap menyebar. +100 penerima.'], ['f', 'Jangan diteruskan, Ran. Kalau mau, kirim kartu cek faktanya saja ke grup alumni.', true, 'Yang dibagikan bukti dan sumbernya, bukan tautan hoaksnya.']];
+export const STATUS = [['KELIRU', true, ''], ['KONTEKS KELIRU', false, 'Fotonya memang konteks keliru, tetapi klaim utamanya (kas dipakai untuk kampanye) dibantah panitia: KELIRU.'], ['BENAR', false, 'Klaim itu dibantah panitia, rekap kas, foto asli, dan rekaman lengkap.']];
+export const CALLS = [['ajak', 'Jangan teruskan tautannya; bagikan kartu ini.', true, ''], ['malu', 'Sebarkan ke semua grup supaya pembuatnya malu!', false, 'Kartu cek fakta meluruskan informasi, bukan mempermalukan orang.']];
+export const CLAIM = 'Fajar memakai kas kelas untuk kampanye.';
+export const words = (t) => t.split(/\s+/).filter((w) => /[\p{L}\p{N}]/u.test(w)).length;
+const HEAD28 = {
+  vertikal: ['Baca Vertikal', 'Ketuk enam tanda mencurigakan di halaman artikel, lalu nilai "Tentang kami".'],
+  tab1: ['Buka Tab', 'Buka tab baru dan taruh setiap temuan di timbangan: melemahkan, netral, atau mendukung.'],
+  tab2: ['Buka Tab Lagi', 'Timbang tiga tab berikutnya, lalu cap artikelnya.'],
+  foto: ['Selidiki Foto', 'Temukan tiga petunjuk di foto yang membantah keterangan "Selasa pukul 07.00 di kantin".'],
+  balik: ['Cari Gambar Terbalik', 'Urutkan hasil pencarian dari yang paling lama, lalu tentukan jenis fotonya.'],
+  video: ['Video Terpotong', 'Tandai bagian rekaman lengkap yang dibuang dari klip, lalu cari tab yang sejalan.'],
+  ekosistem: ['Ekosistem Periksa Fakta', 'Seret setiap pihak ke perannya dalam melawan hoaks.'],
+  grup: ['Tahan Sebaran di Grup', 'Pilih balasan yang menahan hoaks di grup kelas.'],
+  akun: ['Akun Penyebar', 'Ketuk tanda bahaya di profil akun penyebar pertama, lalu ambil tindakan.'],
+  bos: ['Kartu Cek Fakta', 'Rakit kartu cek fakta paling banyak 60 kata untuk menghentikan meteran.'],
+};
+const msg28 = (t) => el('p', { class: 'reveal info' }, t);
+
+// The spread meter: +100 receivers every 20 seconds until the mission is done; sharing early adds 300.
+function spreadMeter(ctx, start) {
+  let n = start; let stopped = false;
+  const num = el('b'); const bar = el('i'); const note = el('small', null, '+100 setiap 20 detik sampai hoaks ditahan');
+  const node = el('div', { class: 'bl28-meteran' });
+  const draw = () => { num.textContent = `${n.toLocaleString('id-ID')} penerima`; bar.style.width = `${Math.min(100, n / 30)}%`; };
+  const share = onTap(el('button', { class: 'bl28-bagikan', type: 'button' }, '📤 Bagikan'), () => {
+    if (stopped) { note.textContent = 'Yang dibagikan kartu cek fakta, bukan tautannya.'; return; }
+    n += 300; ctx.mistake(); ctx.sound.bad(); shake(node); note.textContent = 'Kamu ikut menyebarkan sebelum memeriksa: +300 penerima!'; draw();
+  });
+  fill(node, el('span', null, '📈 Hoaks sampai ke'), num, el('span', { class: 'bl28-meter-batang' }, bar), note, share);
+  draw();
+  const iv = setInterval(() => { if (!node.isConnected) { clearInterval(iv); return; } if (!stopped) { n += 100; draw(); } }, 20000);
+  return { node, bump(k) { if (!stopped) { n += k; draw(); } }, stop() { if (stopped) return; stopped = true; clearInterval(iv); node.classList.add('henti'); note.textContent = `🛑 Ditahan di ${n.toLocaleString('id-ID')} penerima`; }, get n() { return n; } };
+}
+
+// Misi 1: vertical reading.
+function verticalRound(area, ctx, { meter, done }) {
+  const need = ARTICLE.filter((a) => a[2]).length; const found = new Set();
+  const msg = msg28(`Ketuk tanda yang mencurigakan di halaman ini (ada ${need}). Jangan tekan Bagikan sebelum selesai memeriksa!`);
+  const host = el('div', { class: 'bl28-halaman' }); const pin = el('div', { class: 'bl28-yt' });
+  let stage = 1;
+  const draw = () => fill(host, articleView({ found, tap: (p) => {
+    if (stage !== 1 || found.has(p[0])) return;
+    if (p[0] === 'tentang') { say(msg, 'info', 'Bagian "Tentang kami" dinilai terakhir. Cari tanda lain dulu.'); return; }
+    if (!p[2]) { ctx.mistake(); found.add(p[0]); say(msg, 'bad', p[3]); draw(); return; }
+    found.add(p[0]); ctx.sound.tap(); say(msg, '', p[3]); draw();
+    if (ARTICLE.filter((a) => a[2]).every((a) => found.has(a[0]))) { stage = 2; setTimeout(about, 1400); }
+  } }));
+  function about() {
+    host.querySelector('.bl-a.tentang')?.classList.add('sorot');
+    say(msg, 'info', 'Situs menulis tentang dirinya sendiri: "paling terpercaya sejak 2010". Tempel sebagai bukti?');
+    fill(pin, onTap(el('button', { class: 'bl28-tuas', type: 'button', 'data-k': 'tempel' }, '📌 Tempel sebagai bukti'), () => { if (stage !== 2) return; ctx.mistake(); say(msg, 'bad', 'Situs bisa menulis apa saja tentang dirinya. Penilaian harus datang dari pihak lain.'); }),
+      onTap(el('button', { class: 'bl28-tuas', type: 'button', 'data-k': 'lateral' }, '🗂️ Bukan bukti: cek lewat tab lain'), () => { if (stage !== 2) return; stage = 3; ctx.sound.tap(); meter.stop(); say(msg, '', 'Tepat. Untuk menilai situs, tinggalkan halaman dan baca lateral.'); done(); }));
+  }
+  draw();
+  area.append(host, pin, msg);
+}
+
+// Misi 2: open tabs and weigh each finding on a balance.
+function balanceRound(area, ctx, { meter, ids, pre = [], verdict = false, done }) {
+  const sources = TABS.filter((t) => ids.includes(t[0]));
+  const placed = Object.fromEntries(pre.map((id) => [id, TABS.find((t) => t[0] === id)[4]]));
+  const msg = msg28('Buka tab dari menu. Seret kartu yang terbuka ke piringan timbangan, atau ketuk kartu lalu ketuk piringannya.');
+  const menu = el('div', { class: 'bl28-menu' }); const open = el('div', { class: 'bl28-tabbuka' });
+  const beam = el('div', { class: 'bl28-balok' });
+  const pans = [['lemah', '⬇ Melemahkan'], ['netral', '⚖ Netral'], ['dukung', '⬆ Mendukung']].map(([k, l]) => el('div', { class: `bl28-piring p-${k}`, 'data-drop': k }, el('b', null, l), el('div', { class: 'bl28-piring-isi' })));
+  const tilt = () => { const v = Object.values(placed); const d = v.filter((x) => x === 'dukung').length - v.filter((x) => x === 'lemah').length; beam.style.setProperty('--miring', `${Math.max(-8, Math.min(8, d * 1.6))}deg`); pans.forEach((p) => fill(p.querySelector('.bl28-piring-isi'), Object.entries(placed).filter(([, x]) => x === p.dataset.drop).map(([id]) => el('span', { class: 'bl28-chip' }, id)))); };
+  const drawMenu = () => fill(menu, el('b', null, '＋ Tab baru'), sources.map((s) => onTap(el('button', { class: `bl28-sumber ${s[0] in placed ? 'beres' : ''}`, type: 'button', 'data-t': s[0] }, `${s[2]} ${s[0]} · ${s[1]}`), () => {
+    if (s[0] in placed) return; ctx.sound.tap(); menu.querySelectorAll('.bl28-sumber').forEach((b) => b.classList.toggle('on', b.dataset.t === s[0]));
+    fill(open, el('div', { class: 'bl28-tab', 'data-drag': s[0] }, el('b', null, `${s[2]} ${s[0]} · ${s[1]}`), el('span', null, s[3])));
+  })));
+  const scale = el('div', { class: 'bl28-timbangan' }, beam, el('div', { class: 'bl28-piring-piring' }, pans));
+  const board = el('div', { class: 'bl28-dua' }, el('div', { class: 'bl28-peramban' }, menu, open), scale);
+  let over = false;
+  dnd(board, (card, pan) => {
+    if (over) return;
+    const s = TABS.find((t) => t[0] === card.dataset.drag);
+    if (pan.dataset.drop !== s[4]) { ctx.mistake(); shake(card); say(msg, 'bad', RATE_HINT[s[0]]); return; }
+    placed[s[0]] = s[4]; open.replaceChildren(); ctx.sound.tap(); tilt(); drawMenu(); say(msg, '', s[5]);
+    if (!sources.every((x) => x[0] in placed)) return;
+    if (!verdict) { over = true; meter.stop(); setTimeout(() => say(msg, '', 'Tiga tab, tiga temuan. Timbangan mulai miring ke "melemahkan".'), 1600); done(); return; }
+    over = true; setTimeout(stamp, 1500);
+  });
+  function stamp() {
+    say(msg, 'info', 'Timbangan miring jauh ke "melemahkan". Cap artikelnya.');
+    const row = el('div', { class: 'bl28-yt' }, [['percaya', '✅ Dapat dipercaya', 'Lima tab melemahkan dan tidak satu pun mendukung.'], ['separuh', '❓ Separuh benar', 'Tidak ada satu tab pun yang mendukung klaimnya.'], ['tidak', '⛔ Tidak dapat dipercaya', '']].map(([k, l, why]) => onTap(el('button', { class: 'bl28-tuas', type: 'button', 'data-k': k }, l), (e) => {
+      if (row.classList.contains('beres')) return;
+      if (why) { ctx.mistake(); shake(e.currentTarget); say(msg, 'bad', why); return; }
+      row.classList.add('beres'); e.currentTarget.classList.add('on'); ctx.sound.tap(); meter.stop();
+      say(msg, '', 'Situs baru dan anonim, tanpa rekam jejak, akun penyebarnya dibuat untuk menyerang, dan klaimnya dibantah panitia serta rekap kas.'); done();
+    })));
+    area.insertBefore(row, msg);
+  }
+  drawMenu(); tilt();
+  area.append(board, msg);
+}
+
+// Misi 3: three clues in the photo; the shadow clue needs the sun clock.
+function photoClueRound(area, ctx, { meter, done }) {
+  const found = new Set(); let time = 7; let over = false;
+  const msg = msg28('Keterangan artikel: "Selasa (20/10) pukul 07.00 di kantin sekolah." Ketuk bagian foto yang membantahnya.');
+  const photoBox = el('div', { class: 'bl28-foto' }); const side = el('div', { class: 'bl28-kanan' });
+  const clueList = el('div', { class: 'bl-temuan' });
+  const add = (k) => { found.add(k); ctx.sound.tap(); say(msg, '', CLUES.find((c) => c[0] === k)[1]); drawPhoto(); drawList(); if (found.size === 3 && !over) { over = true; meter.stop(); done(); } };
+  const drawList = () => fill(clueList, CLUES.map(([k, t]) => el('div', { class: found.has(k) ? 'ya' : '' }, found.has(k) ? `✓ ${t}` : '🔍 …')));
+  const drawPhoto = () => fill(photoBox, photo({ found, onClue: (k) => {
+    if (found.has(k) || over) return;
+    if (k === 'spanduk') add(k);
+    else if (k === 'bayangan') sunClock();
+    else kantin();
+  } }));
+  function sunClock() {
+    say(msg, 'info', 'Bayangan di foto pendek, kira-kira setengah tinggi badan. Putar jam matahari: pukul berapa bayangannya sepanjang itu?');
+    const sim = el('div', { class: 'bl28-sim' });
+    const draw = () => { fill(sim, shadowSim(time)); jam.querySelectorAll('.bl28-jam').forEach((b) => b.classList.toggle('on', +b.dataset.t === time)); };
+    const jam = el('div', { class: 'bl28-yt' }, [7, 9, 12, 15].map((t) => onTap(el('button', { class: 'bl28-jam', type: 'button', 'data-t': t }, `${String(t).padStart(2, '0')}.00`), () => { time = t; ctx.sound.tap(); draw(); })));
+    const pinBtn = button('📌 Cocok dengan foto', () => {
+      if (found.has('bayangan')) return;
+      if (time !== 12) { ctx.mistake(); shake(sim); say(msg, 'bad', `Bayangan pukul ${String(time).padStart(2, '0')}.00 ${time === 7 ? 'kira-kira dua kali tinggi badan' : 'kira-kira sama dengan tinggi badan'}, lebih panjang dari bayangan di foto.`); return; }
+      panel.remove(); add('bayangan');
+    }, 'primary');
+    const panel = el('div', { class: 'bl28-panel' }, el('b', null, '☀️ Jam matahari'), jam, sim, pinBtn);
+    side.querySelector('.bl28-panel')?.remove(); side.append(panel); draw();
+  }
+  function kantin() {
+    say(msg, 'info', 'Kantin di foto beratap seng. Masih seperti ini kantin sekolah sekarang? Ambil kartu K di meja guru.');
+    side.querySelector('.bl28-panel')?.remove();
+    const panel = el('div', { class: 'bl28-panel' }, onTap(el('button', { class: 'bl28-tuas', type: 'button', 'data-k': 'kartuK' }, '🗂️ Ambil kartu K'), () => { panel.replaceChildren(el('div', { class: 'bl28-kartuk' }, CARD_K)); add('kantin'); }));
+    side.append(panel);
+  }
+  photoBox.addEventListener('pointerdown', (e) => { if (!over && e.target.closest('svg.bl-foto') && !e.target.closest('.bl-hot')) { ctx.mistake(); say(msg, 'bad', 'Bagian itu tidak membantah keterangannya. Perhatikan tulisan, bayangan, dan bangunan.'); } });
+  drawPhoto(); drawList(); side.append(clueList);
+  area.append(el('div', { class: 'bl28-dua' }, photoBox, side), msg);
+}
+
+// Misi 3: reverse image search, oldest first.
+function reverseRound(area, ctx, { meter, done }) {
+  const msg = msg28('Hasil pencarian gambar terbalik datang acak. Seret setiap hasil ke garis waktu, dari yang paling lama.');
+  const slots = RESULTS.map((r, i) => el('div', { class: 'bl28-slot', 'data-drop': i }, el('small', null, i === 0 ? '⏮ paling lama' : i === RESULTS.length - 1 ? 'paling baru ⏭' : `${i + 1}`)));
+  const tray = el('div', { class: 'bl28-baki' }, ctx.rand.shuffle(RESULTS.map((r) => r[0])).map((id) => { const r = RESULTS.find((x) => x[0] === id); return el('div', { class: 'bl28-hasil', 'data-drag': id }, el('b', null, r[1]), el('span', null, r[2]), el('small', null, r[3])); }));
+  let left = RESULTS.length;
+  const board = el('div', { class: 'bl28-papan' }, el('div', { class: 'bl28-garis' }, slots), tray);
+  dnd(board, (card, slot) => {
+    if (!left || slot.classList.contains('isi')) return;
+    const i = RESULTS.findIndex((r) => r[0] === card.dataset.drag);
+    if (+slot.dataset.drop !== i) { ctx.mistake(); shake(card); say(msg, 'bad', 'Belum urut. Bandingkan tanggalnya: tahun dulu, lalu bulan, lalu jam.'); return; }
+    card.classList.add('locked'); slot.replaceChildren(card); slot.classList.add('isi'); ctx.sound.tap();
+    if (--left) { say(msg, '', 'Tepat.'); return; }
+    say(msg, 'info', 'Kemunculan pertama: situs resmi sekolah, Juni 2025. Foto ini termasuk jenis apa?');
+    const row = el('div', { class: 'bl28-yt' }, KINDS.map(([k, l, ok, why]) => onTap(el('button', { class: 'bl28-tuas', type: 'button', 'data-k': k }, l), (e) => {
+      if (row.classList.contains('beres')) return;
+      if (!ok) { ctx.mistake(); shake(e.currentTarget); say(msg, 'bad', why); return; }
+      row.classList.add('beres'); e.currentTarget.classList.add('on'); ctx.sound.tap(); meter.stop(); say(msg, '', `${why} Itulah sebabnya hasil diurutkan dari yang paling lama: yang dicari kemunculan pertama.`); done();
+    })));
+    area.insertBefore(row, msg);
+  });
+  area.append(board, msg);
+}
+
+// Misi 4: mark what the clip cut out, then link to the matching tab.
+function cutRound(area, ctx, { meter, done }) {
+  const marked = new Set(); const need = FULL.map((f, i) => (f[2] ? i : -1)).filter((i) => i >= 0); let stage = 1;
+  const msg = msg28('Ketuk setiap baris rekaman lengkap yang tidak ada di klip.');
+  const full = el('div', { class: 'bl-transkrip' }, el('b', null, '🎬 Rekaman lengkap rapat kelas 11-3 · 2 Oktober 2026'), FULL.map(([who, t, cut], i) => { const p = el('p', { class: 'bl-baris', 'data-i': i }, el('i', null, `${who}: `), t); return onTap(p, () => {
+    if (stage !== 1 || marked.has(i)) return;
+    if (!cut) { ctx.mistake(); shake(p); say(msg, 'bad', 'Bagian ini ada di klip.'); return; }
+    marked.add(i); p.classList.add('potong'); ctx.sound.tap();
+    if (need.every((n) => marked.has(n))) { stage = 2; say(msg, '', 'Yang dibuang: alasan kas dipakai (menjenguk teman yang dirawat) dan janji tidak memakai kas untuk kampanye.'); setTimeout(link, 1600); }
+  }); }));
+  const clip = el('div', { class: 'bl-transkrip klip' }, el('b', null, '📱 Klip yang beredar (12 detik)'), el('p', null, el('i', null, 'FAJAR: '), '"…pokoknya kas kelas dipakai! Setuju?"'), el('p', null, el('i', null, 'MURID-MURID: '), '"Setujuuu!"'));
+  const side = el('div', { class: 'bl28-kanan' }, clip);
+  function link() {
+    say(msg, 'info', 'Tab mana yang sejalan dengan rekaman lengkap ini? Ketuk tab itu.');
+    fill(side, el('b', null, '🗂️ Tab dari Misi 2'), el('div', { class: 'bl28-tab-tab' }, TABS.map(([id, n, ic]) => onTap(el('button', { class: 'bl28-sumber', type: 'button', 'data-t': id }, `${ic} ${id} · ${n}`), (e) => {
+      if (stage !== 2) return;
+      if (id !== 'T5') { ctx.mistake(); shake(e.currentTarget); say(msg, 'bad', 'Cari tab yang mencatat ke mana uang kas dipakai.'); return; }
+      stage = 3; e.currentTarget.classList.add('on'); ctx.sound.tap(); meter.stop(); say(msg, '', 'T5: kas dipakai Rp150.000 untuk menjenguk teman yang dirawat, sejalan dengan rapat kelas. Klip yang dipotong membalik arti ucapan Fajar.'); done();
+    }))));
+  }
+  area.append(el('div', { class: 'bl28-dua' }, full, side), msg);
+}
+
+// Misi 5: who does what against hoaxes.
+function ecoRound(area, ctx, { meter, done }) {
+  const msg = msg28('Seret setiap pihak ke perannya, atau ketuk pihak lalu ketuk perannya.');
+  const roles = ctx.rand.shuffle(Object.keys(ROLE_TEXT)).map((L) => el('div', { class: 'bl28-peran', 'data-drop': L }, el('span', null, ROLE_TEXT[L]), el('div', { class: 'bl28-peran-isi' })));
+  const tray = el('div', { class: 'bl28-baki' }, ctx.rand.shuffle(ROLES.map((r) => r[0])).map((n) => el('div', { class: 'bl28-pihak', 'data-drag': n }, ROLES.find((r) => r[0] === n)[1])));
+  let left = ROLES.length;
+  const board = el('div', { class: 'bl28-papan' }, el('div', { class: 'bl28-peran-peran' }, roles), tray);
+  dnd(board, (card, box) => {
+    if (!left || box.classList.contains('isi')) return;
+    const want = ROLES.find((r) => r[0] === card.dataset.drag)[2];
+    if (box.dataset.drop !== want) { ctx.mistake(); shake(card); say(msg, 'bad', 'Belum cocok. Siapa yang paling tepat melakukan peran itu?'); return; }
+    card.classList.add('locked'); box.querySelector('.bl28-peran-isi').append(card); box.classList.add('isi'); ctx.sound.tap();
+    if (--left) { say(msg, '', 'Tepat.'); return; }
+    meter.stop(); say(msg, '', 'Melawan hoaks adalah kerja bersama, dan pembaca adalah pertahanan terakhir sebelum tombol Bagikan.'); done();
+  });
+  area.append(board, msg);
+}
+
+// Misi 6: the class group chat.
+function chatRound(area, ctx, { meter, done }) {
+  const msg = msg28('Grup kelas ramai. Ketuk balasan yang akan kamu kirim.');
+  const log = el('div', { class: 'bl28-obrolan', 'aria-live': 'polite' }, el('div', { class: 'bl28-gelembung' }, el('b', null, 'Rani'), '🔗 wanasari-terkini.example · TERBONGKAR! Calon Ketua OSIS Fajar Pakai Uang Kas Kelas untuk Kampanye'), el('div', { class: 'bl28-gelembung' }, el('b', null, 'Bima'), 'Wah parah 😡'));
+  const replies = el('div', { class: 'bl28-balasan' });
+  const offer = (opts, after) => fill(replies, opts.map(([k, t, ok, why]) => onTap(el('button', { class: 'bl28-pilihan', type: 'button', 'data-k': k }, t), (e) => {
+    if (replies.dataset.kunci) return;
+    if (!ok) { ctx.mistake(); shake(e.currentTarget); if (why.includes('+100')) meter.bump(100); say(msg, 'bad', why); return; }
+    replies.dataset.kunci = '1'; ctx.sound.tap(); log.append(el('div', { class: 'bl28-gelembung saya' }, el('b', null, 'Kamu'), t)); log.scrollTop = log.scrollHeight; say(msg, '', why);
+    setTimeout(() => { delete replies.dataset.kunci; after(); }, 1500);
+  })));
+  offer(CHAT1, () => {
+    log.append(el('div', { class: 'bl28-gelembung' }, el('b', null, 'Bima'), 'Oh, makasih. Kuhapus dari grup sebelah 🙏'), el('div', { class: 'bl28-gelembung' }, el('b', null, 'Rani'), 'Tapi bisa saja benar, kan? Kuteruskan ke grup alumni ya, biar mereka nilai sendiri.')); log.scrollTop = log.scrollHeight;
+    say(msg, 'info', 'Rani mau meneruskan tautannya. Balas Rani.');
+    offer(CHAT2, () => { replies.replaceChildren(); log.append(el('div', { class: 'bl28-gelembung' }, el('b', null, 'Rani'), 'Oke, kukirim kartu cek faktanya saja 👍')); log.scrollTop = log.scrollHeight; meter.stop(); say(msg, '', 'Tautan yang diteruskan dengan "benar nggak sih?" tetap menyebarkan hoaks. Yang diteruskan buktinya.'); done(); });
+  });
+  area.append(el('div', { class: 'bl28-dua' }, log, replies), msg);
+}
+
+// Misi 6: the first spreader's profile.
+function accountRound(area, ctx, { meter, done }) {
+  const need = PROFILE.filter((p) => p[2]).length; const found = new Set(); let stage = 1;
+  const msg = msg28(`Ketuk tanda bahaya di profil akun penyebar pertama (ada ${need}).`);
+  const part = ([k, t, sus, why], tag = 'div') => { const n = el(tag, { class: `bl28-profil-${k} bl28-ketuk`, 'data-k': k }, t); return onTap(n, () => {
+    if (stage !== 1 || found.has(k)) return;
+    found.add(k);
+    if (!sus) { ctx.mistake(); n.classList.add('aman'); say(msg, 'bad', why); return; }
+    n.classList.add('curiga'); ctx.sound.tap(); say(msg, '', why);
+    if (PROFILE.filter((p) => p[2]).every((p) => found.has(p[0]))) { stage = 2; setTimeout(act, 1400); }
+  }); };
+  const P = Object.fromEntries(PROFILE.map((p) => [p[0], p]));
+  const card = el('div', { class: 'bl28-profil' }, el('div', { class: 'bl28-profil-kepala' }, el('span', { class: 'bl28-avatar' }, '🏫'), el('div', null, part(P.nama, 'b'), part(P.bio))), el('div', { class: 'bl28-profil-meta' }, part(P.dibuat), part(P.pengelola)),
+    el('small', null, '3 unggahan'), ['u1', 'u2', 'u3'].map((k) => part(P[k])));
+  const acts = el('div', { class: 'bl28-yt' });
+  function act() {
+    say(msg, 'info', 'Akun baru, anonim, dan hanya menyerang satu calon. Apa tindakanmu?');
+    fill(acts, [['lapor', '🚩 Laporkan ke platform dan panitia', ''], ['ikut', '➕ Ikuti supaya tahu unggahan berikutnya', 'Mengikuti dan berinteraksi justru menaikkan jangkauan akun itu.'], ['maki', '💬 Balas dengan makian', 'Makian memancing keributan dan ikut menaikkan jangkauan unggahannya.']].map(([k, l, why]) => onTap(el('button', { class: 'bl28-tuas', type: 'button', 'data-k': k }, l), (e) => {
+      if (stage !== 2) return;
+      if (why) { ctx.mistake(); shake(e.currentTarget); say(msg, 'bad', why); return; }
+      stage = 3; e.currentTarget.classList.add('on'); ctx.sound.tap(); meter.stop(); say(msg, '', 'Dilaporkan. Platform bisa memberi label atau membatasi sebarannya, dan panitia bisa memberi keterangan resmi.'); done();
+    })));
+  }
+  area.append(card, acts, msg);
+}
+
+// Misi Bos: the fact-check card, at most 60 words.
+function factCardBoss(area, ctx, { meter, done }) {
+  const msg = msg28('Seret blok ke kartu: satu status, tiga bukti, dan satu ajakan. Paling banyak 60 kata.');
+  const blocks = [...STATUS.map(([t, ok, why], i) => ({ id: `s${i}`, type: 'status', text: t, ok, why })), ...EVIDENCE.map(([k, t, ok]) => ({ id: `b${k}`, type: 'bukti', text: t, ok, why: k === 'T3' ? 'Profil calon hanya identitas; tidak membantah klaim.' : 'Pendapat bukan bukti yang bisa diperiksa.' })), ...CALLS.map(([k, t, ok, why]) => ({ id: `a${k}`, type: 'ajak', text: t, ok, why }))];
+  const B = Object.fromEntries(blocks.map((b) => [b.id, b]));
+  const slots = [['status', 'Status'], ['bukti', 'Bukti 1'], ['bukti', 'Bukti 2'], ['bukti', 'Bukti 3'], ['ajak', 'Ajakan']].map(([t, l], i) => el('div', { class: 'bl28-blok-slot', 'data-drop': `${t}-${i}` }, el('small', null, l)));
+  const count = el('b', { class: 'bl28-kata' });
+  const put = new Set();
+  const drawCount = () => { const n = words(CLAIM) + [...put].reduce((s, id) => s + words(B[id].text), 0); count.textContent = `${n}/60 kata`; count.classList.toggle('lebih', n > 60); return n; };
+  const cardBox = el('div', { class: 'bl28-kartu-cek' }, el('div', { class: 'bl28-kartu-kepala' }, el('b', null, '✅ CEK FAKTA'), count), el('p', null, el('b', null, 'Klaim: '), CLAIM), slots);
+  const tray = el('div', { class: 'bl28-baki' }, ctx.rand.shuffle(blocks.map((b) => b.id)).map((id) => el('div', { class: `bl28-blok t-${B[id].type}`, 'data-drag': id }, B[id].text)));
+  let left = slots.length;
+  const board = el('div', { class: 'bl28-dua kartu' }, cardBox, tray);
+  dnd(board, (card, slot) => {
+    if (!left || slot.classList.contains('isi')) return;
+    const b = B[card.dataset.drag]; const type = slot.dataset.drop.split('-')[0];
+    if (b.type !== type) { ctx.mistake(); shake(card); say(msg, 'bad', `Blok ini bagian ${b.type === 'status' ? 'status' : b.type === 'bukti' ? 'bukti' : 'ajakan'}, bukan ${type === 'status' ? 'status' : type === 'bukti' ? 'bukti' : 'ajakan'}.`); return; }
+    if (!b.ok) { ctx.mistake(); shake(card); say(msg, 'bad', b.why); return; }
+    card.classList.add('locked'); slot.replaceChildren(card); slot.classList.add('isi'); put.add(b.id); ctx.sound.tap(); const n = drawCount();
+    if (--left) { say(msg, '', 'Tepat.'); return; }
+    meter.stop(); say(msg, '', `Kartu cek fakta ${n} kata, berbukti dan bersumber. Meteran berhenti di ${meter.n.toLocaleString('id-ID')} penerima.`); done();
+  });
+  drawCount();
+  area.append(board, msg);
+}
+
 export default {
   id: 'sma-28-baca-lateral',
   title: 'Cek Dulu Sebelum Sebar',
@@ -184,49 +463,33 @@ export default {
   source: null,
   rounds: 10,
   maxPlayers: 4,
-  goal: 'Periksa artikel tentang calon ketua OSIS: baca vertikal lalu lateral, verifikasi foto dan video, kenali peran lembaga periksa fakta, dan tulis tanggapan yang tepat di grup kelas.',
+  goal: 'Tahan Hoaks Sebelum Pemilihan: baca vertikal lalu buka tab untuk membaca lateral, selidiki foto dan video, kenali ekosistem periksa fakta, tahan sebaran di grup kelas, lalu rakit kartu cek fakta sebelum meteran sebaran makin tinggi.',
   extraModes: [
     { id: 'peramban', icon: '🗂', label: 'Simulasi Peramban', desc: 'Artikel di tab utama; buka tab baru untuk data domain, nama situs, profil, pengumuman, rekap kas, akun penyebar, gambar, dan video lengkap', create: createBrowser },
     { id: 'giliran', icon: '🕵️', label: 'Tim Pemeriksa', desc: 'Tim bergiliran membuka satu tab dan menilainya; penilaian benar mendapat poin, dan menekan "Bagikan" sebelum pemeriksaan selesai mengurangi poin', create: createTeams },
   ],
   create(root, ctx) {
-    const wrap = el('div', { class: 'act baca-lateral' });
+    const wrap = el('div', { class: 'act bl28-main' });
     root.append(wrap);
     function render() {
       wrap.replaceChildren();
       const r = ctx.round;
       let solved = false;
-      const state = { checked: false };
-      const next = () => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, 2400); } };
-      const ask = (prompt, opts, columns = 1, subject = null, onRight = next) => choice(wrap, { prompt, subject, ctx, shuffle: true, onRight, columns, options: opts.map(([l, correct]) => ({ label: String(l), correct })) });
-      const then = (fn) => () => { wrap.replaceChildren(); fn(); };
-      if (r === 0) {
-        const found = new Set(); const need = ARTICLE.filter((a) => a[2]).length;
-        const msg = el('p', { class: 'reveal info' }, `Membaca vertikal: ketuk tanda yang mencurigakan di halaman ini (ada ${need}).`);
-        const host = el('div');
-        const draw = () => host.replaceChildren(articleView({ found, tap: (p) => {
-          if (found.has(p[0])) return; found.add(p[0]);
-          if (!p[2]) { ctx.mistake(); say(msg, 'bad', p[3]); draw(); return; }
-          ctx.sound.tap(); say(msg, '', p[3]); draw();
-          if (ARTICLE.filter((a) => a[2]).every((a) => found.has(a[0]))) { state.checked = true; setTimeout(then(() => ask('Mengapa bagian "Tentang kami" tidak bisa dipakai untuk menilai situs ini?', [['Situs bisa menulis apa saja tentang dirinya sendiri; penilaian yang adil harus datang dari pihak lain', true], ['Karena terlalu pendek'], ['Karena ditulis di bagian bawah'], ['Bisa dipakai; situs tidak mungkin berbohong tentang dirinya']])), 1800); }
-        } }));
-        draw();
-        wrap.append(el('p', { class: 'prompt' }, 'Membaca vertikal: halaman artikel'), shareBar(ctx, state), host, msg);
-      } else if (r === 1) browserRound(wrap, ctx, { sources: TABS, title: 'Membaca lateral: buka tab baru dan nilai isinya', state, done: next });
-      else if (r === 2) ask('T5 (rekap kas) dibuat teman sekelas Fajar. Apakah T5 cukup sebagai bukti?', [['Belum cukup bila berdiri sendiri karena pembuatnya dekat dengan yang dituduh; kuat karena sejalan dengan pemeriksaan panitia (T4) dan rekaman rapat', true], ['Cukup, karena angkanya cocok'], ['Tidak berguna sama sekali'], ['Cukup, karena dibuat bendahara']], 1, tabCard(TABS[4]),
-        then(() => ask('Apa kesimpulanmu tentang artikel itu?', [['Tidak dapat dipercaya: situsnya baru dan anonim, tidak ada sumber lain, dan klaimnya dibantah sumber resmi', true], ['Benar, karena ada foto dan video'], ['Separuh benar'], ['Belum bisa disimpulkan sama sekali']])));
-      else if (r === 3) photoRound(wrap, ctx, { state, done: then(() => ask('Apakah foto itu hasil suntingan?', [['Tidak; fotonya asli tetapi dipakai dengan keterangan yang salah: konteks keliru', true], ['Ya, hasil suntingan (manipulasi)'], ['Ya, buatan KA'], ['Tidak; fotonya benar dan keterangannya juga benar']], 1, null,
-        then(() => ask('Mengapa hasil pencarian gambar terbalik diurutkan dari yang paling lama?', [['Yang dicari kemunculan pertama; unggahan baru sering hanya menyalin foto dengan keterangan yang sudah diubah', true], ['Supaya hasilnya lebih sedikit'], ['Karena foto lama lebih jernih'], ['Tidak perlu diurutkan']])))) });
-      else if (r === 4) videoRound(wrap, ctx, { state, done: then(() => ask('Bagaimana pemotongan itu mengubah arti ucapan Fajar?', [['Seolah-olah Fajar ingin memakai kas untuk kampanye, padahal kesepakatannya untuk menjenguk teman sakit dan Fajar justru menolak memakai kas untuk kampanye', true], ['Tidak mengubah arti apa pun'], ['Membuat Fajar terdengar lebih sopan'], ['Membuat video lebih pendek saja']], 1, null,
-        then(() => ask('Tab mana di membaca lateral yang sejalan dengan rekaman lengkap ini?', TABS.map(([id, n]) => [`${id} · ${n}`, id === 'T5']), 2)))) });
-      else if (r === 5) ask('Langkah mana yang tepat untuk memeriksa video yang beredar?', [['Cari rekaman lebih panjang, periksa kapan dan oleh siapa pertama diunggah, perhatikan lompatan gambar atau suara, bandingkan dengan saksi atau sumber resmi', true], ['Tonton berulang kali sampai yakin'], ['Hitung jumlah penonton; makin banyak makin benar'], ['Tanyakan di grup apakah videonya asli']]);
-      else if (r === 6) matchRound(wrap, ctx, { done: then(() => ask('Mengapa hoaks menjelang pemilihan berbahaya bagi demokrasi?', [['Pemilih memutuskan berdasarkan informasi palsu, nama baik calon rusak, dan kepercayaan pada proses pemilihan turun', true], ['Karena membuat grup ramai'], ['Tidak berbahaya; pemilih bisa memilih sendiri'], ['Karena menghabiskan kuota internet']])) });
-      else if (r === 7) ask('Tanggapan mana yang paling tepat di grup kelas?', [['Membalas sopan dengan bukti dan sumbernya (foto bakti sosial 2025, video dipotong, pengumuman panitia), mengajak tidak meneruskan, lalu melapor ke panitia', true], ['Meneruskan tautan ke grup lain dengan tambahan "Benar nggak sih ini?"'], ['Diam saja dan tidak melakukan apa pun'], ['Membalas dengan menghina pembuat artikel dan menebak siapa pembuatnya']], 1, null,
-        then(() => ask('Mengapa meneruskan tautan dengan "Benar nggak sih ini?" tetap merugikan?', [['Tautan tetap sampai ke lebih banyak orang, dan banyak yang hanya membaca judulnya tanpa membaca pertanyaannya', true], ['Karena pertanyaannya tidak sopan'], ['Tidak merugikan, karena hanya bertanya'], ['Karena grup lain tidak kenal Fajar']])));
-      else if (r === 8) {
-        const sources = [...TABS, ...EXTRA];
-        browserRound(wrap, ctx, { sources: EXTRA, title: 'Dua tab lagi: gambar terbalik dan video lengkap', state, done: then(() => ask('Dari delapan sumber, berapa yang melemahkan artikel?', [6, 7, 8, 5].sort((a, b) => a - b).map((x) => [x, x === sources.filter((s) => s[4] === 'lemah').length]), 4)) });
-      } else factCardRound(wrap, ctx, { done: next });
+      const next = (wait = 5200) => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, wait); } };
+      const meter = spreadMeter(ctx, 300 + 100 * r);
+      const area = el('div', { class: 'bl28-area' });
+      const go = (k, no) => { wrap.append(misiHead(no, ...HEAD28[k], '🔎'), meter.node, area); };
+      const fin = (ms) => ({ meter, done: () => next(ms) });
+      if (r === 0) { go('vertikal', 1); verticalRound(area, ctx, fin(5500)); }
+      else if (r === 1) { go('tab1', 2); balanceRound(area, ctx, { ids: ['T1', 'T2', 'T3'], ...fin(5500) }); }
+      else if (r === 2) { go('tab2', 2); balanceRound(area, ctx, { ids: ['T4', 'T5', 'T6'], pre: ['T1', 'T2', 'T3'], verdict: true, ...fin(6500) }); }
+      else if (r === 3) { go('foto', 3); photoClueRound(area, ctx, fin(6000)); }
+      else if (r === 4) { go('balik', 3); reverseRound(area, ctx, fin(7000)); }
+      else if (r === 5) { go('video', 4); cutRound(area, ctx, fin(6500)); }
+      else if (r === 6) { go('ekosistem', 5); ecoRound(area, ctx, fin(5500)); }
+      else if (r === 7) { go('grup', 6); chatRound(area, ctx, fin(6000)); }
+      else if (r === 8) { go('akun', 6); accountRound(area, ctx, fin(6000)); }
+      else { go('bos', 'Bos'); factCardBoss(area, ctx, fin(7500)); }
     }
     render();
   },

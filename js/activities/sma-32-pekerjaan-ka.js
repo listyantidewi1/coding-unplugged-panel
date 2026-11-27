@@ -4,8 +4,9 @@
 // job, survey data, AI professions, a developer charter, and a debate scoreboard.
 
 import { el, onTap, button, shake } from '../core/util.js';
-import { choice } from '../core/kit.js';
+import { dnd } from '../core/kit.js';
 import { say } from './sma-kit.js';
+import { misiHead, fill } from './misi-kit.js';
 
 export const JOBS = [['K', 'Kasir', '🛒'], ['N', 'Penerjemah', '📖'], ['W', 'Perawat', '🩺'], ['F', 'Petani', '🌶'], ['D', 'Desainer grafis', '🎨'], ['M', 'Montir', '🔧']];
 // [kode, tugas, P, E, T]
@@ -33,84 +34,192 @@ export const DUTIES = { P: 'Memberi label pada contoh data, misalnya menandai fo
 
 export const PRINCIPLES = [['sejahtera', 'kesejahteraan pengguna'], ['transparan', 'transparansi dan tanggung jawab manusia'], ['adil', 'keadilan'], ['privasi', 'privasi'], ['terjangkau', 'terjangkau oleh semua orang']];
 export const FEEDBACK = [['1', '"Jadwal saya berubah mendadak lewat aplikasi pada malam hari, padahal saya harus mengatur antar-jemput anak."', 'sejahtera', 'Kami memastikan jadwal diumumkan paling lambat tiga hari sebelumnya, dan perubahan mendadak harus disetujui pegawai.'], ['2', '"Saya tidak tahu mengapa jam kerja saya dikurangi. Kepala toko menjawab, \'Itu keputusan sistem.\'"', 'transparan', 'Kami menampilkan alasan setiap perubahan jam kerja, dan keputusan akhir diambil kepala toko yang bisa dimintai penjelasan.'], ['3', '"Aplikasi menilai saya lambat karena saya sering membantu pelanggan lansia."', 'adil', 'Kami menyusun ukuran kinerja bersama pegawai supaya membantu pelanggan tidak dinilai lambat.'], ['4', '"Aplikasi meminta akses lokasi ponsel saya selama 24 jam."', 'privasi', 'Kami hanya meminta data yang diperlukan untuk jadwal dan tidak melacak lokasi pegawai.'], ['5', '"Pegawai yang tidak punya ponsel pintar tidak bisa melihat jadwalnya."', 'terjangkau', 'Kami menyediakan jadwal tercetak atau pesan singkat bagi pegawai tanpa ponsel pintar.']];
-export const DEBATE = [['jelas', 'Klaimnya jelas', 1], ['data', 'Didukung data dari soal 3', 1], ['contoh', 'Memakai contoh tugas dari soal 1 atau 2', 1], ['tanggap', 'Menanggapi argumen tim lawan', 1], ['pribadi', 'Menyerang pribadi, bukan argumen', -1]];
+export const DEBATE = [['jelas', 'Klaimnya jelas', 1], ['data', 'Didukung data Misi 3', 1], ['contoh', 'Memakai contoh tugas Misi 1 atau 2', 1], ['tanggap', 'Menanggapi argumen tim lawan', 1], ['pribadi', 'Menyerang pribadi, bukan argumen', -1]];
 
-// --- view pieces ---
-function sorter(ctx, { tasks, onDone }) {
-  const marks = Object.fromEntries(tasks.map((t) => [t[0], [0, 0, 0]])); let sorted = false;
-  const host = el('div', { class: 'kj-pilah' });
-  const draw = () => host.replaceChildren(...JOBS.filter((j) => tasks.some((t) => t[0][0] === j[0])).map(([jk, jn, ic]) => el('div', { class: 'kj-kerja' }, el('b', { class: 'kj-judul' }, `${ic} ${jn}`), tasks.filter((t) => t[0][0] === jk).map((t) => {
-    const m = marks[t[0]]; const mine = chance(...m); const sug = suggested(t);
-    return el('div', { class: `kj-tugas ${sorted ? `p-${mine.toLowerCase()}` : ''} ${sorted && mine !== sug ? 'beda' : ''}` }, el('span', { class: 'kj-kode' }, t[0]), el('span', { class: 'kj-teks' }, t[1]),
-      el('div', { class: 'kj-tanda' }, ['P', 'E', 'T'].map((L, i) => onTap(el('button', { class: `kj-cek ${m[i] ? 'on' : ''}`, type: 'button', 'data-t': `${t[0]}${L}` }, `${m[i] ? '✓' : ''}${L}`), () => { if (sorted) return; m[i] = m[i] ? 0 : 1; ctx.sound.tap(); draw(); }))),
-      sorted ? el('div', { class: 'kj-hasil' }, el('b', null, mine), mine !== sug ? el('small', null, `Disarankan: ${sug}. ${reason(t)} Diskusikan!`) : el('small', null, reason(t))) : null);
-  }))));
-  const msg = el('p', { class: 'reveal info' }, 'Tandai P (berpola), E (empati), dan T (tangan), lalu pilah. Rendah bila E atau T; Tinggi bila hanya P; Sedang bila tidak ada.');
-  const go = button('Pilah ke Tinggi, Sedang, Rendah', () => {
-    if (sorted) return; sorted = true; go.disabled = true; draw(); ctx.sound.good();
-    const diff = tasks.filter((t) => chance(...marks[t[0]]) !== suggested(t)).length;
-    const n = (c) => tasks.filter((t) => chance(...marks[t[0]]) === c).length;
-    say(msg, diff ? 'bad' : '', `Pilahanmu: ${n('Tinggi')} tinggi, ${n('Sedang')} sedang, ${n('Rendah')} rendah. ${diff ? `${diff} tugas berbeda dari penilaian yang disarankan (bergaris): diskusikan alasannya.` : 'Sama dengan penilaian yang disarankan.'}`);
-    onDone?.(diff);
+// ---------- Bursa Kerja 2035: the ten missions ----------
+export const PCT_DECOYS = ['+80,0%', '−71,4%', '+71,4%'];
+export const PROMISE = [['1', '📅 Jadwal diumumkan 3 hari sebelumnya; perubahan mendadak perlu persetujuan pegawai'], ['2', '🧑‍⚖️ Alasan setiap perubahan ditampilkan; keputusan akhir di tangan kepala toko'], ['3', '⚖️ Ukuran kinerja disusun bersama pegawai'], ['4', '🔒 Hanya data yang perlu untuk jadwal; lokasi tidak dilacak'], ['5', '📄 Jadwal tercetak atau SMS bagi pegawai tanpa ponsel pintar'], ['x', '⚡ Aplikasi dibuat lebih cepat']];
+export const TEACHER = [['g1', 'Memeriksa jawaban pilihan ganda ulangan harian', 'Tinggi', 'Berpola: kunci jawabannya jelas.'], ['g2', 'Merekap nilai dan kehadiran ke rapor', 'Tinggi', 'Berpola: angka dipindahkan dan dijumlahkan.'], ['g3', 'Menenangkan murid yang bertengkar di kelas', 'Rendah', 'Perlu empati dan kehadiran langsung.'], ['g4', 'Mendampingi praktik di bengkel sekolah', 'Rendah', 'Perlu tangan dan mata di tempat.'], ['g5', 'Merancang cerita pembuka pelajaran yang menarik', 'Sedang', 'Tidak berpola: KA bisa memberi draf, guru menimbang.']];
+export const CHANCES = [['Tinggi', '🌊 Tinggi'], ['Sedang', '〰️ Sedang'], ['Rendah', '🏝 Rendah']];
+export const SWING = [['kasir', 'Kasir', -30], ['terjemah', 'Penerjemah dokumen', -5], ['input', 'Petugas input data', -25], ['operator', 'Operator sistem KA', 16], ['teknisi', 'Teknisi mesin dan sensor', 12], ['pendamping', 'Pendamping digital UMKM', 15]];
+export const NET = ['−17 (−7,6%)', '+17 (+7,6%)', '−103 (−46,2%)'];
+// [kode, tim, kutipan, kriteria yang dipenuhi]
+export const ARGS = [
+  ['a1', 'Pro', '"Data Misi 3: operator sistem KA naik 400% dan pendamping digital UMKM naik 250%. Di toko Pak Joko juga muncul tugas baru: melaporkan gangguan mesin."', ['jelas', 'data', 'contoh']],
+  ['a2', 'Kontra', '"Tim Pro anak kota, tahu apa soal pekerjaan di desa!"', ['pribadi']],
+  ['a3', 'Kontra', '"Tim Pro menyebut +400%, padahal itu dari 4 menjadi 20 orang. Data yang sama: 60 pekerjaan hilang, hanya 43 yang baru."', ['jelas', 'data', 'tanggap']],
+  ['a4', 'Pro', '"Kasir tidak hilang: Pak Joko tetap membantu pelanggan lansia (K4). Tim Kontra lupa bahwa tugas berubah, bukan hilang. Mereka memang selalu pesimis."', ['jelas', 'contoh', 'tanggap', 'pribadi']],
+];
+const HEAD32 = {
+  gel1: ['Tebak Gelombang KA I', 'Tandai P, E, T pada tugas kasir, penerjemah, dan perawat, lalu lepaskan gelombang.'],
+  gel2: ['Tebak Gelombang KA II', 'Tandai P, E, T pada tugas petani, desainer, dan montir, lalu lepaskan gelombang.'],
+  joko: ['Kartu Kerja Baru Pak Joko', 'Seret setiap tugas: diambil mesin, tetap, atau tugas baru.'],
+  papan: ['Papan Bursa Kerja', 'Seret persentase perubahan yang tepat ke setiap pekerjaan.'],
+  neraca: ['Neraca Pekerjaan', 'Seret setiap perubahan ke piring Hilang atau Baru, lalu baca neracanya.'],
+  profesi: ['Bursa Profesi KA', 'Seret setiap profesi ke tugasnya.'],
+  prinsip: ['Sidang Atur Shift', 'Seret prinsip yang dilanggar ke setiap masukan pegawai.'],
+  janji: ['Piagam Pengembang', 'Seret janji yang menjawab setiap masukan pegawai.'],
+  pers: ['Konferensi Pers', 'Wartawan bertanya tentang tugas guru: seret setiap tugas ke peluangnya.'],
+  bos: ['Debat Besar', 'Jadilah juri: ketuk kriteria yang dipenuhi setiap argumen, lalu ketok palu.'],
+};
+const msg32 = (t) => el('p', { class: 'reveal info' }, t);
+const MARK_NAME = { P: 'berpola', E: 'perlu empati', T: 'perlu tangan' };
+
+// Misi 1: mark P, E, T on twelve task cards, then release the AI wave.
+function waveRound(area, ctx, { jobs, done }) {
+  const tasks = TASKS.filter((t) => jobs.includes(t[0][0])); const marks = Object.fromEntries(tasks.map((t) => [t[0], [0, 0, 0]])); let over = false;
+  const msg = msg32('P berpola · E perlu empati · T perlu keterampilan tangan. Tinggi bila hanya P, Rendah bila ada E atau T, Sedang bila tidak ada tanda.');
+  const cards = {};
+  const card = (t) => (cards[t[0]] = el('div', { class: 'kj32-tugas' }, el('div', { class: 'kj32-tugas-teks' }, el('b', null, t[0]), el('span', null, t[1])), el('div', { class: 'kj32-tanda' }, ['P', 'E', 'T'].map((L, i) => onTap(el('button', { class: 'kj32-cek', type: 'button', 'data-t': `${t[0]}${L}`, title: MARK_NAME[L] }, L), (e) => {
+    if (over) return; const m = marks[t[0]]; m[i] = m[i] ? 0 : 1; e.currentTarget.classList.toggle('on', !!m[i]); ctx.sound.tap();
+  }))), el('span', { class: 'kj32-label' })));
+  const boards = el('div', { class: `kj32-papan-papan ${jobs.length > 3 ? 'enam' : ''}` }, jobs.map((jk) => { const [, name, ic] = JOBS.find((j) => j[0] === jk); return el('div', { class: 'kj32-papan' }, el('b', { class: 'kj32-judul' }, `${ic} ${name}`), tasks.filter((t) => t[0][0] === jk).map(card)); }));
+  const go = button('🌊 Lepaskan Gelombang KA', () => {
+    if (over) return; over = true; go.disabled = true; ctx.sound.good();
+    let match = 0;
+    for (const t of tasks) {
+      const mine = chance(...marks[t[0]]); const sug = suggested(t); const c = cards[t[0]];
+      c.classList.add(`p-${mine.toLowerCase()}`); if (mine === sug) match++; else c.classList.add('beda');
+      c.querySelector('.kj32-label').textContent = mine === sug ? mine : `${mine} · saran ${sug}`;
+    }
+    setTimeout(() => { for (const t of tasks) if (chance(...marks[t[0]]) === 'Tinggi') cards[t[0]].classList.add('sapu'); }, 700);
+    say(msg, '', `Kecocokan ${match}/${tasks.length} dengan penilaian yang disarankan.${match < tasks.length ? ' Kartu bergaris berbeda: diskusikan alasanmu.' : ''} Kartu Tinggi disapu gelombang: dibantu atau diambil alih KA, bukan berarti pekerjanya diberhentikan.`);
+    done();
   }, 'primary');
-  draw();
-  return el('div', { class: 'kj-wadah' }, host, go, msg);
+  area.append(boards, go, msg);
 }
 
-function pickRows(wrap, ctx, { prompt, rows, opts, why, done, info, cls = '' }) {
-  const res = {};
-  const msg = el('p', { class: 'reveal info' }, info);
-  const box = el('div', { class: `kj-baris-baris ${cls}` });
-  const draw = () => box.replaceChildren(...rows.map(([k, t, a, w]) => el('div', { class: `kj-baris ${k in res ? 'beres' : ''}` }, el('span', null, t), k in res ? el('b', null, opts.find((o) => o[0] === a)[1]) : el('div', { class: 'seg' }, opts.map(([v, l]) => onTap(el('button', { class: 'seg-btn', type: 'button' }, l), () => {
-    if (v !== a) { ctx.mistake(); say(msg, 'bad', why ? why(k, a, false) : 'Belum tepat.'); return; }
-    res[k] = v; ctx.sound.tap(); say(msg, '', w || (why ? why(k, a, true) : 'Tepat.')); draw();
-    if (Object.keys(res).length === rows.length) setTimeout(done, 1500);
-  }))))));
-  draw();
-  wrap.append(el('p', { class: 'prompt' }, prompt), box, msg);
+// A drag board: cards into keyed bins (columns or rows).
+function sortBoard(area, ctx, { oops, msg, items, need, bins, check, place, after, done, tray = 'kj32-baki', board = 'kj32-papan-bin' }) {
+  let left = need ?? items.length;
+  const trayEl = el('div', { class: tray }, ctx.rand.shuffle(items.slice()).map((it) => el('div', { class: 'kj32-kartu', 'data-drag': it[0] }, it[1])));
+  const host = el('div', { class: board }, bins, trayEl);
+  dnd(host, (card, bin) => {
+    if (!left || bin.classList.contains('isi')) return;
+    const it = items.find((x) => x[0] === card.dataset.drag); const why = check(it, bin.dataset.drop);
+    if (why) { oops(); shake(card); say(msg, 'bad', why); return; }
+    card.classList.add('locked'); (place ? place(card, bin) : bin.querySelector('.kj32-isi').append(card)); ctx.sound.tap(); left--;
+    after?.(it, left); if (!left) done();
+  });
+  area.append(host, msg);
+}
+const colBin = (k, label, cls = '') => el('div', { class: `kj32-kolom ${cls}`, 'data-drop': k }, el('b', null, label), el('div', { class: 'kj32-isi' }));
+const rowBin = (k, text, cls = '') => el('div', { class: `kj32-baris ${cls}`, 'data-drop': k }, el('span', { class: 'kj32-slot' }, '?'), el('span', null, text));
+const toSlot = (card, bin) => { bin.querySelector('.kj32-slot').replaceWith(card); bin.classList.add('isi'); };
+
+function jokoRound(area, ctx, { oops, done }) {
+  const msg = msg32('Toko Pak Joko memasang mesin bayar mandiri dan KA pencatat stok. Tugas berpola diambil mesin, tugas yang perlu manusia tetap, dan mesin memunculkan tugas baru.');
+  sortBoard(area, ctx, { oops, msg, items: JOKO, bins: el('div', { class: 'kj32-kolom-kolom' }, [['ambil', '🤖 Diambil mesin', 'ambil'], ['tetap', '🧑 Tetap', 'tetap'], ['baru', '✨ Tugas baru', 'baru']].map(([k, l, c]) => colBin(k, l, c))),
+    check: (it, k) => (it[2] !== k ? 'Apakah tugas ini berpola, tetap perlu manusia, atau baru muncul karena ada mesin?' : ''),
+    after: (it) => say(msg, '', ({ ambil: 'Berpola: dikerjakan mesin.', tetap: 'Tetap perlu manusia.', baru: 'Muncul karena ada mesin dan KA.' })[it[2]]),
+    done: () => { say(msg, '', 'Pekerjaan Pak Joko tidak hilang, isinya berubah: ia perlu belajar merawat sistem digital dan membaca laporan data.'); done(); } });
 }
 
-function dataChart(show = {}) {
-  const mx = Math.max(...DATA.flatMap((d) => [d[1], d[2]]));
-  return el('div', { class: 'kj-grafik' }, el('div', { class: 'kj-legenda' }, el('span', { class: 'th24' }, '2024'), el('span', { class: 'th26' }, '2026')), DATA.map(([n, a, b], i) => el('div', { class: 'kj-gbaris' }, el('span', null, n),
-    el('div', { class: 'kj-batang-batang' }, el('div', { class: 'kj-batang th24' }, el('i', { style: { width: `${(a / mx) * 100}%` } }), el('b', null, String(a))), el('div', { class: 'kj-batang th26' }, el('i', { style: { width: `${(b / mx) * 100}%` } }), el('b', null, String(b)))),
-    el('b', { class: `kj-ubah ${b < a ? 'turun' : 'naik'}` }, show[i] ? `${b - a > 0 ? '+' : '−'}${Math.abs(b - a)} (${fmtPct(pct(a, b))})` : '?'))));
+function pctRound(area, ctx, { oops, done }) {
+  const msg = msg32('Perubahan (%) = (2026 − 2024) ÷ 2024 × 100%. Bagi dengan angka 2024.');
+  const mx = Math.max(...DATA.flatMap((d) => [d[1], d[2]])); let left = DATA.length;
+  const rows = el('div', { class: 'kj32-grafik' }, el('div', { class: 'kj32-legenda' }, el('span', { class: 'th24' }, '2024'), el('span', { class: 'th26' }, '2026')), DATA.map(([n, a, b], i) => el('div', { class: 'kj32-gbaris' }, el('span', null, n),
+    el('div', { class: 'kj32-batang-batang' }, el('div', { class: 'kj32-batang th24' }, el('i', { style: { width: `${(a / mx) * 100}%` } }), el('b', null, String(a))), el('div', { class: 'kj32-batang th26' }, el('i', { style: { width: `${(b / mx) * 100}%` } }), el('b', null, String(b)))),
+    el('span', { class: 'kj32-celah', 'data-drop': String(i) }, '?'))));
+  const chips = ctx.rand.shuffle([...DATA.map(([, a, b]) => fmtPct(pct(a, b))), ...PCT_DECOYS]);
+  const tray = el('div', { class: 'kj32-angka-angka' }, chips.map((c) => el('div', { class: 'kj32-angka', 'data-drag': c }, c)));
+  const host = el('div', { class: 'kj32-dua' }, rows, tray);
+  dnd(host, (chip, blank) => {
+    if (!left || blank.classList.contains('isi')) return;
+    const [n, a, b] = DATA[+blank.dataset.drop]; const want = fmtPct(pct(a, b));
+    if (chip.dataset.drag !== want) { oops(); shake(chip); say(msg, 'bad', `${n}: (${b} − ${a}) ÷ ${a} × 100%.`); return; }
+    blank.textContent = want; blank.classList.add('isi', b < a ? 'turun' : 'naik'); chip.remove(); ctx.sound.tap();
+    if (--left) { say(msg, '', `${n}: ${b - a > 0 ? '+' : '−'}${Math.abs(b - a)} orang, ${want}.`); return; }
+    say(msg, '', 'Persen besar belum tentu orang banyak: +400% itu dari 4 menjadi 20 orang, sedangkan kasir −25% berarti 30 orang.'); done();
+  });
+  area.append(host, msg);
 }
 
-function dataRound(wrap, ctx, { done }) {
-  const show = {};
-  const msg = el('p', { class: 'reveal info' }, 'Perubahan (%) = (2026 − 2024) : 2024 × 100%.');
-  const chartBox = el('div');
-  const area = el('div', { class: 'kj-baris-baris' });
-  const draw = () => {
-    chartBox.replaceChildren(dataChart(show));
-    area.replaceChildren(...DATA.map(([n, a, b], i) => {
-      const right = pct(a, b); const opts = [...new Set([right, pct(b, a), Math.round(((b - a) / b) * 1000) / 10, b - a])].sort((x, y) => x - y);
-      return el('div', { class: `kj-baris ${i in show ? 'beres' : ''}` }, el('span', null, `${n}: ${a} → ${b}`), i in show ? el('b', null, fmtPct(right)) : el('div', { class: 'seg' }, opts.map((v) => onTap(el('button', { class: 'seg-btn', type: 'button' }, fmtPct(v)), () => {
-        if (v !== right) { ctx.mistake(); say(msg, 'bad', `${n}: bagi perubahannya (${b - a}) dengan angka 2024 (${a}), bukan 2026.`); return; }
-        show[i] = true; ctx.sound.tap(); draw();
-        if (Object.keys(show).length === DATA.length) { say(msg, '', 'Jumlah 223 → 206: berkurang 17 (−7,6%).'); setTimeout(done, 1500); }
-      }))));
-    }));
-  };
-  draw();
-  wrap.append(el('p', { class: 'prompt' }, 'Membaca data: hitung perubahan dalam persen'), el('div', { class: 'kj-dua' }, chartBox, area), msg);
+function balanceRound(area, ctx, { oops, done }) {
+  const msg = msg32('Seret setiap perubahan jumlah pekerja ke piring yang tepat.'); let left = SWING.length; const sum = { hilang: 0, baru: 0 };
+  const beam = el('div', { class: 'kj32-tuas' });
+  const pans = [['hilang', '📉 Hilang'], ['baru', '📈 Baru']].map(([k, l]) => el('div', { class: `kj32-piring ${k}`, 'data-drop': k }, el('b', null, l), el('div', { class: 'kj32-isi' }), el('strong', null, '0')));
+  const tilt = () => { scale.style.setProperty('--m', Math.max(-10, Math.min(10, (sum.baru - sum.hilang) / 3))); pans.forEach((p) => { p.querySelector('strong').textContent = String(sum[p.dataset.drop]); }); };
+  const scale = el('div', { class: 'kj32-neraca' }, beam, el('div', { class: 'kj32-piring-piring' }, pans));
+  const tray = el('div', { class: 'kj32-angka-angka' }, ctx.rand.shuffle(SWING.slice()).map(([k, n, d]) => el('div', { class: 'kj32-angka lebar', 'data-drag': k }, el('small', null, n), el('b', null, `${d > 0 ? '+' : '−'}${Math.abs(d)}`))));
+  const host = el('div', { class: 'kj32-papan-bin' }, scale, tray);
+  let stage = 1;
+  dnd(host, (chip, pan) => {
+    if (stage === 2) {
+      if (!pan.classList.contains('kj32-hasil')) return;
+      if (chip.dataset.drag !== NET[0]) { oops(); shake(chip); say(msg, 'bad', 'Baru dikurangi hilang: 43 − 60. Persennya dibagi jumlah pekerja 2024 (223).'); return; }
+      stage = 3; pan.textContent = NET[0]; pan.classList.add('isi'); chip.remove(); ctx.sound.tap();
+      say(msg, '', 'Jumlah pekerja 223 → 206: berkurang 17 (−7,6%). Tetapi 60 orang kehilangan pekerjaan lama dan 43 pekerjaan baru butuh keterampilan lain.'); done(); return;
+    }
+    if (stage !== 1 || !pan.classList.contains('kj32-piring')) return;
+    const s = SWING.find((x) => x[0] === chip.dataset.drag); const want = s[2] < 0 ? 'hilang' : 'baru';
+    if (pan.dataset.drop !== want) { oops(); shake(chip); say(msg, 'bad', `${s[1]}: ${s[2] < 0 ? 'berkurang' : 'bertambah'}.`); return; }
+    chip.classList.add('locked'); pan.querySelector('.kj32-isi').append(chip); sum[want] += Math.abs(s[2]); tilt(); ctx.sound.tap();
+    if (--left) return;
+    stage = 2; say(msg, 'info', 'Hilang 60, baru 43. Seret perubahan totalnya ke papan hasil.');
+    const res = el('div', { class: 'kj32-hasil', 'data-drop': 'net' }, '? total');
+    scale.append(res); fill(tray, ctx.rand.shuffle(NET.slice()).map((t) => el('div', { class: 'kj32-angka', 'data-drag': t }, t)));
+  });
+  tilt();
+  area.append(host, msg);
 }
 
-function matchRound(wrap, ctx, { done }) {
-  const got = {}; let sel = null;
-  const msg = el('p', { class: 'reveal info' }, 'Ketuk profesi, lalu ketuk tugasnya.');
-  const host = el('div', { class: 'kj-pasang' });
-  const letters = ctx.rand.shuffle(Object.keys(DUTIES));
-  const draw = () => host.replaceChildren(el('div', { class: 'kj-kol' }, PROFS.map(([k, n, a]) => onTap(el('button', { class: `kj-item ${sel === k ? 'pilih' : ''} ${k in got ? 'beres' : ''}`, type: 'button' }, el('b', null, k), n, k in got ? el('em', null, `→ ${a}`) : null), () => { if (!(k in got)) { sel = k; draw(); } }))),
-    el('div', { class: 'kj-kol' }, letters.map((L) => onTap(el('button', { class: `kj-item ${Object.values(got).includes(L) ? 'beres' : ''}`, type: 'button' }, el('b', null, L), DUTIES[L]), () => {
-      if (!sel || Object.values(got).includes(L)) return; const want = PROFS.find((p) => p[0] === sel)[2];
-      if (L !== want) { ctx.mistake(); shake(host); say(msg, 'bad', 'Belum cocok. Siapa yang membangun model, siapa yang memberi label, siapa yang memeriksa keadilan?'); return; }
-      got[sel] = L; sel = null; ctx.sound.tap(); draw();
-      if (Object.keys(got).length === PROFS.length) { say(msg, '', '1–R, 2–T, 3–P, 4–Q, 5–U, 6–S.'); done(); }
-    }))));
-  draw();
-  wrap.append(el('p', { class: 'prompt' }, 'Profesi di bidang KA: pasangkan dengan tugasnya'), host, msg);
+function profRound(area, ctx, { oops, done }) {
+  const msg = msg32('Siapa yang membangun model, memberi label, memeriksa keadilan, atau merancang robot?');
+  const want = Object.fromEntries(PROFS.map(([k, , a]) => [a, k]));
+  sortBoard(area, ctx, { oops, msg, items: PROFS.map(([k, n]) => [k, n]), bins: el('div', { class: 'kj32-baris-baris' }, ctx.rand.shuffle(Object.keys(DUTIES)).map((L) => rowBin(L, DUTIES[L]))),
+    check: (it, L) => (want[L] !== it[0] ? `${it[1]} tidak terutama bertugas seperti ini.` : ''), place: toSlot,
+    after: (it) => say(msg, '', `${it[1]}: tepat.`), done: () => { say(msg, '', 'Enam profesi baru di sekitar KA, dari pelabel data sampai auditor etika.'); done(); } });
+}
+
+function principleRound(area, ctx, { oops, done }) {
+  const msg = msg32('Aplikasi "Atur Shift" menyusun jadwal pegawai toko. Lima pegawai mengirim masukan.');
+  sortBoard(area, ctx, { oops, msg, items: PRINCIPLES, tray: 'kj32-baki baris', bins: el('div', { class: 'kj32-baris-baris' }, FEEDBACK.map(([k, t]) => rowBin(k, t, 'kutip'))),
+    check: (it, k) => (FEEDBACK.find((f) => f[0] === k)[2] !== it[0] ? 'Masukan ini merugikan pegawai dalam hal apa?' : ''), place: toSlot,
+    after: (it) => say(msg, '', `Prinsip ${it[1]}.`), done: () => { say(msg, '', 'Lima prinsip pengembang yang bertanggung jawab: kesejahteraan, transparansi, keadilan, privasi, dan keterjangkauan.'); done(); } });
+}
+
+function promiseRound(area, ctx, { oops, done }) {
+  const msg = msg32('Setiap masukan dijawab satu janji. Satu kartu janji adalah pengecoh.');
+  const pn = Object.fromEntries(PRINCIPLES);
+  sortBoard(area, ctx, { oops, msg, items: PROMISE, need: 5, tray: 'kj32-baki baris', bins: el('div', { class: 'kj32-baris-baris' }, FEEDBACK.map(([k, t, p]) => rowBin(k, `${t} · ${pn[p]}`, 'kutip'))),
+    check: (it, k) => (it[0] === 'x' ? 'Lebih cepat tidak menjawab keluhan pegawai mana pun.' : it[0] !== k ? 'Janji ini menjawab masukan lain.' : ''), place: toSlot,
+    after: () => say(msg, '', 'Masuk piagam.'), done: () => { area.querySelector('.pengecoh')?.remove(); say(msg, '', 'Piagam selesai. "Itu keputusan sistem" tidak boleh lagi menjadi jawaban: selalu ada manusia yang bertanggung jawab.'); done(); } });
+  area.querySelector('[data-drag="x"]')?.classList.add('pengecoh');
+}
+
+function pressRound(area, ctx, { oops, done }) {
+  const msg = msg32('Wartawan: "Apakah KA akan menggantikan guru?" Jawab dengan memilah tugas guru.');
+  sortBoard(area, ctx, { oops, msg, items: TEACHER, bins: el('div', { class: 'kj32-kolom-kolom' }, CHANCES.map(([k, l]) => colBin(k, l, k.toLowerCase()))),
+    check: (it, k) => (it[2] !== k ? 'Berpola saja? Perlu empati atau tangan? Atau tidak berpola?' : ''), after: (it) => say(msg, '', it[3]),
+    done: () => { say(msg, '', 'Juru Bicara: "KA bisa membantu memeriksa dan merekap, tetapi menenangkan murid, mendampingi praktik, dan menimbang ide tetap tugas guru."'); done(); } });
+}
+
+function debateBoss(area, ctx, { oops, done }) {
+  const msg = msg32('Mosi: "KA akan lebih banyak menciptakan pekerjaan daripada menghilangkannya di Wanasari dalam sepuluh tahun." Nilai setiap argumen.');
+  const score = { Pro: 0, Kontra: 0 }; let i = 0; let sel = new Set();
+  const board = el('div', { class: 'kj32-skor' });
+  const drawScore = () => fill(board, ['Pro', 'Kontra'].map((t) => el('div', { class: `kj32-tim t-${t}` }, el('span', null, `Tim ${t}`), el('b', null, String(score[t])))));
+  const stage = el('div', { class: 'kj32-debat' });
+  function show() {
+    const [k, team, quote] = ARGS[i]; sel = new Set();
+    const crit = el('div', { class: 'kj32-kriteria' }, DEBATE.map(([c, l, p]) => onTap(el('button', { class: `kj32-poin ${p < 0 ? 'minus' : ''}`, type: 'button', 'data-c': c }, el('b', null, p > 0 ? `+${p}` : `−${-p}`), l), (e) => {
+      if (sel.has(c)) sel.delete(c); else sel.add(c); e.currentTarget.classList.toggle('on', sel.has(c)); ctx.sound.tap();
+    })));
+    fill(stage, el('div', { class: `kj32-kutip t-${team}`, 'data-k': k }, el('b', null, `🎤 Tim ${team}`), el('span', null, quote)), crit, button('🔨 Ketok palu', judge, 'primary'));
+  }
+  function judge() {
+    if (stage.classList.contains('sibuk') || i >= ARGS.length) return;
+    const want = ARGS[i][3];
+    if (want.length !== sel.size || want.some((c) => !sel.has(c))) { oops(); shake(stage); say(msg, 'bad', 'Belum tepat. Periksa lagi: ada data angka? contoh tugas? menanggapi lawan? menyerang pribadi?'); return; }
+    const pts = want.reduce((a, c) => a + DEBATE.find((d) => d[0] === c)[2], 0); score[ARGS[i][1]] += pts; drawScore(); ctx.sound.good();
+    say(msg, '', `${pts >= 0 ? '+' : '−'}${Math.abs(pts)} poin untuk Tim ${ARGS[i][1]}.`);
+    i++;
+    if (i < ARGS.length) { stage.classList.add('sibuk'); setTimeout(() => { stage.classList.remove('sibuk'); show(); }, 1600); return; }
+    fill(stage); say(msg, '', `Tim Pro ${score.Pro}, Tim Kontra ${score.Kontra}. Skor menilai mutu argumen, bukan benar-salahnya mosi: data, contoh, dan tanggapan menang; serangan pribadi kalah.`); done();
+  }
+  drawScore(); show();
+  area.append(board, stage, msg);
 }
 
 export default {
@@ -123,48 +232,45 @@ export default {
   source: null,
   rounds: 10,
   maxPlayers: 4,
-  goal: 'Bantu Sekar memahami pekerjaan masa depan: uraikan enam pekerjaan menjadi tugas, nilai mana yang bisa dibantu KA, baca data perubahan pekerjaan, kenali profesi KA, dan susun piagam pengembang KA.',
+  goal: 'Bursa Kerja 2035: jadilah biro konsultan karier. Tebak tugas yang disapu Gelombang KA, ubah kartu kerja Pak Joko, baca papan bursa kerja, kenali profesi KA, susun piagam pengembang, dan jadilah juri debat.',
   extraModes: [
     { id: 'pilah', icon: '🗃', label: 'Pilah 24 Tugas', desc: 'Tandai P, E, dan T untuk 24 tugas dari enam pekerjaan, lalu pilah ke Tinggi, Sedang, dan Rendah; perbedaan dengan penilaian yang disarankan ditandai untuk didiskusikan', create: createSort },
     { id: 'debat', icon: '🎤', label: 'Papan Skor Debat', desc: 'Debat tim pro dan kontra: moderator mengetuk poin setiap argumen, dan pengatur waktu membatasi giliran bicara satu menit', create: createDebate },
   ],
   create(root, ctx) {
-    const wrap = el('div', { class: 'act pekerjaan-ka' });
+    const wrap = el('div', { class: 'act kj32-main' });
     root.append(wrap);
     function render() {
       wrap.replaceChildren();
       const r = ctx.round;
       let solved = false;
-      const next = () => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, 2400); } };
-      const ask = (prompt, opts, columns = 1, subject = null, onRight = next) => choice(wrap, { prompt, subject, ctx, shuffle: true, onRight, columns, options: opts.map(([l, correct]) => ({ label: String(l), correct })) });
-      const then = (fn) => () => { wrap.replaceChildren(); fn(); };
-      const sortRound = (jobs) => { wrap.append(el('p', { class: 'prompt' }, `Menguraikan pekerjaan: ${jobs.map((j) => JOBS.find((x) => x[0] === j)[1]).join(' dan ')}`), sorter(ctx, { tasks: TASKS.filter((t) => jobs.includes(t[0][0])), onDone: () => setTimeout(next, 1200) })); };
-      if (r === 0) sortRound(['K', 'N']);
-      else if (r === 1) sortRound(['W', 'F']);
-      else if (r === 2) sortRound(['D', 'M']);
-      else if (r === 3) ask('Menurut penilaian yang disarankan, pekerjaan mana yang paling banyak tugasnya berpeluang tinggi?', [['Kasir (3 dari 4 tugas)', true], ['Perawat'], ['Montir'], ['Petani']], 2, null,
-        then(() => ask('Adakah pekerjaan yang semua tugasnya berpeluang tinggi?', [['Tidak ada: setiap pekerjaan masih punya tugas yang perlu empati, tangan, atau penilaian manusia; isinya berubah, jarang hilang seluruhnya', true], ['Ada: kasir akan hilang seluruhnya'], ['Ada: semua pekerjaan akan diganti KA'], ['Tidak ada, karena KA tidak bisa apa-apa']], 1, null,
-          then(() => ask('Pada tugas N2 (puisi) dan D2 (sketsa logo), bagaimana KA dan manusia bekerja sama?', [['KA membuat draf atau pilihan dengan cepat; manusia memilih, memperbaiki rasa bahasa atau desainnya, dan bertanggung jawab atas hasil akhir', true], ['KA mengerjakan semuanya, manusia tidak perlu memeriksa'], ['Manusia tidak boleh memakai KA sama sekali'], ['KA memilih hasil terbaik dan menandatanganinya']])))));
-      else if (r === 4) pickRows(wrap, ctx, { prompt: 'Pekerjaan yang berubah: tugas Pak Joko setelah ada mesin bayar mandiri dan KA pencatat stok', rows: JOKO.map(([k, t, a]) => [k, t, a]), opts: JOKO_OPTS, info: 'Tugas berpola diambil alih mesin; tugas yang perlu empati tetap; mesin dan KA memunculkan tugas baru.', why: (k, a, ok) => (ok ? ({ ambil: 'Berpola: dikerjakan mesin.', tetap: 'Tetap perlu manusia.', baru: 'Muncul karena ada mesin dan KA.' })[a] : 'Apakah tugas ini berpola, tetap perlu manusia, atau baru muncul karena mesin?'),
-        done: then(() => ask('Keterampilan apa yang paling perlu dipelajari Pak Joko?', [['Memakai dan merawat sistem digital, membaca laporan data, dan melayani pelanggan dengan sabar', true], ['Memindai barang lebih cepat'], ['Menghitung uang tunai lebih cepat'], ['Tidak perlu belajar apa pun']])) });
-      else if (r === 5) dataRound(wrap, ctx, { done: then(() => ask('Pekerjaan mana yang paling banyak berkurang dan paling banyak bertambah dalam persen?', [['Berkurang: petugas input data (−41,7%) · Bertambah: operator dan pengawas sistem KA (+400%)', true], ['Berkurang: kasir (−30) · Bertambah: pendamping digital UMKM (+15)'], ['Berkurang: penerjemah dokumen · Bertambah: teknisi perawatan'], ['Berkurang: kasir · Bertambah: operator sistem KA']], 1, dataChart({ 0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1 }))) });
-      else if (r === 6) ask('Berapa pekerjaan yang hilang dan berapa yang baru muncul di keenam jenis pekerjaan?', [['60 hilang dan 43 baru (berkurang 17)', true], ['17 hilang dan 0 baru'], ['43 hilang dan 60 baru'], ['30 hilang dan 16 baru']], 1, dataChart({ 0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1 }),
-        then(() => ask('Bisakah petugas input data yang kehilangan pekerjaan langsung menjadi operator sistem KA?', [['Tidak langsung: perlu keterampilan baru, pelatihan ulang, waktu, dan dukungan selama peralihan', true], ['Bisa langsung, karena keduanya memakai komputer'], ['Tidak bisa sama sekali, selamanya'], ['Bisa, asal mendaftar lebih dulu']], 1, null,
-          then(() => ask('Cara mana membantu pekerja yang paling mungkin kesulitan?', [['Pelatihan ulang gratis, perusahaan melatih pegawai sebelum memasang KA, dan bantuan sementara bagi yang kehilangan pekerjaan', true], ['Melarang semua mesin bayar mandiri'], ['Membiarkan pasar mengatur sendiri tanpa bantuan'], ['Hanya merekrut pegawai muda']])))));
-      else if (r === 7) matchRound(wrap, ctx, { done: next });
-      else if (r === 8) pickRows(wrap, ctx, { prompt: 'Aplikasi "Atur Shift": prinsip apa yang dilanggar setiap masukan?', rows: FEEDBACK.map(([k, t, a]) => [k, `${k}. ${t}`, a]), opts: PRINCIPLES, cls: 'prinsip', info: 'Pilihan: kesejahteraan pengguna, transparansi dan tanggung jawab manusia, keadilan, privasi, terjangkau oleh semua orang.', why: (k, a, ok) => (ok ? FEEDBACK.find((f) => f[0] === k)[3] : 'Masukan ini merugikan pegawai dalam hal apa?'), done: next });
-      else ask('Janji piagam mana yang menjawab masukan nomor 2 ("Itu keputusan sistem")?', [[FEEDBACK[1][3], true], [FEEDBACK[3][3]], [FEEDBACK[4][3]], ['Kami membuat aplikasi lebih cepat supaya jadwal keluar lebih awal.']], 1, null,
-        then(() => ask('Debat: satu argumen klaimnya jelas, memakai data soal 3, dan menanggapi lawan, tetapi juga menyerang pribadi. Berapa poinnya?', [[1], [2, true], [3], [4]], 4, el('table', { class: 'kj-tabel' }, DEBATE.map(([, l, p]) => el('tr', null, el('td', null, l), el('td', null, p > 0 ? `+${p}` : `−${-p}`)))),
-          then(() => ask('Argumen mana yang paling kuat untuk tim kontra?', [['"Data soal 3: 43 pekerjaan baru muncul, tetapi 60 hilang; dan tugas kasir K1–K3 berpola sehingga mudah diambil alih."', true], ['"Tim pro tidak mengerti apa-apa."'], ['"KA itu menakutkan."'], ['"Pokoknya pekerjaan akan hilang semua."']])))));
+      const next = (wait = 5200) => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, wait); } };
+      const area = el('div', { class: 'kj32-area' });
+      const go = (k, no) => wrap.append(misiHead(no, ...HEAD32[k], '🧑‍🔧'), area);
+      const fin = (ms) => ({ oops: () => ctx.mistake(), done: () => next(ms) });
+      if (r === 0) { go('gel1', 1); waveRound(area, ctx, { jobs: ['K', 'N', 'W'], ...fin(7500) }); }
+      else if (r === 1) { go('gel2', 1); waveRound(area, ctx, { jobs: ['F', 'D', 'M'], ...fin(7500) }); }
+      else if (r === 2) { go('joko', 2); jokoRound(area, ctx, fin(6000)); }
+      else if (r === 3) { go('papan', 3); pctRound(area, ctx, fin(6000)); }
+      else if (r === 4) { go('neraca', 3); balanceRound(area, ctx, fin(6500)); }
+      else if (r === 5) { go('profesi', 4); profRound(area, ctx, fin(5500)); }
+      else if (r === 6) { go('prinsip', 5); principleRound(area, ctx, fin(5500)); }
+      else if (r === 7) { go('janji', 5); promiseRound(area, ctx, fin(6000)); }
+      else if (r === 8) { go('pers', 6); pressRound(area, ctx, fin(6500)); }
+      else { go('bos', 'Bos'); debateBoss(area, ctx, fin(7500)); }
     }
     render();
   },
 };
 
 function createSort(root, ctx) {
-  const wrap = el('div', { class: 'act pekerjaan-ka' });
+  const wrap = el('div', { class: 'act kj32-main' });
   root.append(wrap);
-  const start = () => wrap.replaceChildren(el('p', { class: 'prompt' }, 'Pilah 24 tugas dari enam pekerjaan'), sorter(ctx, { tasks: TASKS, onDone: () => wrap.append(el('div', { class: 'kode-baris' }, button('↺ Ulangi', start))) }));
+  const start = () => {
+    const area = el('div', { class: 'kj32-area' });
+    wrap.replaceChildren(el('div', { class: 'misi-kepala' }, el('b', { class: 'misi-judul' }, '🗃 Pilah 24 Tugas')), area);
+    waveRound(area, ctx, { jobs: JOBS.map((j) => j[0]), done: () => area.append(button('↺ Ulangi', start)) });
+  };
   start();
 }
 

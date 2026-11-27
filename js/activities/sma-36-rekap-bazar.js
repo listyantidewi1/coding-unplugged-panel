@@ -2,10 +2,13 @@
 // list: predicting range(), nested for with an accumulator, Dodi's misplaced
 // jumlah = 0, finding the best day and stall, Sari's while that never ends
 // (indentation), IndexError past the last index, and a donation target loop.
+// The main mode is the game Manusia Python: players tap cells, drag values,
+// move lines and crowns, and assemble outputs; nothing is typed.
 
-import { el, onTap, button } from '../core/util.js';
-import { choice } from '../core/kit.js';
-import { say, pickTeams, scoreBar, finishBoard, rowsChoose, pyTracer, pyCode, stepper } from './smp-kit.js';
+import { el, onTap, button, shake } from '../core/util.js';
+import { dnd } from '../core/kit.js';
+import { say, pickTeams, scoreBar, finishBoard, pyTracer, pyCode, stepper } from './smp-kit.js';
+import { misiHead, fill, codeView, rowsView, fillBoard, tileSlots, layar, play } from './misi-kit.js';
 import { runPy, pyRepr, makePyRunner } from './mini-py.js';
 
 export const HARI = ['Kamis', 'Jumat', 'Sabtu'];
@@ -21,7 +24,6 @@ export const DONASI = (target = 300, persen = 30) => [...PRE, `target = ${target
 export const NAIK = [...HEAD.slice(0, 5), 'for s in range(len(stan)):', '    naik = True', '    for h in range(1, len(hari)):', '        if penjualan[h][s] <= penjualan[h - 1][s]:', '            naik = False', '    if naik:', '        print(stan[s])'];
 export const run = (lines, o = {}) => runPy(lines, { limit: 20000, loopLimit: 50, ...o });
 export const RANGES = ['range(1, 4)', 'range(0, 10, 3)', 'range(5, 0, -1)', 'range(len(stan))', 'range(2, 2)', 'range(10, 0, -3)'];
-const DISTRACT = { 'range(1, 4)': ['[1, 2, 3, 4]', '[0, 1, 2, 3]', '[2, 3, 4]'], 'range(0, 10, 3)': ['[0, 3, 6, 9, 12]', '[3, 6, 9]', '[0, 3, 6]'], 'range(5, 0, -1)': ['[5, 4, 3, 2, 1, 0]', '[4, 3, 2, 1, 0]', '[]'], 'range(len(stan))': ['[1, 2, 3, 4]', '[0, 1, 2, 3, 4]', '[4]'], 'range(2, 2)': ['[2]', '[0, 1]', '[2, 2]'], 'range(10, 0, -3)': ['[10, 7, 4, 1, -2]', '[10, 7, 4]', '[9, 6, 3]'] };
 export const rangeOf = (src) => pyRepr(runPy([...HEAD.slice(0, 2), `x = list(${src})`]).vars.x);
 // Line counts for a run (how many times each line was reached).
 export function counts(lines) { const c = {}; const ru = makePyRunner(lines, { limit: 20000 }); for (const y of ru.gen) c[y.line] = (c[y.line] || 0) + 1; return c; }
@@ -32,6 +34,329 @@ function grid(vars = {}, { lit = false, col = null } = {}) {
     DATA.map((row, i) => el('tr', null, el('th', null, `${i}: ${HARI[i]}`), row.map((v, j) => el('td', { class: `${lit && i === h && j === s ? 'baca' : ''} ${col === j ? 'kolom' : ''}` }, String(v))))));
 }
 const loopTracer = (lines, o = {}) => pyTracer(lines, { counts: true, cls: 'rb-jejak', speed: 350, opts: { limit: 20000, loopLimit: 50 }, hideVars: ['hari', 'stan', 'penjualan'], extra: (st) => grid(st.vars, { lit: true }), ...o });
+
+// ---------- Permainan: Manusia Python ----------
+// The players are the interpreter; the Bug Bazar slips one bug into every mission.
+const HEAD36 = {
+  ramal: ['Ramal range', 'Ketuk bilangan yang dihasilkan range, lalu tutup list-nya.', 'range-nya disamarkan!'],
+  setel: ['Setel Mesin range', 'Atur a, b, dan langkah sampai hasilnya sama dengan target.', 'Targetnya diacak!'],
+  jalan: ['Jalankan Perulangan Bersarang', 'Tunjuk sel yang dibaca, lalu hitung jumlah berikutnya.', 'Penunjuk h dan s hilang!'],
+  hitung: ['Hitung Eksekusi', 'Berapa kali setiap baris dijalankan?', 'Penghitung baris rusak!'],
+  dodi: ['Bug Dodi', 'Ramal keluaran program Dodi, lalu pindahkan baris yang salah tempat.', 'jumlah = 0 dipindah diam-diam!'],
+  terlaris: ['Cari Hari Terlaris', 'Pindahkan mahkota ke calon terlaris di setiap putaran.', 'Mahkotanya tertukar!'],
+  stan: ['Total Setiap Stan', 'Susun baris program dari kartu, lalu cari stan terlaris.', 'Baris program berserakan!'],
+  henti: ['Putaran Tak Berujung', 'Jalankan program Sari, temukan baris yang lupa dijorokkan.', 'Satu jorokan dicuri!'],
+  batas: ['Lewat Batas', 'Tunjuk kotak yang dibaca di setiap pemeriksaan, lalu perbaiki syaratnya.', 'Ambang dinaikkan ke 500!'],
+  bos: ['Target Donasi dan Stan Naik Terus', 'Hitung donasi terkumpul, lalu cari stan yang penjualannya naik setiap hari.', 'Bug terakhir menunggu!'],
+};
+const msg36 = (t) => el('p', { class: 'reveal info' }, t);
+const pyList = (lines) => runPy([`x = ${lines}`]).vars.x;
+
+export const RANGE_Q = ['range(1, 4)', 'range(0, 10, 3)', 'range(5, 0, -1)'];
+export const SETEL = [[[0, 1, 2, 3], 'indeks keempat stan'], [[], 'list kosong'], [[10, 7, 4, 1], 'hitung mundur']];
+export const SETEL_SOL = [[0, 4, 1], [0, 0, 1], [10, 0, -3]];
+export const CORE = ['total_hari = []', 'for h in range(len(hari)):', '    jumlah = 0', '    for s in range(len(stan)):', '        jumlah = jumlah + penjualan[h][s]', '    total_hari.append(jumlah)', '    print(hari[h], jumlah)', 'print("Total bazar:", sum(total_hari))'];
+export const ACC_CHIPS = ['120', '205', '265', '310', '85', '60', '45', '180'];
+export const TOT_CHIPS = ['320', '470', '630', '1100', '790', '150'];
+export const COUNT_CHIPS = ['3', '3', '12', '30', '4', '11', '1'];
+export const COUNT_WANT = ['3', '12', '3', '30'];
+export const DODI = ['jumlah = 0', 'total_hari = []', 'for h in range(len(hari)):', '    for s in range(len(stan)):', '        jumlah = jumlah + penjualan[h][s]', '    total_hari.append(jumlah)', '    print(hari[h], jumlah)'];
+export const DODI_CHIPS = ['310', '320', '470', '630', '790', '1100'];
+export const DODI_WANT = ['310', '630', '1100'];
+const DODI_GAPS = { g1: [2, 'Tepat: jumlah dinolkan setiap hari baru, sebelum perulangan stan.'], g2: [3, 'Di dalam perulangan stan, jumlah dinolkan setiap stan, jadi hanya berisi satu angka. Kamis menjadi 45.'], g3: [5, 'Terlambat: jumlah sudah ditambahkan ke total_hari sebelum dinolkan.'] };
+export const TERLARIS = ['terlaris = 0', 'for h in range(1, len(hari)):', '    if total_hari[h] > total_hari[terlaris]:', '        terlaris = h', 'print("Hari terlaris:", hari[terlaris])'];
+export const STAN_BUILD = ['total_stan = []', ['fs', 0], ['j0', 1], ['fh', 1], ['acc', 2], '    total_stan.append(jumlah)'];
+export const STAN_TILES = [['fs', 'for s in range(len(stan)):'], ['j0', 'jumlah = 0'], ['fh', 'for h in range(len(hari)):'], ['acc', 'jumlah = jumlah + penjualan[h][s]'], ['x1', 'jumlah = jumlah + penjualan[s][h]', 'penjualan[s][h] membaca baris ke-s. Saat s = 3 tidak ada hari ke-3: IndexError.'], ['x2', 'for s in range(len(hari)):', 'Ada 4 stan, jadi s berjalan sebanyak len(stan).']];
+export const SARI_OUT = [['k', 'Kamis belum mencapai 400'], ['j', 'Jumat belum mencapai 400'], ['s', 'Hari pertama mencapai 400: Sabtu'], ['x1', 'Sabtu belum mencapai 400', 'Sabtu 470, sudah mencapai 400, jadi syarat while False.'], ['x2', 'Hari pertama mencapai 400: Jumat', 'Jumat 320, belum mencapai 400.']];
+const SARI_TAP = { 0: 'Baris ini dijalankan sekali sebelum perulangan.', 1: 'Baris ini dijalankan sekali sebelum perulangan.', 2: 'Baris ini dijalankan sekali sebelum perulangan.', 3: 'Syarat while-nya benar. Apa yang seharusnya mengubah i di setiap putaran?', 4: 'print ini sudah di dalam perulangan.', 6: 'Baris ini memang dijalankan sekali setelah perulangan selesai.' };
+export const FIXED500 = ['i = 0', 'while i < len(total_hari) and total_hari[i] < 500:', '    print(hari[i], "belum mencapai 500")', '    i = i + 1', 'if i < len(hari):', '    print("Hari pertama mencapai 500:", hari[i])', 'else:', '    print("Tidak ada hari yang mencapai 500")'];
+export const COND = [['cek', 'i < len(total_hari)'], ['nilai', 'total_hari[i] < 500'], ['x1', 'i <= len(total_hari)', 'Dengan <=, i = 3 masih lolos, lalu total_hari[3] dibaca dan galat.']];
+export const DONASI_CORE = ['target = 300', 'terkumpul = 0', 'i = 0', 'while terkumpul < target and i < len(hari):', '    terkumpul = terkumpul + total_hari[i] * 30 // 100', '    i = i + 1'];
+export const DON_CHIPS = ['93', '96', '141', '189', '330', '310'];
+export const DON_WANT = ['93', '189', '330'];
+export const HASIL_CHIPS = ['Kamis', 'Jumat', 'Sabtu', '70', '100', '30'];
+export const HASIL_WANT = ['Sabtu', '70'];
+
+function grid36({ lit = null, col = null, onCell = null, onCol = null, foot = null } = {}) {
+  return el('table', { class: 'rb36-meja' },
+    el('tr', null, el('th', null, 'h \\ s'), STAN.map((n, j) => { const th = el('th', { class: col === j ? 'kolom' : '', 'data-col': j }, el('small', null, String(j)), ` ${n}`); return onCol ? onTap(th, () => onCol(j)) : th; })),
+    DATA.map((row, i) => el('tr', null, el('th', null, el('small', null, String(i)), ` ${HARI[i]}`), row.map((v, j) => { const td = el('td', { class: `${lit && lit[0] === i && lit[1] === j ? 'baca' : ''} ${col === j ? 'kolom' : ''}`, 'data-h': i, 'data-s': j }, String(v)); return onCell ? onTap(td, () => onCell(i, j)) : td; }))),
+    foot ? el('tr', { class: 'kaki' }, el('th', null, foot[0]), foot[1].map((v, j) => el('td', { class: col === j ? 'kolom' : '' }, v == null ? '' : String(v)))) : null);
+}
+const boxes36 = (arr, cls = '') => el('div', { class: `rb36-list ${cls}` }, el('b', null, '['), arr.length ? arr.map((x) => el('span', { class: 'rb36-kotak' }, String(x))) : el('span', { class: 'rb36-kosong' }, ' '), el('b', null, ']'));
+
+// Misi 1a: build list(range(...)) by tapping numbers.
+function ramalRound(area, ctx, { oops, done }) {
+  const msg = msg36('Ketuk bilangan yang dihasilkan range satu per satu, lalu tutup list-nya.');
+  let qi = 0;
+  const go = () => {
+    const src = RANGE_Q[qi]; const v = pyList(`list(${src})`); const [a, b, s = 1] = src.match(/-?\d+/g).map(Number);
+    const got = []; let over = false;
+    const box = el('div', { class: 'rb36-list besar' });
+    const draw = () => fill(box, el('b', null, '['), got.map((x) => el('span', { class: 'rb36-kotak' }, String(x))), over ? el('b', null, ']') : el('span', { class: 'rb36-kursor' }, '▮'));
+    const pick = (n) => {
+      if (over) return; const k = got.length;
+      if (n === null) { if (k < v.length) { oops(); say(msg, 'bad', `Belum selesai: masih ada bilangan sebelum mencapai ${b}.`); return; } over = true; draw(); ctx.sound.good(); qi++;
+        if (qi < RANGE_Q.length) { say(msg, 'info', `list(${src}) = [${v.join(', ')}]. Berikutnya!`); setTimeout(go, 1800); } else { say(msg, '', 'range(a, b, langkah) mulai dari a, bertambah langkah, dan berhenti sebelum b. Langkah negatif menghitung mundur.'); done(); }
+        return; }
+      if (k >= v.length) { oops(); say(msg, 'bad', `${n} sudah mencapai atau melewati batas ${b}. range berhenti sebelum b: tutup list-nya.`); return; }
+      if (n !== v[k]) { oops(); say(msg, 'bad', k === 0 ? `range mulai dari a = ${a}.` : `Tambahkan langkah ${s} ke bilangan terakhir.`); return; }
+      got.push(n); ctx.sound.tap(); draw(); say(msg, 'info', 'Tepat.');
+    };
+    draw();
+    fill(area, el('div', { class: 'rb36-mesin' }, el('small', null, `Ramalan ${qi + 1} dari ${RANGE_Q.length}`), el('code', { class: 'rb36-ekspr' }, `list(${src})`), box),
+      el('div', { class: 'rb36-angka-angka' }, Array.from({ length: 11 }, (_, n) => onTap(el('button', { class: 'rb36-angka', type: 'button', 'data-n': n }, String(n)), () => pick(n))),
+        onTap(el('button', { class: 'rb36-angka tutup', type: 'button', 'data-n': 'tutup' }, '] tutup'), () => pick(null))), msg);
+  };
+  go();
+}
+
+// Misi 1b: set a, b and step until the machine matches the target.
+function setelRound(area, ctx, { oops, done }) {
+  const msg = msg36('Atur a, b, dan langkah dengan tombol − dan +, lalu jalankan mesin.');
+  let a = 0; let b = 5; let s = 1; let t = 0; let out = null; let busy = false;
+  const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
+  const step = (k, v, set) => el('div', { class: 'rb36-stepper', 'data-k': k }, el('small', null, k), onTap(el('button', { class: 'rb36-pm', type: 'button', 'data-d': '-1' }, '−'), () => set(-1)), el('b', null, String(v)), onTap(el('button', { class: 'rb36-pm', type: 'button', 'data-d': '1' }, '+'), () => set(1)));
+  const draw = () => fill(area,
+    el('div', { class: 'rb36-target', 'data-t': t }, el('small', null, `Target ${t + 1} dari ${SETEL.length}: ${SETEL[t][1]}`), boxes36(SETEL[t][0])),
+    el('div', { class: 'rb36-mesin' }, el('code', { class: 'rb36-ekspr' }, `list(range(${a}, ${b}, ${s}))`),
+      el('div', { class: 'rb36-stepper-stepper' }, step('a', a, (d) => { a = clamp(a + d, -5, 12); out = null; draw(); }), step('b', b, (d) => { b = clamp(b + d, -5, 12); out = null; draw(); }), step('langkah', s, (d) => { s += d; if (s === 0) s += d; s = clamp(s, -5, 5); out = null; draw(); })),
+      button('▶ Jalankan', runIt, 'primary'), out ? boxes36(out, 'hasil') : null), msg);
+  function runIt() {
+    if (busy) return; out = pyList(`list(range(${a}, ${b}, ${s}))`); const ok = JSON.stringify(out) === JSON.stringify(SETEL[t][0]);
+    if (!ok) { oops(); draw(); say(msg, 'bad', `Hasilnya [${out.join(', ')}], belum sama dengan target.`); return; }
+    ctx.sound.good(); busy = true; draw(); t++;
+    if (t < SETEL.length) { say(msg, 'info', `Tepat: range(${a}, ${b}, ${s}). Target berikutnya!`); setTimeout(() => { busy = false; out = null; draw(); }, 1800); return; }
+    say(msg, '', 'Satu list bisa dibuat dengan beberapa range. range(a, a) selalu kosong, dan langkah negatif butuh a > b.'); done();
+  }
+  draw();
+}
+
+// Misi 2a: be the pointer and the accumulator for h = 0, then read the totals.
+function jalanRound(area, ctx, { oops, done }) {
+  const msg = msg36('h = 0. Ketuk sel penjualan[h][s] yang dibaca program.');
+  let s = 0; let jumlah = 0; let phase = 'tap'; const used = [];
+  const vars = el('div', { class: 'rb36-var' }); const gridBox = el('div');
+  const tray = el('div', { class: 'mk-chip-chip' }, ctx.rand.shuffle(ACC_CHIPS.slice()).map((c) => el('div', { class: 'mk-chip', 'data-drag': c }, c)));
+  const draw = () => {
+    fill(gridBox, grid36({ lit: phase === 'jumlah' ? [0, s] : null, onCell: phase === 'tap' ? cell : null }));
+    fill(vars, el('span', null, 'h = ', el('b', null, '0')), el('span', null, 's = ', el('b', null, phase === 'tap' ? '?' : String(s))), el('span', null, 'jumlah = ', phase === 'jumlah' ? el('span', { class: 'mk-celah', 'data-drop': 'j' }, '?') : el('b', null, String(jumlah))));
+  };
+  const host = el('div', { class: 'rb36-dua' }, codeView(CORE, { hl: [4] }), el('div', { class: 'rb36-tumpuk' }, gridBox, vars, tray));
+  function cell(h, j) {
+    if (h !== 0 || j !== s) { oops(); say(msg, 'bad', h !== 0 ? 'h = 0: baris pertama, Kamis.' : `s berjalan 0, 1, 2, 3. Sekarang s = ${s}.`); return; }
+    phase = 'jumlah'; ctx.sound.tap(); draw(); say(msg, 'info', `penjualan[0][${s}] = ${DATA[0][s]}. Seret nilai jumlah yang baru.`);
+  }
+  dnd(host, (chip, blank) => {
+    if (phase !== 'jumlah' || blank.dataset.drop !== 'j') return;
+    const want = jumlah + DATA[0][s];
+    if (+chip.dataset.drag !== want) { oops(); shake(chip); say(msg, 'bad', `jumlah = jumlah + penjualan[0][${s}] = ${jumlah} + ${DATA[0][s]}.`); return; }
+    chip.remove(); jumlah = want; used.push(want); s++; ctx.sound.tap();
+    if (s < 4) { phase = 'tap'; draw(); say(msg, 'info', `jumlah = ${jumlah}. Ketuk sel berikutnya.`); return; }
+    phase = 'auto'; draw(); say(msg, 'info', 'Kamis selesai: 310. Program menjalankan Jumat dan Sabtu…'); autoRun();
+  });
+  function autoRun() {
+    const cells = []; for (let h = 1; h < 3; h++) for (let j = 0; j < 4; j++) cells.push([h, j]);
+    let i = 0;
+    const tick = () => {
+      if (!host.isConnected) return;
+      if (i < cells.length) { fill(gridBox, grid36({ lit: cells[i] })); i++; setTimeout(tick, 280); return; }
+      fill(gridBox, grid36()); totals();
+    };
+    tick();
+  }
+  function totals() {
+    say(msg, 'info', 'Lengkapi total_hari dan total bazar.');
+    fill(area, el('div', { class: 'rb36-dua' }, codeView(CORE, { hl: [5, 7] }), el('div', { class: 'rb36-tumpuk' }, grid36(), fillBoard(ctx, { oops, msg, chips: TOT_CHIPS, want: ['320', '470', '1100'],
+      view: rowsView([['total_hari = [310, ', '_', ', ', '_', ']'], ['Total bazar: ', '_']]),
+      hints: ['Jumat: 150 + 95 + 40 + 35.', 'Sabtu: 210 + 130 + 75 + 55.', '310 + 320 + 470.'],
+      done: () => { say(msg, '', 'Perulangan luar memilih hari, perulangan dalam menjumlahkan keempat stan. Total bazar Rp1.100 ribu.'); done(); } }))), msg);
+  }
+  draw();
+  area.append(host, msg);
+}
+
+// Misi 2b: how many times each line runs.
+function hitungRound(area, ctx, { oops, done }) {
+  const msg = msg36('Seret angka ke penghitung di samping baris. 3 hari, 4 stan.');
+  const at = { 2: 0, 4: 1, 6: 2 };
+  area.append(fillBoard(ctx, { oops, msg, chips: COUNT_CHIPS, want: COUNT_WANT, cls: 'rb36-lebar',
+    view: (mk) => el('div', { class: 'rb36-tumpuk' }, codeView(CORE, { after: (i) => (i in at ? el('span', { class: 'rb36-hitung' }, '×', mk()) : null) }), el('div', { class: 'mk-rumus' }, el('div', null, 'Bila 5 hari dan 6 stan, baris 5 dijalankan ', mk(), ' kali'))),
+    hints: ['Baris ini ada di perulangan luar: sekali untuk setiap hari.', 'Di perulangan dalam: 3 hari × 4 stan.', 'print ada di perulangan luar.', '5 × 6.'],
+    done: () => { say(msg, '', 'Baris di perulangan luar jalan 3 kali; baris di perulangan dalam jalan 3 × 4 = 12 kali. 5 hari × 6 stan = 30.'); done(); } }), msg);
+}
+
+// Misi 2c: predict Dodi's output, then drag jumlah = 0 to the right place.
+function dodiRound(area, ctx, { oops, done }) {
+  const msg = msg36('Program Dodi menolkan jumlah di atas. Ramal keluarannya.');
+  area.append(el('div', { class: 'rb36-dua' }, codeView(DODI, { warn: [0] }), el('div', { class: 'rb36-tumpuk' }, grid36(), fillBoard(ctx, { oops, msg, chips: DODI_CHIPS, want: DODI_WANT,
+    view: rowsView([['Kamis ', '_'], ['Jumat ', '_'], ['Sabtu ', '_']]),
+    hints: ['Kamis: 120 + 85 + 60 + 45.', 'jumlah tidak dinolkan lagi: 310 + 150 + 95 + 40 + 35.', '630 + 210 + 130 + 75 + 55.'],
+    done: () => { say(msg, 'info', 'Angkanya menumpuk: 310, 630, 1100. Seret baris jumlah = 0 ke tempat yang benar.'); setTimeout(fixIt, 2400); } }))), msg);
+  function fixIt() {
+    let over = false; const card = el('div', { class: 'mk-ubin', 'data-drag': 'nol' }, 'jumlah = 0');
+    const rest = DODI.slice(1); const gapAt = { 1: 'g1', 2: 'g2', 4: 'g3' };
+    const rows = []; rest.forEach((t, i) => { rows.push(el('div', { class: 'mk-baris' }, el('code', null, t))); if (gapAt[i]) rows.push(el('div', { class: 'rb36-celah-baris', 'data-drop': gapAt[i], style: { marginLeft: `${(DODI_GAPS[gapAt[i]][0] === 3 ? 2 : 1) * 2}em` } }, '⤷ taruh di sini')); });
+    const screen = layar();
+    const host = el('div', { class: 'rb36-dua' }, el('div', { class: 'rb36-tumpuk' }, el('div', { class: 'rb36-baki-satu' }, card), el('div', { class: 'mk-kode' }, rows)), screen);
+    dnd(host, (c, gap) => {
+      if (over || !gap.classList.contains('rb36-celah-baris')) return;
+      if (gap.dataset.drop !== 'g1') { oops(); shake(c); say(msg, 'bad', DODI_GAPS[gap.dataset.drop][1]); return; }
+      over = true; c.classList.add('locked'); gap.replaceChildren(c); gap.classList.add('isi'); ctx.sound.tap(); host.querySelectorAll('.rb36-celah-baris:not(.isi)').forEach((g) => g.remove()); say(msg, 'info', DODI_GAPS.g1[1]);
+      play(screen, run(REKAP()).out.slice(0, 3), { end: () => { say(msg, '', 'Kamis 310, Jumat 320, Sabtu 470. Akumulator dinolkan di dalam perulangan luar, tepat sebelum perulangan dalam.'); done(); } });
+    });
+    fill(area, host, msg);
+  }
+}
+
+// Misi 3a: move the crown along total_hari.
+function terlarisRound(area, ctx, { oops, done }) {
+  const msg = msg36('terlaris = 0: mahkota mulai di Kamis.');
+  const T = [310, 320, 470]; let h = 1; let cur = 0;
+  const crown = el('div', { class: 'rb36-mahkota', 'data-drag': 'mahkota' }, '👑');
+  const boxesEl = T.map((v, i) => el('div', { class: 'rb36-podium', 'data-drop': String(i) }, el('small', null, `[${i}] ${HARI[i]}`), el('b', null, String(v))));
+  boxesEl[0].append(crown);
+  const codeBox = el('div');
+  const info = el('div', { class: 'rb36-var' });
+  const draw = () => { fill(codeBox, codeView(TERLARIS, { hl: h < 3 ? [2] : [4] })); fill(info, el('span', null, 'h = ', el('b', null, h < 3 ? String(h) : '–')), el('span', null, 'terlaris = ', el('b', null, String(cur))), h < 3 ? el('span', null, `${T[h]} > ${T[cur]}?`) : null); };
+  const host = el('div', { class: 'rb36-dua' }, codeBox, el('div', { class: 'rb36-tumpuk' }, el('div', { class: 'rb36-podium-podium' }, boxesEl), info));
+  say(msg, 'info', 'h = 1. Seret mahkota ke calon terlaris setelah putaran ini.');
+  dnd(host, (c, box) => {
+    if (h >= 3) return; const j = +box.dataset.drop; const want = T[h] > T[cur] ? h : cur;
+    if (j !== want) { oops(); shake(c); say(msg, 'bad', want === cur ? `${T[h]} tidak lebih besar dari ${T[cur]}, jadi terlaris tetap.` : `${T[h]} > ${T[cur]}: terlaris = h = ${h}.`); return; }
+    boxesEl[j].append(crown); cur = j; h++; ctx.sound.tap(); draw();
+    if (h < 3) { say(msg, 'info', `h = ${h}. Seret mahkota lagi.`); return; }
+    say(msg, 'info', 'Perulangan selesai. Lengkapi keluaran print.');
+    host.lastChild.append(fillBoard(ctx, { oops, msg, chips: ['Kamis', 'Jumat', 'Sabtu', '2', '470'], want: ['Sabtu'], view: rowsView([['Hari terlaris: ', '_']]), hints: ['print menampilkan hari[terlaris], yaitu nama harinya.'],
+      done: () => { say(msg, '', 'Hari terlaris: Sabtu. Calon awal indeks 0, jadi perulangan cukup mulai dari 1.'); done(); } }));
+  });
+  draw(); area.append(host, msg);
+}
+
+// Misi 3b: build the per-stall program from cards, then tap the best stall.
+function stanRound(area, ctx, { oops, done }) {
+  const msg = msg36('Susun program total setiap stan. Perulangan luar per stan, dalam per hari.');
+  const gridBox = el('div');
+  fill(gridBox, grid36());
+  const board = tileSlots(ctx, { oops, msg, build: STAN_BUILD, tiles: STAN_TILES, onFull: () => {
+    say(msg, 'info', 'Program jalan: kolom demi kolom.'); const tot = run(STANPROG()).vars.total_stan; const shown = [null, null, null, null];
+    let j = 0;
+    const tick = () => {
+      if (!gridBox.isConnected) return;
+      if (j < 4) { shown[j] = tot[j]; fill(gridBox, grid36({ col: j, foot: ['total_stan', shown] })); j++; setTimeout(tick, 600); return; }
+      fill(gridBox, grid36({ foot: ['total_stan', tot], onCol: pick })); say(msg, 'info', 'Ketuk kolom stan terlaris.');
+    };
+    tick();
+  } });
+  let over = false;
+  function pick(j) {
+    if (over) return;
+    if (j !== 0) { oops(); say(msg, 'bad', 'Bandingkan baris total_stan: mana yang terbesar?'); return; }
+    over = true; ctx.sound.good(); fill(gridBox, grid36({ col: 0, foot: ['total_stan', [480, 310, 175, 135]] }));
+    say(msg, '', 'Stan terlaris: Kue (480). Keempat total stan berjumlah 1100, sama dengan total bazar.'); done();
+  }
+  area.append(el('div', { class: 'rb36-tumpuk' }, board, gridBox), msg);
+}
+
+// Misi 4: run Sari's endless loop, indent the line, predict the output.
+function hentiRound(area, ctx, { oops, done }) {
+  const msg = msg36('Jalankan program Sari: hari pertama yang mencapai 400.');
+  const lines = SARI(); let ran = false; let fixed = false; let busy = false;
+  const codeBox = el('div'); const screen = layar(); const count = el('small', { class: 'rb36-putaran' }, 'putaran: 0');
+  const draw = () => fill(codeBox, codeView(fixed ? SARI({ indent: true }) : lines, { warn: ran && !fixed ? [5] : [], onLine: ran && !fixed ? tap : null, cls: ran && !fixed ? 'ketuk' : '' }));
+  const runBtn = button('▶ Jalankan', () => {
+    if (busy || ran) return; busy = true;
+    const R = run(lines); let n = 0;
+    play(screen, R.out, { gap: 45, err: `⛔ ${R.error?.message || 'Perulangan tidak berhenti'}`, end: () => { busy = false; ran = true; runBtn.remove(); draw(); oopsFree(); } });
+    const iv = setInterval(() => { if (!screen.isConnected || n >= R.out.length) { clearInterval(iv); return; } n++; count.textContent = `putaran: ${n}`; }, 45);
+  }, 'primary');
+  function oopsFree() { say(msg, 'info', 'Program tidak berhenti! Ketuk baris yang seharusnya ikut berulang (dijorokkan).'); }
+  function tap(i) {
+    if (fixed) return;
+    if (i !== 5) { oops(); say(msg, 'bad', SARI_TAP[i]); return; }
+    fixed = true; ctx.sound.tap(); draw(); say(msg, 'info', 'i = i + 1 sekarang di dalam perulangan. Susun keluarannya sebelum dijalankan.'); setTimeout(predict, 1600);
+  }
+  function predict() {
+    const out = layar();
+    fill(area, el('div', { class: 'rb36-dua' }, codeBox, el('div', { class: 'rb36-tumpuk' }, tileSlots(ctx, { oops, msg, build: [['k', 0], ['j', 0], ['s', 0]], tiles: SARI_OUT, onFull: () => {
+      play(out, run(SARI({ indent: true })).out, { end: () => { say(msg, '', 'Ramalanmu cocok dengan layar. Tanpa jorokan, i tidak pernah berubah dan syarat while selalu True.'); done(); } });
+    } }), out)), msg);
+  }
+  draw();
+  area.append(el('div', { class: 'rb36-dua' }, codeBox, el('div', { class: 'rb36-tumpuk' }, runBtn, screen, count)), msg);
+}
+
+// Misi 5: tap the box read at each check, find the IndexError, fix the order of conditions.
+function batasRound(area, ctx, { oops, done }) {
+  const msg = msg36('Ambang 500. Setiap pemeriksaan syarat while membaca total_hari[i]. Ketuk kotak yang dibaca.');
+  const T = [310, 320, 470]; let i = 0; let over = false;
+  const screen = layar();
+  const cells = [...T.map((v, k) => el('button', { class: 'rb36-podium', type: 'button', 'data-k': k }, el('small', null, `[${k}]`), el('b', null, String(v)))), el('button', { class: 'rb36-podium hantu', type: 'button', 'data-k': 3 }, el('small', null, '[3]'), el('b', null, '?'))];
+  cells.forEach((c, k) => onTap(c, () => pick(k)));
+  const info = el('div', { class: 'rb36-var' });
+  const drawInfo = () => fill(info, el('span', null, 'pemeriksaan ke-', el('b', null, String(i + 1))), el('span', null, 'i = ', el('b', null, String(i))));
+  function pick(k) {
+    if (over) return;
+    if (k !== i) { oops(); say(msg, 'bad', `i = ${i}, jadi yang dibaca total_hari[${i}].`); return; }
+    cells[k].classList.add('baca'); ctx.sound.tap();
+    if (k < 3) { screen.textContent = `${i ? `${screen.textContent}\n` : ''}${HARI[k]} belum mencapai 500`; i++; drawInfo(); say(msg, 'info', `${T[k]} < 500 benar: print, lalu i = ${i}.`); return; }
+    over = true; cells[3].classList.add('meledak'); screen.append(el('b', { class: 'mk-galat' }, '\nIndexError: list index out of range'));
+    say(msg, 'info', 'Pemeriksaan keempat membaca total_hari[3], padahal indeks terakhir 2. Perbaiki syaratnya.'); setTimeout(fixIt, 2600);
+  }
+  drawInfo();
+  area.append(el('div', { class: 'rb36-dua' }, codeView(SARI({ indent: true, batas: 500 }), { hl: [3] }), el('div', { class: 'rb36-tumpuk' }, el('div', { class: 'rb36-podium-podium empat' }, cells), info, screen)), msg);
+  function fixIt() {
+    let got = 0; const out = layar();
+    const slots = [el('span', { class: 'mk-slot sebaris', 'data-drop': '0' }, '?'), el('span', { class: 'mk-slot sebaris', 'data-drop': '1' }, '?')];
+    const view = codeView(FIXED500, { line: (k) => (k === 1 ? el('code', null, 'while ', slots[0], ' and ', slots[1], ':') : null) });
+    const tray = el('div', { class: 'mk-ubin-baki' }, ctx.rand.shuffle(COND.slice()).map(([id, t]) => el('div', { class: 'mk-ubin', 'data-drag': id }, t)));
+    const host = el('div', { class: 'rb36-dua' }, el('div', { class: 'rb36-tumpuk' }, view, tray), out);
+    dnd(host, (card, slot) => {
+      if (!slot.classList.contains('mk-slot') || slot.classList.contains('isi')) return;
+      if (+slot.dataset.drop !== got) { say(msg, 'info', 'Isi syarat kiri dulu.'); return; }
+      const id = card.dataset.drag; const want = got === 0 ? 'cek' : 'nilai';
+      if (id !== want) { oops(); shake(card); say(msg, 'bad', COND.find((c) => c[0] === id)[2] || (got === 0 ? 'and memeriksa dari kiri. Bila total_hari[i] di kiri, saat i = 3 ia dibaca dulu dan galat.' : 'Syarat ini sudah dipakai di kiri.')); return; }
+      card.classList.add('locked'); slot.replaceChildren(card); slot.classList.add('isi'); got++; ctx.sound.tap();
+      if (got < 2) { say(msg, 'info', 'Tepat. Sekarang syarat kanan.'); return; }
+      tray.remove();
+      play(out, runPy([...PRE, ...FIXED500]).out, { end: () => { say(msg, '', 'and berhenti di False pertama: saat i = 3, i < len(total_hari) sudah False, jadi total_hari[3] tidak pernah dibaca.'); done(); } });
+    });
+    say(msg, 'info', 'Seret dua syarat ke while … and …. Urutannya penting.');
+    fill(area, host, msg);
+  }
+}
+
+// Misi 6 and Bos: donation loop, then the stalls that rise every day.
+function bosRound(area, ctx, { oops, done }) {
+  const msg = msg36('30% penjualan setiap hari didonasikan. Hitung terkumpul setelah setiap putaran.');
+  area.append(el('div', { class: 'rb36-dua' }, codeView(DONASI_CORE, { hl: [4] }), fillBoard(ctx, { oops, msg, chips: DON_CHIPS, want: DON_WANT,
+    view: rowsView([['total_hari = [310, 320, 470]'], ['Kamis: terkumpul ', '_'], ['Jumat: terkumpul ', '_'], ['Sabtu: terkumpul ', '_']]),
+    hints: ['310 × 30 // 100.', '93 + 320 × 30 // 100 = 93 + 96.', '189 + 470 × 30 // 100 = 189 + 141.'],
+    done: () => { say(msg, 'info', 'Terkumpul 93, 189, 330. Sekarang keluarannya.'); setTimeout(result, 2200); } })), msg);
+  function result() {
+    fill(area, el('div', { class: 'rb36-dua' }, codeView(DONASI(300).slice(8), {}), fillBoard(ctx, { oops, msg, chips: HASIL_CHIPS, want: HASIL_WANT,
+      view: rowsView([['Target 300: tercapai pada hari ', '_'], ['Target 400: belum tercapai, kurang ', '_']]),
+      hints: ['330 ≥ 300 baru tercapai setelah putaran Sabtu.', 'Perulangan berhenti karena i mencapai 3: 400 − 330.'],
+      done: () => { say(msg, 'info', 'Misi Bos: stan mana yang penjualannya naik setiap hari?'); setTimeout(naik, 2400); } })), msg);
+  }
+  function naik() {
+    let left = 4; const want = run(NAIK).out;
+    const bins = [['ya', '📈 naik setiap hari'], ['tidak', '📉 pernah turun']].map(([k, t]) => el('div', { class: 'rb36-wadah', 'data-drop': k }, el('b', null, t), el('div', { class: 'rb36-wadah-isi' })));
+    const tray = el('div', { class: 'mk-chip-chip' }, ctx.rand.shuffle(STAN.slice()).map((n) => el('div', { class: 'mk-chip', 'data-drag': n }, n)));
+    const out = el('div', { class: 'rb36-tumpuk' });
+    const host = el('div', { class: 'rb36-dua' }, el('div', { class: 'rb36-tumpuk' }, grid36(), tray), el('div', { class: 'rb36-tumpuk' }, el('div', { class: 'rb36-wadah-wadah' }, bins), out));
+    dnd(host, (chip, bin) => {
+      bin = bin.closest('.rb36-wadah'); if (!bin || !left) return;
+      const n = chip.dataset.drag; const j = STAN.indexOf(n); const ok = want.includes(n) === (bin.dataset.drop === 'ya');
+      if (!ok) { oops(); shake(chip); say(msg, 'bad', `${n}: ${DATA.map((r) => r[j]).join(' → ')}. ${want.includes(n) ? 'Setiap hari lebih besar dari kemarin.' : 'Ada hari yang tidak lebih besar dari kemarin.'}`); return; }
+      chip.remove(); bin.querySelector('.rb36-wadah-isi').append(el('span', { class: 'mk-chip locked' }, n)); ctx.sound.tap();
+      if (--left) { say(msg, 'info', 'Tepat.'); return; }
+      const scr = layar(); fill(out, codeView(NAIK.slice(5), { cls: 'kecil' }), scr);
+      play(scr, want, { end: () => { say(msg, '', 'naik dimulai True untuk setiap stan dan menjadi False begitu ada hari yang tidak naik. Keluaran: Kue dan Minuman.'); done(); } });
+    });
+    fill(area, host, msg);
+  }
+}
 
 export default {
   id: 'sma-36-rekap-bazar',
@@ -51,36 +376,31 @@ export default {
     { id: 'giliran', icon: '🧑‍🤝‍🧑', label: 'Tebak print Berikutnya', desc: 'Sebelum layar maju, tim yang mendapat giliran menebak keluaran print berikutnya', create: createTeams },
   ],
   create(root, ctx) {
-    const wrap = el('div', { class: 'act rekap-bazar' });
+    const wrap = el('div', { class: 'act rb36-main' });
     root.append(wrap);
-    const R = run(REKAP()); const D = run(REKAP(true)); const C = counts(REKAP());
     function render() {
       wrap.replaceChildren();
       const r = ctx.round;
       let solved = false;
-      const next = () => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, 2400); } };
-      const ask = (prompt, opts, columns = 1, subject = null, onRight = next) => choice(wrap, { prompt, subject, ctx, shuffle: true, onRight, columns, options: opts.map(([l, correct]) => ({ label: String(l), correct })) });
-      const then = (fn) => () => { wrap.replaceChildren(); fn(); };
-      const totals = R.vars.total_hari;
-      if (r === 0) rowsChoose(wrap, ctx, { prompt: 'Meramal range: isi list(…)', cls: 'rb-isi', rows: RANGES.map((src) => { const v = rangeOf(src); return [src, `list(${src})`, [...new Set([v, ...DISTRACT[src]])].sort(), v, src === 'range(2, 2)' ? 'Kosong: mulai dari 2 sampai sebelum 2.' : 'Tepat.']; }), info: 'list(range(3)) = [0, 1, 2] sudah diisi.', done: next });
-      else if (r === 1) { const tr = loopTracer(REKAP(), { onEnd: () => setTimeout(then(() => rowsChoose(wrap, ctx, { prompt: 'Jejak saat h = 0: penjualan[h][s] · jumlah sesudah baris 10', cls: 'rb-isi', rows: [1, 2, 3].map((s) => { const p = DATA[0][s]; const j = DATA[0].slice(0, s + 1).reduce((a, b) => a + b, 0); return [`s${s}`, `h = 0, s = ${s}`, [`${p} · ${j}`, `${p} · ${p}`, `${DATA[1][0]} · ${j}`, `${p} · ${j + 120}`].sort(), `${p} · ${j}`]; }).concat([['e', 'jumlah di akhir putaran h = 0 · 1 · 2', [totals.join(' · '), '310 · 630 · 1100', '480 · 310 · 175', '120 · 150 · 210'], totals.join(' · ')]]), done: next })), 1600) });
-        wrap.append(el('p', { class: 'prompt' }, 'Program rekap: perulangan bersarang'), tr); }
-      else if (r === 2) rowsChoose(wrap, ctx, { prompt: 'Keluaran dan banyak eksekusi', rows: [['b', 'Keluaran baris 12 dan 13', [R.out.slice(0, 4).join(' / '), D.out.slice(0, 4).join(' / '), 'Kamis 120 / Jumat 150 / Sabtu 210 / Total bazar: 480', 'Kamis 310 / Jumat 320 / Sabtu 470 / Total bazar: 470'], R.out.slice(0, 4).join(' / ')], ['8', 'Baris 8 dijalankan', ['3 kali', '1 kali', '4 kali', '12 kali'], `${C[7]} kali`], ['10', 'Baris 10 dijalankan', ['12 kali', '7 kali', '4 kali', '3 kali'], `${C[9]} kali`, '3 × 4.'], ['56', '5 hari dan 6 stan: baris 10 dijalankan', ['30 kali', '11 kali', '36 kali', '25 kali'], '30 kali']], done: next });
-      else if (r === 3) { const tr = loopTracer(REKAP(true), { onEnd: () => setTimeout(then(() => rowsChoose(wrap, ctx, { prompt: 'Dodi memindahkan jumlah = 0 ke atas baris 7', rows: [['k', 'Keluaran baris 12', [D.out.slice(0, 3).join(' / '), R.out.slice(0, 3).join(' / '), 'Kamis 0 / Jumat 0 / Sabtu 0'], D.out.slice(0, 3).join(' / ')], ['m', 'Mengapa?', ['jumlah hanya dinolkan sekali, jadi penjualan hari berikutnya ditambahkan ke jumlah hari sebelumnya', 'range salah', 'append tidak berjalan'], 'jumlah hanya dinolkan sekali, jadi penjualan hari berikutnya ditambahkan ke jumlah hari sebelumnya', 'Akumulator dinolkan di dalam perulangan luar, tepat sebelum perulangan dalam.']], done: next })), 1600) });
-        wrap.append(el('p', { class: 'prompt' }, 'Program Dodi'), tr); }
-      else if (r === 4) { wrap.append(pyCode(REKAP().slice(13)), el('p', { class: 'rb-ket' }, `total_hari = ${pyRepr(totals)}`)); rowsChoose(wrap, ctx, { prompt: 'Hari terlaris (baris 14–18)', rows: [['1', 'terlaris setelah h = 1', ['1', '0', '2'], '1', '320 > 310.'], ['2', 'terlaris setelah h = 2', ['2', '1', '0'], '2', '470 > 320.'], ['o', 'Keluaran baris 18', ['Hari terlaris: Sabtu', 'Hari terlaris: 2', 'Hari terlaris: Kamis', 'Hari terlaris: 470'], R.out.at(-1)], ['b', 'Mengapa range(1, len(hari))? Dengan range(len(hari))', ['indeks 0 sudah calon awal; hasilnya tidak berubah, hanya satu perbandingan sia-sia', 'hasilnya menjadi Kamis', 'program galat IndexError'], 'indeks 0 sudah calon awal; hasilnya tidak berubah, hanya satu perbandingan sia-sia']], done: next }); }
-      else if (r === 5) { const S = run(STANPROG()); const W = run(STANPROG(true));
-        ask('Program mana yang menghitung total setiap stan?', [['Perulangan luar for s, dalam for h, dengan penjualan[h][s]', true], [`Perulangan luar for s, dalam for h, dengan penjualan[s][h] (berhenti dengan ${W.error?.text})`], ['Perulangan luar for h, dalam for s, tanpa jumlah = 0'], ['Satu perulangan for s dengan penjualan[s]']], 1, pyCode(STANPROG(), { cls: 'rb-kecil' }),
-          then(() => { wrap.append(grid({}, { col: S.vars.terbaik })); rowsChoose(wrap, ctx, { prompt: 'Hasil program total stan', rows: [['t', 'Isi total_stan', [pyRepr(S.vars.total_stan), '[310, 320, 470]', '[480, 310, 175]', '[480, 310, 175, 135, 1100]'], pyRepr(S.vars.total_stan), 'Jumlah keempatnya 1100, sama dengan total bazar.'], ['s', 'Stan terlaris', ['Kue', 'Minuman', 'Sabtu', 'Buku bekas'], S.out.at(-1).replace('Stan terlaris: ', '')]], done: next }); })); }
-      else if (r === 6) { const tr = loopTracer(SARI(), { hideVars: ['hari'], extra: null, onEnd: () => setTimeout(then(() => ask('Program Sari: apa yang terjadi, dan kapan program berhenti?', [['"Kamis belum mencapai 400" tampil terus dan tidak pernah berhenti: W4 tidak menjorok sehingga berada di luar perulangan, i tetap 0, dan 310 < 400 selalu benar', true], ['Kamis, Jumat, lalu Sabtu mencapai 400'], ['Program galat IndexError'], ['Program tidak menampilkan apa-apa']], 1, pyCode(SARI(), { warn: [5] }))), 1600) });
-        wrap.append(el('p', { class: 'prompt' }, 'Program Sari: hari pertama yang mencapai 400'), tr); }
-      else if (r === 7) { const F = run(SARI({ indent: true })); const E = run(SARI({ indent: true, batas: 500 }));
-        rowsChoose(wrap, ctx, { prompt: 'W4 dijorokkan, lalu ambang diganti 500', rows: [['k', 'Keluaran setelah diperbaiki', [F.out.join(' / '), 'Kamis belum mencapai 400 / Hari pertama mencapai 400: Jumat', 'Hari pertama mencapai 400: Sabtu', 'Kamis belum mencapai 400 / Jumat belum mencapai 400 / Sabtu belum mencapai 400'], F.out.join(' / ')], ['e', `Ambang 500: ${E.error?.text}. Nilai i saat itu`, ['3', '2', '4', '0'], String(E.vars.i), 'Setelah tiga putaran, pemeriksaan syarat yang keempat membaca total_hari[3], padahal indeks terakhir 2.']], done: next }); wrap.prepend(pyCode(SARI({ indent: true, batas: 500 }))); }
-      else if (r === 8) { const G = run(SARI({ indent: true, batas: 500, and: true }));
-        rowsChoose(wrap, ctx, { prompt: 'Perbaiki W2 dengan and', rows: [['w', 'Baris W2', ['while i < len(total_hari) and total_hari[i] < 500:', 'while total_hari[i] < 500 and i < len(total_hari):', 'while i < len(total_hari) or total_hari[i] < 500:', 'while i <= len(total_hari) and total_hari[i] < 500:'], 'while i < len(total_hari) and total_hari[i] < 500:'], ['u', 'Apakah urutan kedua syarat penting?', ['ya: and diperiksa dari kiri dan berhenti di False pertama, jadi total_hari[3] tidak dibaca', 'tidak: and bersifat tukar-menukar', 'ya: syarat kanan diperiksa dulu'], 'ya: and diperiksa dari kiri dan berhenti di False pertama, jadi total_hari[3] tidak dibaca'], ['p', `Sesudah perulangan, i = ${G.vars.i}. Lalu W5`, [`${G.error?.text ?? 'tidak galat'}: perlu memeriksa i < 3 dulu`, 'menampilkan Sabtu', 'menampilkan Kamis'], `${G.error?.text ?? 'tidak galat'}: perlu memeriksa i < 3 dulu`]], done: next }); }
-      else { const T3 = run(DONASI(300)); const T4 = run(DONASI(400)); const N = run(NAIK); const steps = []; { let t = 0; for (const x of totals) { t += Math.floor((x * 30) / 100); steps.push(t); } }
-        rowsChoose(wrap, ctx, { prompt: 'Program target donasi (30% setiap hari)', cls: 'rb-isi', rows: [['d4', 'D4: while … and …', ['terkumpul < target · i < len(hari)', 'terkumpul > target · i < len(hari)', 'terkumpul < target · i <= len(hari)', 'terkumpul <= target · i < 3 - 1'], 'terkumpul < target · i < len(hari)'], ['d6', 'D6 · D8 · D10', ['i + 1 · hari[i - 1] · target - terkumpul', 'i + 1 · hari[i] · terkumpul - target', 'i - 1 · hari[i - 1] · target - terkumpul'], 'i + 1 · hari[i - 1] · target - terkumpul', 'Sesudah putaran terakhir, i sudah bertambah satu.']],
-          done: then(() => rowsChoose(wrap, ctx, { prompt: 'Jalankan programnya', rows: [['a', 'terkumpul tiap putaran · keluaran (target 300)', [`${steps.join(', ')} · ${T3.out[0]}`, `93, 189, 330 · Target tercapai pada hari Jumat`, `93, 96, 141 · Target belum tercapai, kurang 0`], `${steps.join(', ')} · ${T3.out[0]}`], ['b', 'Target 400', [T4.out[0], 'Target tercapai pada hari Sabtu', 'Target belum tercapai, kurang 0', 'IndexError: list index out of range'], T4.out[0], 'Perulangan berhenti karena i mencapai 3, bukan karena target tercapai.'], ['c', 'Mengapa * 30 // 100, bukan * 0.3?', ['hanya bilangan bulat: hasilnya int tanpa galat pecahan (* 0.3 memberi float, misalnya 93.0)', '* 0.3 tidak bisa dijalankan', '// lebih cepat daripada *'], 'hanya bilangan bulat: hasilnya int tanpa galat pecahan (* 0.3 memberi float, misalnya 93.0)'], ['t', 'Tantangan: stan yang naik setiap hari', [N.out.join(' dan '), 'Kue', 'Kue, Minuman, dan Kerajinan', 'Buku bekas'], N.out.join(' dan ')]], done: next })) }); }
+      const next = (wait = 5200) => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, wait); } };
+      const area = el('div', { class: 'rb36-area' });
+      let bug = null;
+      const go = (k, no) => {
+        const [judul, tujuan, ulah] = HEAD36[k];
+        bug = el('div', { class: 'rb36-bug' }, el('b', null, '🐛 Bug Bazar'), el('span', null, ulah));
+        wrap.append(el('div', { class: 'rb36-kepala' }, misiHead(no, judul, tujuan, '🐍'), bug), area);
+      };
+      const fin = (ms) => ({ oops: () => ctx.mistake(), done: () => { bug.classList.add('beres'); bug.lastChild.textContent = 'Bug dibasmi ✓'; next(ms); } });
+      if (r === 0) { go('ramal', 1); ramalRound(area, ctx, fin(5000)); }
+      else if (r === 1) { go('setel', 1); setelRound(area, ctx, fin(5000)); }
+      else if (r === 2) { go('jalan', 2); jalanRound(area, ctx, fin(5500)); }
+      else if (r === 3) { go('hitung', 2); hitungRound(area, ctx, fin(5500)); }
+      else if (r === 4) { go('dodi', 2); dodiRound(area, ctx, fin(5500)); }
+      else if (r === 5) { go('terlaris', 3); terlarisRound(area, ctx, fin(5000)); }
+      else if (r === 6) { go('stan', 3); stanRound(area, ctx, fin(5500)); }
+      else if (r === 7) { go('henti', 4); hentiRound(area, ctx, fin(6000)); }
+      else if (r === 8) { go('batas', 5); batasRound(area, ctx, fin(6000)); }
+      else { go('bos', 'Bos'); bosRound(area, ctx, fin(7000)); }
     }
     render();
   },

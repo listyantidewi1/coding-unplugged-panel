@@ -4,8 +4,8 @@
 // per column to recover the key, the one-time pad, and password habits.
 
 import { el, onTap, button, shake } from '../core/util.js';
-import { choice } from '../core/kit.js';
 import { say, pickTeams, scoreBar, finishBoard } from './sma-kit.js';
+import { misiHead, fill } from './misi-kit.js';
 
 const ABC = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 export const only = (t) => t.toUpperCase().replace(/[^A-Z]/g, '');
@@ -38,37 +38,105 @@ export const MESSAGES = [
 ];
 
 // --- pieces ---
-// A shifted alphabet strip for one key letter: top = plain, bottom = cipher.
-function strip(keyCh, onPick) {
-  const s = n(keyCh);
-  return el('div', { class: 'sv-strip' }, el('div', { class: 'sv-baris atas' }, el('b', null, 'Asli'), ...[...ABC].map((c) => el('span', null, c))),
-    el('div', { class: 'sv-baris bawah' }, el('b', null, `Baris ${keyCh}`), ...[...ABC].map((c, i) => onTap(el('button', { class: 'sv-sel', type: 'button' }, ch(i + s)), () => onPick(i)))));
+// Bars of letter counts; shift s shows the counts as if read with key letter s.
+function bars(counts, { s = 0, ref = false, pick = null, mark = null } = {}) {
+  const max = Math.max(...counts, 1);
+  return el('div', { class: 'sv-batang' }, ...[...ABC].map((c, i) => {
+    const v = counts[(i + s) % 26];
+    const node = el(pick ? 'button' : 'div', { class: `sv-bt ${mark === i ? 'tanda' : ''}`, type: pick ? 'button' : null, 'data-i': i },
+      ref ? el('i', { class: 'ref', style: { height: `calc((100% - 1.1em) * ${FREQ_ID[c] / 19.1})` } }) : null,
+      el('i', { style: { height: `${(v / max) * 100}%` } }), el('small', null, c));
+    return pick ? onTap(node, () => pick(i)) : node;
+  }));
 }
 
-// Encrypt or decrypt letter by letter by tapping the strip.
-function vigBoard(wrap, ctx, { text, key, dir, given = 0, need = Infinity, prompt, done }) {
-  const t = only(text); const out = dir === 1 ? vig(t, key) : vig(t, key, -1);
-  let k = given;
-  const grid = el('div', { class: 'sv-grid' });
-  const helper = el('div', { class: 'sv-bantu' });
-  const msg = el('p', { class: 'reveal info' }, dir === 1 ? 'Cari huruf asli di baris atas; huruf di bawahnya pada baris kunci adalah sandinya.' : 'Cari huruf sandi di baris kunci; huruf di atasnya adalah huruf asli.');
-  const draw = () => {
-    const kk = only(key);
-    grid.replaceChildren(...[[dir === 1 ? 'Pesan' : 'Sandi', (i) => t[i]], ['Kunci', (i) => kk[i % kk.length]], [dir === 1 ? 'Sandi' : 'Pesan', (i) => (i < k ? out[i] : '')]].map(([l, f], r) => el('div', { class: 'sv-grid-baris' }, el('b', null, l), ...[...t].map((_, i) => el('span', { class: `${i === k && k < t.length ? 'kini' : ''} ${r === 2 && i < given ? 'diberi' : ''}` }, f(i))))));
-    if (k >= t.length) { helper.replaceChildren(); return; }
-    const kc = kk[k % kk.length];
-    helper.replaceChildren(el('p', { class: 'sv-catat' }, `Huruf ke-${k + 1}: ${dir === 1 ? `${t[k]} digeser ${n(kc)} (${kc})` : `${t[k]} digeser mundur ${n(kc)} (${kc})`}`), strip(kc, (i) => {
-      const got = dir === 1 ? ch(i + n(kc)) : ABC[i];
-      const ok = dir === 1 ? ABC[i] === t[k] : ch(i + n(kc)) === t[k];
-      if (!ok) { ctx.mistake(); shake(helper); say(msg, 'bad', dir === 1 ? `Cari kolom huruf asli ${t[k]} pada baris atas.` : `Cari huruf sandi ${t[k]} pada baris ${kc}.`); return; }
-      k++; ctx.sound.tap(); say(msg, 'info', `${dir === 1 ? t[k - 1] : t[k - 1]} → ${got}`);
-      if (k - given >= need && k < t.length) { k = t.length; say(msg, 'info', 'Sisanya diisi otomatis.'); }
-      draw();
-      if (k >= t.length) { say(msg, '', `${dir === 1 ? 'Sandi' : 'Pesan'}: ${dir === 1 ? group(out) : out}`); done(out); }
-    }));
+// The sliding strip: a fixed A–Z on top, and below it a strip of A–Z twice that
+// slides so the key letter sits under A. set(s) slides it; mark(i) lights column i.
+function pita({ onTop = null, onBottom = null } = {}) {
+  const cell = (tag, c, cb, extra = {}) => { const b = el(tag, { class: 'jm21-sel', type: tag === 'button' ? 'button' : null, ...extra }, c); return cb ? onTap(b, cb) : b; };
+  const tops = [...ABC].map((c, i) => cell(onTop ? 'button' : 'span', c, onTop && (() => onTop(i)), { 'data-i': i }));
+  const lows = Array.from({ length: 26 }, (_, i) => cell(onBottom ? 'button' : 'span', ch(i), onBottom && (() => onBottom(Number(lows[i].dataset.j))), { 'data-j': i }));
+  const track = el('div', { class: 'jm21-rel' }, lows);
+  const node = el('div', { class: 'jm21-pita' },
+    el('b', null, 'Asli'), el('div', { class: 'jm21-atas' }, tops),
+    el('b', null, 'Pita'), el('div', { class: 'jm21-jendela' }, track));
+  let s = 0;
+  const api = {
+    node,
+    get s() { return s; },
+    set(v) {
+      const d = ((v - s + 39) % 26) - 13; s = v; node.dataset.s = v;
+      lows.forEach((b, i) => { b.textContent = ch(i + v); b.dataset.j = i + v; });
+      if (d && track.animate) track.animate([{ transform: `translateX(${(d * 100) / 26}%)` }, { transform: 'none' }], { duration: 450, easing: 'ease-out' });
+      api.mark(null);
+    },
+    mark(i) { tops.forEach((t, k) => t.classList.toggle('sorot', k === i)); lows.forEach((t, k) => t.classList.toggle('sorot', k === i)); },
   };
-  wrap.append(el('p', { class: 'prompt' }, prompt), grid, helper, msg);
-  draw();
+  api.set(0);
+  return api;
+}
+
+// Encrypt (dir 1) or decrypt (dir -1) letter by letter: tap the key letter to
+// slide the strip, then tap the letter on the strip.
+function pitaBoard(host, ctx, { text, key, dir, given = 0, need = Infinity, labels = null, done }) {
+  const t = only(text); const kk = only(key); const out = vig(t, kk, dir);
+  let k = given;
+  const L = labels || (dir === 1 ? ['Pesan', 'Kunci', 'Sandi'] : ['Sandi', 'Kunci', 'Pesan']);
+  const grid = el('div', { class: 'jm21-grid' });
+  const tabs = el('div', { class: 'jm21-tab' });
+  const msg = el('p', { class: 'reveal info' });
+  const p = pita(dir === 1 ? { onTop: (i) => tapLetter(i, i + pp.s) } : { onBottom: (j) => tapLetter(j - pp.s, j) });
+  const pp = p;
+  const drawGrid = () => {
+    grid.replaceChildren(...[(i) => t[i], (i) => kk[i % kk.length], (i) => (i < k ? out[i] : '')].map((f, r) => el('div', { class: 'jm21-grid-baris' }, el('b', null, L[r]),
+      ...[...t].map((_, i) => el('span', { class: `${i === k && k < t.length ? 'kini' : ''} ${r === 2 && i < given ? 'diberi' : ''} ${r === 1 && kk[i % kk.length] === 'A' ? 'nol' : ''}`, 'data-i': i }, f(i))))));
+  };
+  const keyNow = () => kk[k % kk.length];
+  const uniq = [...new Set(kk)];
+  tabs.append(el('small', null, 'Geser pita ke huruf kunci:'), ...uniq.map((c) => onTap(el('button', { class: 'jm21-tab-btn', type: 'button', 'data-k': c }, c), () => {
+    if (k >= t.length) return;
+    if (c !== keyNow()) { ctx.mistake(); shake(tabs); say(msg, 'bad', `Huruf kunci di bawah huruf ke-${k + 1} adalah ${keyNow()}, bukan ${c}.`); return; }
+    ctx.sound.tap(); p.set(n(c)); tabs.querySelectorAll('.jm21-tab-btn').forEach((b) => b.classList.toggle('on', b.dataset.k === c));
+    say(msg, 'info', dir === 1 ? `Pita bergeser: ${c} kini di bawah A. Ketuk huruf asli ${t[k]} di baris atas.` : `Pita bergeser: ${c} kini di bawah A. Ketuk huruf sandi ${t[k]} di pita.`);
+  })));
+  function tapLetter(i, j) {
+    if (k >= t.length) return;
+    if (p.s !== n(keyNow())) { ctx.mistake(); shake(tabs); say(msg, 'bad', `Geser pitanya dulu: ketuk huruf kunci ${keyNow()}.`); return; }
+    const ok = dir === 1 ? ABC[i] === t[k] : i >= 0 && i < 26 && ch(j) === t[k];
+    if (!ok) { ctx.mistake(); shake(p.node); say(msg, 'bad', dir === 1 ? `Cari huruf asli ${t[k]} di baris atas.` : `Cari huruf sandi ${t[k]} di pita, lalu lihat huruf di atasnya.`); return; }
+    p.mark(i); ctx.sound.tap();
+    say(msg, 'info', dir === 1 ? `${t[k]} → ${ch(j)}` : `${t[k]} ← ${ABC[i]}`);
+    k++;
+    if (k - given >= need && k < t.length) { k = t.length; say(msg, 'info', 'Caranya sudah lancar. Sisanya diisi otomatis.'); }
+    drawGrid();
+    if (k >= t.length) { tabs.remove(); done(out); }
+  }
+  say(msg, 'info', dir === 1 ? 'Langkah: ketuk huruf kunci (pita bergeser), lalu ketuk huruf asli di baris atas. Huruf di bawahnya adalah sandinya.' : 'Langkah: ketuk huruf kunci (pita bergeser), lalu ketuk huruf sandi di pita. Huruf di atasnya adalah huruf asli.');
+  host.append(grid, tabs, p.node, msg);
+  drawGrid();
+  return { grid, msg, pita: p };
+}
+
+// Tap the cipher letters that are the same as the plain letters.
+function sameStep(host, ctx, { grid, msg }, t, out, done) {
+  const want = [...t].map((c, i) => (c === out[i] ? i : -1)).filter((i) => i >= 0);
+  const got = new Set();
+  const row = grid.lastElementChild;
+  say(msg, 'info', `Sandi: ${group(out)}. Ada ${want.length} huruf yang tidak berubah. Ketuk semuanya di baris Sandi.`);
+  [...row.querySelectorAll('span')].forEach((sp) => {
+    const i = Number(sp.dataset.i);
+    const b = el('button', { class: 'jm21-sama', type: 'button', 'data-i': i }, sp.textContent);
+    sp.replaceWith(onTap(b, () => {
+      if (got.has(i)) return;
+      if (!want.includes(i)) { ctx.mistake(); shake(b); say(msg, 'bad', `Huruf ke-${i + 1}: ${t[i]} menjadi ${out[i]}. Itu berubah.`); return; }
+      got.add(i); b.classList.add('kena'); ctx.sound.tap();
+      if (got.size === want.length) {
+        grid.querySelectorAll('.jm21-grid-baris:nth-child(2) span.nol').forEach((s) => s.classList.add('kena'));
+        say(msg, '', `Huruf ke-${want.map((x) => x + 1).join(', ')} tetap karena kuncinya A (geser 0). Tiga huruf A pada LAPANGAN malah menjadi S, U, S. Pelajaran: kunci sebaiknya huruf acak, bukan kata biasa yang memuat A.`);
+        done();
+      }
+    }));
+  });
 }
 
 // Ciphertext laid out 20 letters per row; taps on letters report positions.
@@ -78,79 +146,273 @@ function cipherGrid(text, { marks = {}, onTap: tap } = {}) {
     const a = r * 20 + 1;
     rows.push(el('div', { class: 'sv-sb' }, el('small', null, `${a}–${Math.min(a + 19, text.length)}`), ...[...text.slice(r * 20, r * 20 + 20)].map((c, j) => {
       const p = a + j; const m = marks[p];
-      const s = onTap(el('button', { class: `sv-h ${m || ''} ${j % 5 === 4 ? 'akhir' : ''}`, type: 'button', 'data-p': p }, c), () => tap?.(p));
-      return s;
+      return onTap(el('button', { class: `sv-h ${m || ''} ${j % 5 === 4 ? 'akhir' : ''}`, type: 'button', 'data-p': p }, c), () => tap?.(p));
     })));
   }
-  return el('div', { class: 'sv-sandi' }, rows);
+  return el('div', { class: 'sv-sandi jm21-sandi' }, rows);
 }
 
-function traceRound(wrap, ctx, { done }) {
+function traceRound(host, ctx, { done }) {
   const T = CIPHER3; let k = 1; const found = {}; const dist = { RHYI: 8 };
-  const host = el('div');
+  const box = el('div');
   const table = el('div', { class: 'sv-jejak' });
   const msg = el('p', { class: 'reveal info' });
   const marks = () => { const m = {}; for (const s of TRACES) for (const p of found[s] || []) for (let i = 0; i < s.length; i++) m[p + i] = s === TRACES[k] ? 'kena' : 'lama'; return m; };
   found.RHYI = where(T, 'RHYI');
   const draw = () => {
-    host.replaceChildren(cipherGrid(T, { marks: marks(), onTap: (p) => {
+    box.replaceChildren(cipherGrid(T, { marks: marks(), onTap: (p) => {
       if (k >= TRACES.length) return;
       const s = TRACES[k]; const occ = where(T, s); const f = (found[s] ||= []);
-      if (!occ.includes(p) || f.includes(p)) { ctx.mistake(); shake(host); say(msg, 'bad', `Huruf ke-${p} bukan awal deret ${s} yang belum ditemukan.`); return; }
+      if (!occ.includes(p) || f.includes(p)) { ctx.mistake(); shake(box); say(msg, 'bad', `Huruf ke-${p} bukan awal deret ${s} yang belum ditemukan.`); return; }
       f.push(p); f.sort((a, b) => a - b); ctx.sound.tap();
       if (f.length === occ.length) { dist[s] = f[1] - f[0]; say(msg, 'info', `${s}: letak ${f[0]} dan ${f[1]}, jarak ${dist[s]}.`); k++; }
       draw();
-      if (k >= TRACES.length) { say(msg, '', 'Jarak 8, 36, 20, 8.'); done(); }
+      if (k >= TRACES.length) { box.remove(); sieve(host, ctx, { dists: TRACES.map((x) => dist[x]), msg, done }); }
     } }));
     table.replaceChildren(el('div', { class: 'sv-jejak-baris kepala' }, el('b', null, 'Deret'), el('b', null, 'Letak'), el('b', null, 'Jarak')),
       ...TRACES.map((s, i) => el('div', { class: `sv-jejak-baris ${i === k ? 'kini' : ''}` }, el('code', null, s), el('span', null, (found[s] || []).join(' dan ') || '?'), el('span', null, dist[s] ?? '?'))));
-    if (k < TRACES.length && !(found[TRACES[k]] || []).length) say(msg, 'info', `Ketuk huruf pertama setiap kemunculan ${TRACES[k]}.`);
+    if (k < TRACES.length && !(found[TRACES[k]] || []).length) say(msg, 'info', `Ketuk huruf pertama setiap kemunculan ${TRACES[k]} (dua kali muncul).`);
   };
-  wrap.append(el('p', { class: 'prompt' }, 'Mencari jejak kunci: temukan deret yang berulang dan hitung jaraknya.'), el('div', { class: 'sv-dua' }, host, table), msg);
+  host.append(el('div', { class: 'sv-dua jm21-dua' }, box, table), msg);
   draw();
 }
 
-// Bar chart of letter counts; shift s shows the counts as if decrypted with key letter s.
-function bars(counts, { s = 0, ref = false, pick = null, mark = null } = {}) {
-  const max = Math.max(...counts, 1);
-  return el('div', { class: 'sv-batang' }, ...[...ABC].map((c, i) => {
-    const v = counts[(i + s) % 26];
-    const node = el(pick ? 'button' : 'div', { class: `sv-bt ${mark === i ? 'tanda' : ''}`, type: pick ? 'button' : null },
-      ref ? el('i', { class: 'ref', style: { height: `calc((100% - 1.1em) * ${FREQ_ID[c] / 19.1})` } }) : null,
-      el('i', { style: { height: `${(v / max) * 100}%` } }), el('small', null, s ? c : ch(i + s)));
-    return pick ? onTap(node, () => pick(i)) : node;
-  }));
+// Test candidate key lengths against all the distances.
+function sieve(host, ctx, { dists, msg, done }) {
+  const lens = [2, 3, 4, 5, 6, 7, 8, 9];
+  const out = el('div', { class: 'jm21-saring' });
+  let cur = null; let fin = false;
+  const draw = () => out.replaceChildren(
+    el('div', { class: 'jm21-saring-btn' }, el('small', null, 'Coba panjang kunci:'), ...lens.map((x) => onTap(el('button', { class: `jm21-tab-btn ${cur === x ? 'on' : ''}`, type: 'button', 'data-n': x }, x), () => test(x)))),
+    el('div', { class: 'jm21-saring-jarak' }, ...dists.map((d) => el('span', { class: cur ? (d % cur ? 'tidak' : 'ya') : '' }, cur ? `${d} : ${cur} = ${Math.floor(d / cur)}${d % cur ? ` sisa ${d % cur}` : ' ✓'}` : `jarak ${d}`))));
+  function test(x) {
+    if (fin) return;
+    cur = x; ctx.sound.tap(); draw();
+    const all = dists.every((d) => d % x === 0);
+    if (!all) say(msg, 'info', `${x} tidak membagi habis semua jarak. Kunci ${x} huruf tidak cocok.`);
+    else if (x === 2) say(msg, 'info', '2 membagi habis semuanya, tetapi kunci sepanjang 2 berarti kunci sepanjang 4 pun berulang. Cari bilangan terbesar yang membagi semuanya.');
+    else { fin = true; say(msg, '', `Panjang kunci ${x}: FPB(${dists.join(', ')}) = ${x}. Deret yang sama muncul lagi karena huruf yang sama bertemu huruf kunci yang sama.`); done(); }
+  }
+  say(msg, 'info', 'Jarak 8, 36, 20, 8. Panjang kunci harus membagi habis semua jarak. Coba-coba!');
+  host.append(out);
+  draw();
 }
 
-function freqRound(wrap, ctx, { done }) {
-  const cols = columns(CIPHER3, 4); const key = [];
-  const host = el('div', { class: 'sv-kolom-kolom dua' });
-  const msg = el('p', { class: 'reveal info' }, 'Dengan panjang kunci 4, huruf sandi dibagi ke empat kolom. Ketuk batang huruf tersering di setiap kolom.');
-  const draw = () => host.replaceChildren(...cols.map((c, j) => el('div', { class: `sv-kolom ${key[j] ? 'beres' : ''}` }, el('b', null, `Kolom ${j + 1}${key[j] ? `: ${key[j]} (${c[n(key[j])]} kali)` : ''}`), bars(c, { mark: key[j] ? n(key[j]) : null, pick: key[j] ? null : (i) => {
-    if (i !== top(c)) { ctx.mistake(); shake(host); say(msg, 'bad', `Masih ada batang yang lebih tinggi dari ${ABC[i]}.`); return; }
-    key[j] = ABC[i]; ctx.sound.tap(); draw();
-    if (key.filter(Boolean).length === 4) { say(msg, '', `Huruf tersering: ${key.join(', ')}. Karena A digeser menjadi huruf kunci itu sendiri, kata kuncinya ${key.join('')}.`); done(); }
-  } }))));
-  wrap.append(el('p', { class: 'prompt' }, 'Membagi ke kolom: huruf tersering di setiap kolom.'), host, msg);
+// Column cracker: pick the key length (or it is given), tap a bar to slide it
+// under A, nudge with ◀ ▶, and watch the preview until the message reads.
+function crackGame(host, ctx, { text, plain, len: fixed = null, lens = [2, 3, 4, 5], hint = null, done }) {
+  let len = fixed; let shifts = fixed ? Array(fixed).fill(0) : []; let fin = false;
+  const top_ = el('div', { class: 'jm21-saring-btn' });
+  const cols = el('div', { class: 'sv-kolom-kolom jm21-kolom' });
+  const prev = el('code', { class: 'jm21-baca' });
+  const msg = el('p', { class: 'reveal info' }, hint || 'Ketuk batang tertinggi di setiap kolom: huruf itu kemungkinan sandi dari A.');
+  const key = () => shifts.map((s) => ABC[s]).join('');
+  const check = () => {
+    if (fin || !len) return;
+    if (vig(text, key(), -1) === plain) { fin = true; ctx.sound.good(); say(msg, '', `Terbaca! Kuncinya ${key()}.`); draw(); done(key()); }
+  };
+  const draw = () => {
+    if (!fixed) top_.replaceChildren(el('small', null, 'Panjang kunci:'), ...lens.map((x) => onTap(el('button', { class: `jm21-tab-btn ${len === x ? 'on' : ''}`, type: 'button', 'data-n': x }, x), () => { if (fin) return; len = x; shifts = Array(x).fill(0); ctx.sound.tap(); draw(); })));
+    if (!len) { cols.replaceChildren(); prev.textContent = 'Pilih panjang kunci dulu.'; return; }
+    cols.dataset.n = len;
+    cols.replaceChildren(...columns(text, len).map((c, j) => el('div', { class: `sv-kolom ${fin ? 'beres' : ''}`, 'data-j': j },
+      el('div', { class: 'sv-kol-atas' }, onTap(el('button', { class: 'jm21-geser', type: 'button', 'aria-label': 'geser kiri' }, '◀'), () => nudge(j, 25)), el('b', null, `Kolom ${j + 1} · kunci ${ABC[shifts[j]]}`), onTap(el('button', { class: 'jm21-geser', type: 'button', 'aria-label': 'geser kanan' }, '▶'), () => nudge(j, 1))),
+      bars(c, { s: shifts[j], ref: true, mark: fin ? 0 : null, pick: fin ? null : (i) => { shifts[j] = (shifts[j] + i) % 26; ctx.sound.tap(); draw(); check(); } }))));
+    const r = vig(text, key(), -1);
+    prev.replaceChildren(el('small', null, `Kunci ${key()}: `), ...[...r.slice(0, 60)].map((c, i) => el('span', { class: `k${i % len}` }, c)), r.length > 60 ? '…' : '');
+  };
+  const nudge = (j, d) => { if (fin) return; shifts[j] = (shifts[j] + d) % 26; ctx.sound.tap(); draw(); check(); };
+  host.append(...[fixed ? null : top_, cols, prev, msg].filter(Boolean));
+  draw();
+  return { msg };
+}
+
+// The trail map: follow the decrypted instructions.
+const PETA = [
+  { id: 'beringin', ikon: '🌳', nama: 'Pohon Beringin', x: 0, y: 0 },
+  { id: 'menara', ikon: '🗼', nama: 'Menara Pandang', x: 1, y: 0 },
+  { id: 'sungai', ikon: '🌊', nama: 'Sungai', x: 2, y: 0 },
+  { id: 'pos3', ikon: '⛺', nama: 'Pos Tiga', x: 3, y: 0 },
+  { id: 'dapur', ikon: '🍳', nama: 'Dapur Umum', x: 0, y: 1 },
+  { id: 'aliran', ikon: '🌊', nama: '', x: 2, y: 1, hias: true },
+  { id: 'gerbang', ikon: '🚪', nama: 'Gerbang', x: 3, y: 1 },
+  { id: 'pos6', ikon: '🚩', nama: 'Pos Enam', x: 0, y: 2 },
+  { id: 'batu', ikon: '🪨', nama: 'Batu Bersusun', x: 1, y: 2 },
+  { id: 'jembatan', ikon: '🎋', nama: 'Jembatan Bambu', x: 2, y: 2 },
+];
+const RUTE = ['sungai', 'jembatan', 'kotak', 'pos6'];
+function mapRound(host, ctx, { done }) {
+  let k = 0;
+  const kertas = el('div', { class: 'jm21-kertas' }, ...PLAIN3.split('. ').map((s) => el('span', null, s.replace(/\.$/, '') + '.')));
+  const peta = el('div', { class: 'jm21-peta' });
+  const tas = el('div', { class: 'jm21-tas' }, '🎒 Tas regu: kosong');
+  const msg = el('p', { class: 'reveal info' }, 'Regu berdiri di Pohon Beringin. Ketuk tempat tujuan satu per satu sesuai isi pesan. Utara di atas.');
+  const draw = () => peta.replaceChildren(el('div', { class: 'jm21-mata', style: { gridColumn: 4, gridRow: 3 } }, el('b', null, '🧭'), el('small', null, '⬆ Utara')), ...PETA.map((p) => {
+    const step = RUTE.indexOf(p.id);
+    const kids = [el('b', null, p.ikon), p.nama ? el('small', null, p.nama) : null, step >= 0 && step < k ? el('i', { class: 'jm21-no' }, step + 1) : null].filter(Boolean);
+    if (p.id === 'jembatan' && k >= 2) kids.push(onTap(el('button', { class: `jm21-kotak ${k > 2 ? 'buka' : ''}`, type: 'button', 'data-id': 'kotak' }, k > 2 ? '📦 terbuka' : '📦 Kotak Kayu'), (e) => { e.stopPropagation?.(); go('kotak'); }));
+    const attrs = { class: `jm21-tempat ${p.id === 'beringin' ? 'mulai' : ''} ${step >= 0 && step < k ? 'jejak' : ''} ${p.hias ? 'hias' : ''}`, style: { gridColumn: p.x + 1, gridRow: p.y + 1 }, 'data-id': p.id };
+    return p.hias ? el('div', attrs, ...kids) : onTap(el('div', { ...attrs, role: 'button', tabindex: 0 }, ...kids), () => go(p.id));
+  }));
+  function go(id) {
+    if (k >= RUTE.length) return;
+    if (id === 'beringin' || (id === 'kotak' && k > 2)) return;
+    if (id !== RUTE[k]) { ctx.mistake(); shake(peta); say(msg, 'bad', k === 0 ? 'Dari pohon beringin, ke arah timur (kanan) sampai ...' : k === 1 ? 'Ikuti sungai ke arah selatan (bawah).' : k === 2 ? 'Apa yang ada di bawah jembatan bambu?' : 'Bendera merah diserahkan kepada penjaga pos berapa?'); return; }
+    k++; ctx.sound.tap();
+    if (id === 'kotak') tas.textContent = '🎒 Tas regu: 🟥 bendera merah';
+    if (id === 'pos6') tas.textContent = '🎒 Bendera merah sudah diserahkan ✓';
+    draw();
+    say(msg, 'info', ['Sampai di sungai.', 'Sampai di jembatan bambu. Ada sesuatu di bawahnya!', 'Bendera merah diambil dari kotak kayu.', ''][k - 1]);
+    if (k === RUTE.length) { say(msg, '', 'Tugas Pos Lima selesai! Pesan sepanjang 191 huruf ini memuat 41 huruf A (21%). Karena A begitu sering, huruf tersering di setiap kolom hampir pasti sandi dari A.'); done(); }
+  }
+  host.append(el('div', { class: 'jm21-peta-wadah' }, kertas, el('div', { class: 'jm21-peta-kanan' }, peta, tas)), msg);
+  draw();
+}
+
+// One-time pad: read KQJDF with the pad, then let the eavesdropper try words.
+function padRound(host, ctx, { done }) {
+  const step1 = el('div', { class: 'jm21-langkah' });
+  host.append(el('div', { class: 'jm21-lembar' }, el('b', null, '🔥 Lembar kunci sekali pakai'), el('code', null, 'QXJMF'), el('small', null, 'dibuat dengan dadu, hanya untuk satu pesan')), step1);
+  pitaBoard(step1, ctx, { text: 'KQJDF', key: 'QXJMF', dir: -1, done: (out) => {
+    const m = step1.querySelector('.reveal');
+    say(m, '', `Pesannya ${out}: regu berangkat ke utara.`);
+    setTimeout(() => { step1.replaceChildren(); spy(step1); }, 1600);
+  } });
+  function spy(area) {
+    const tried = new Map();
+    const words = ctx.rand.shuffle(['BARAT', 'TIMUR', 'PULAU', 'SELAT', 'KABUR']);
+    const table = el('div', { class: 'jm21-coba' });
+    const msg = el('p', { class: 'reveal info' }, 'Tim Rudi hanya punya sandi KQJDF. Ketuk kata tebakan: layar menunjukkan kunci yang membuat KQJDF terbaca kata itu. Coba BARAT dan TIMUR.');
+    const verdict = el('div', { class: 'jm21-putus' });
+    const draw = () => table.replaceChildren(el('div', { class: 'jm21-coba-baris kepala' }, el('b', null, 'Tebakan'), el('b', null, 'Kunci yang cocok')),
+      el('div', { class: 'jm21-coba-baris asli' }, el('code', null, 'UTARA'), el('code', null, 'QXJMF')),
+      ...[...tried].map(([w, k]) => el('div', { class: 'jm21-coba-baris' }, el('code', null, w), el('code', null, k))));
+    area.append(el('div', { class: 'jm21-kartu-kata' }, words.map((w) => onTap(el('button', { class: 'jm21-tab-btn', type: 'button', 'data-w': w }, w), (e) => {
+      if (tried.has(w)) return;
+      tried.set(w, vig('KQJDF', w, -1)); ctx.sound.tap(); e.currentTarget.classList.add('on'); draw();
+      if (tried.has('BARAT') && tried.has('TIMUR') && !verdict.childElementCount) ask();
+    }))), table, verdict, msg);
+    draw();
+    function ask() {
+      say(msg, 'info', 'Semua kunci itu tampak sama acaknya. Apa kesimpulan Tim Rudi?');
+      verdict.replaceChildren(...ctx.rand.shuffle([['Semua arah sama mungkin: tidak bisa ditebak', true], ['Arah yang benar adalah kunci yang paling acak', false]]).map(([l, ok]) => button(l, () => {
+        if (!ok) { ctx.mistake(); shake(verdict); say(msg, 'bad', 'Kunci dibuat dengan dadu: QXJMF, JQSDM, dan RIXJO sama mungkinnya.'); return; }
+        verdict.replaceChildren(button('🔥 Bakar lembar kunci', () => {
+          host.querySelector('.jm21-lembar')?.classList.add('bakar'); verdict.replaceChildren();
+          say(msg, '', 'Kunci sekali pakai tidak bisa dipecahkan bila kuncinya benar-benar acak, sepanjang pesan, dan tidak pernah dipakai lagi. Setelah dipakai, lembarnya dibakar.');
+          done();
+        }, 'primary'));
+        ctx.sound.good(); say(msg, 'info', 'Benar. Sekarang musnahkan lembar kuncinya supaya tidak dipakai lagi.');
+      }, 'jm21-putus-btn')));
+    }
+  }
+}
+
+// The same pad used twice: one right guess opens the other message.
+function reuseRound(host, ctx, { done }) {
+  const A = 'KQJDF'; const B = vig('TIMUR', 'QXJMF');
+  const words = ctx.rand.shuffle(['BARAT', 'TIMUR', 'UTARA', 'PULAU', 'KABUR', 'SELAT']);
+  const rows = el('div', { class: 'jm21-coba' });
+  const msg = el('p', { class: 'reveal info' }, `Regu Merpati malas membuat kunci baru: lembar yang sama dipakai untuk pesan Senin ${A} dan pesan Selasa ${B}. Tim Rudi menebak isi pesan Senin. Ketuk tebakan.`);
+  let fin = false; const tried = [];
+  const draw = () => rows.replaceChildren(el('div', { class: 'jm21-coba-baris tiga kepala' }, el('b', null, `Senin ${A}`), el('b', null, 'Kunci'), el('b', null, `Selasa ${B}`)),
+    ...tried.map(([w, k, b]) => el('div', { class: `jm21-coba-baris tiga ${b === 'TIMUR' ? 'asli' : ''}` }, el('code', null, w), el('code', null, k), el('code', null, b))));
+  host.append(el('div', { class: 'jm21-kartu-kata' }, words.map((w) => onTap(el('button', { class: 'jm21-tab-btn', type: 'button', 'data-w': w }, w), (e) => {
+    if (fin || tried.some((x) => x[0] === w)) return;
+    const k = vig(A, w, -1); const b = vig(B, k, -1);
+    tried.push([w, k, b]); e.currentTarget.classList.add('on'); ctx.sound.tap(); draw();
+    if (b === 'TIMUR') { fin = true; ctx.sound.good(); host.querySelectorAll('.jm21-kartu-kata button').forEach((x) => { x.disabled = true; }); say(msg, '', 'Tebakan UTARA memberi kunci QXJMF, dan kunci itu membuka pesan Selasa: TIMUR. Kunci sekali pakai yang dipakai dua kali bisa dibongkar dengan satu tebakan.'); setTimeout(() => { host.replaceChildren(); matchRound(host, ctx, { done }); }, 3800); }
+    else say(msg, 'info', `Dengan tebakan ${w}, pesan Selasa terbaca ${b}. Bukan kata. Coba lagi.`);
+  }))), rows, msg);
   draw();
 }
 
 const WEAK = [['Kunci yang terlalu pendek, cepat berulang dan mudah dicari', 'Memakai kata sandi yang pendek'], ['Kunci berupa kata yang mudah ditebak, misalnya TUNAS', 'Memakai kata biasa atau nama, misalnya nama hewan peliharaan'], ['Kunci sekali pakai yang dipakai lagi untuk pesan lain', 'Memakai satu kata sandi yang sama untuk banyak akun'], ['Kertas kunci dibiarkan tergeletak di meja pos', 'Menuliskan kata sandi di kertas yang ditempel di layar']];
-function matchRound(wrap, ctx, { done }) {
+function matchRound(host, ctx, { done }) {
   const right = ctx.rand.shuffle(WEAK.map((p) => p[1]));
   const ok = new Set(); let sel = null;
-  const box = el('div', { class: 'sv-cocok' });
-  const msg = el('p', { class: 'reveal info' }, 'Ketuk kelemahan sandi, lalu kebiasaan kata sandi yang mirip.');
-  const draw = () => box.replaceChildren(el('div', { class: 'sv-kol' }, WEAK.map(([l], i) => onTap(el('button', { class: `sv-item ${ok.has(i) ? 'cocok' : sel === i ? 'pilih' : ''}`, type: 'button' }, `${i + 1}. ${l}`), () => { if (!ok.has(i)) { sel = i; draw(); } }))),
-    el('div', { class: 'sv-kol' }, right.map((r) => { const i = WEAK.findIndex((p) => p[1] === r); return onTap(el('button', { class: `sv-item ${ok.has(i) ? 'cocok' : ''}`, type: 'button' }, r), () => {
+  const box = el('div', { class: 'sv-cocok jm21-cocok' });
+  const msg = el('p', { class: 'reveal info' }, 'Dari sandi ke kata sandi: ketuk kelemahan sandi, lalu kebiasaan kata sandi yang mirip.');
+  const draw = () => box.replaceChildren(el('div', { class: 'sv-kol' }, WEAK.map(([l], i) => onTap(el('button', { class: `sv-item ${ok.has(i) ? 'cocok' : sel === i ? 'pilih' : ''}`, type: 'button', 'data-l': i }, `${i + 1}. ${l}`), () => { if (!ok.has(i)) { sel = i; draw(); } }))),
+    el('div', { class: 'sv-kol' }, right.map((r) => { const i = WEAK.findIndex((p) => p[1] === r); return onTap(el('button', { class: `sv-item ${ok.has(i) ? 'cocok' : ''}`, type: 'button', 'data-r': i }, r), () => {
       if (sel === null || ok.has(i)) return;
       if (sel !== i) { ctx.mistake(); shake(box); say(msg, 'bad', 'Belum mirip. Pikirkan apa yang membuat keduanya lemah.'); return; }
       ok.add(i); sel = null; ctx.sound.tap(); draw();
-      if (ok.size === WEAK.length) { say(msg, '', '1–S pendek, 2–P mudah ditebak, 3–R dipakai ulang, 4–Q tergeletak.'); done(); }
+      if (ok.size === WEAK.length) { say(msg, '', 'Pendek, mudah ditebak, dipakai ulang, tergeletak: kelemahan sandi kuno sama dengan kelemahan kata sandi zaman sekarang.'); done(); }
     }); })));
-  wrap.append(el('p', { class: 'prompt' }, 'Dari sandi ke kata sandi: pasangkan kelemahan yang mirip.'), box, msg);
+  host.append(box, msg);
   draw();
 }
+
+// Boss: two keys stacked. Tap where both keys start over together.
+function gearRound(host, ctx, { done }) {
+  const SLOTS = 24;
+  const area = el('div', { class: 'jm21-roda' });
+  const msg = el('p', { class: 'reveal info' });
+  const verdict = el('div', { class: 'jm21-putus' });
+  host.append(area, verdict, msg);
+  const stage = (a, b, then) => {
+    const L = lcm(a.length, b.length);
+    let fin = false;
+    const row = (lbl, f, cls = '') => el('div', { class: `jm21-roda-baris ${cls}` }, el('b', null, lbl), ...Array.from({ length: SLOTS }, (_, i) => f(i)));
+    const comb = vig(a.repeat(L / a.length), b.repeat(L / b.length));
+    const draw = () => fill(area,
+      row(a, (i) => el('span', { class: i % a.length === 0 ? 'awal' : '' }, a[i % a.length])),
+      row(b, (i) => el('span', { class: i % b.length === 0 ? 'awal' : '' }, b[i % b.length])),
+      row('Ketuk', (i) => onTap(el('button', { class: `jm21-slot ${fin && i === L ? 'kena' : ''}`, type: 'button', 'data-i': i }, i + 1), () => tap(i)), 'no'),
+      fin ? row('Gabungan', (i) => el('span', { class: `gabung ${i >= L ? 'ulang' : ''}` }, comb[i % L])) : null);
+    function tap(i) {
+      if (fin) return;
+      if (i === 0) { say(msg, 'info', 'Di huruf pertama keduanya baru mulai. Cari kapan keduanya mulai lagi bersamaan.'); return; }
+      if (i % a.length || i % b.length) { ctx.mistake(); shake(area); say(msg, 'bad', `Di huruf ke-${i + 1}, ${i % a.length ? `${a} sedang di huruf ${a[i % a.length]}` : `${a} mulai lagi`}, ${i % b.length ? `${b} sedang di huruf ${b[i % b.length]}` : `${b} mulai lagi`}. Belum bersamaan.`); return; }
+      fin = true; ctx.sound.good(); draw(); then(L, comb);
+    }
+    say(msg, 'info', `Sandi disandikan dengan ${a}, lalu sandinya disandikan lagi dengan ${b}. Ketuk nomor huruf tempat kedua kunci mulai dari awal bersamaan.`);
+    draw();
+  };
+  stage('REGU', 'PELUIT', (L, comb) => {
+    say(msg, 'info', `Keduanya mulai lagi di huruf ke-${L + 1}: kunci gabungannya ${L} huruf (KPK 4 dan 6), yaitu ${comb}.`);
+    setTimeout(() => stage('REGU', 'TUNAS', (L2) => {
+      say(msg, 'info', `REGU dan TUNAS: kunci gabungan ${L2} huruf (KPK 4 dan 5). Jadi, apakah sandi dua lapis ini aman?`);
+      verdict.replaceChildren(...ctx.rand.shuffle([['Tetap bisa dipecahkan: kuncinya masih berulang, hanya butuh pesan lebih panjang', true], ['Tidak bisa dipecahkan lagi karena dua kunci', false]]).map(([l, ok]) => button(l, () => {
+        if (!ok) { ctx.mistake(); shake(verdict); say(msg, 'bad', `Lihat baris Gabungan: setelah ${L2} huruf kuncinya berulang lagi. Penghitung kolom tetap bisa dipakai.`); return; }
+        verdict.replaceChildren(); ctx.sound.good();
+        say(msg, '', `Dua kunci berulang tetap menjadi satu kunci berulang sepanjang KPK-nya (12 dan 20). Pencari jejak dan penghitung kolom tetap bisa memecahkannya, asal pesannya cukup panjang. Yang benar-benar aman hanya kunci acak yang tidak berulang.`);
+        done();
+      }, 'jm21-putus-btn')));
+    }), 4200);
+  });
+}
+
+// Short trap messages: too few letters per column for "tallest bar = A".
+export const PENDEK = [
+  'SIMPAN SENTER DI BAWAH BATU BESAR DEKAT SUMUR',
+  'TEMUI KAKAK PEMBINA DI DEPAN TENDA KESEHATAN',
+  'BESOK PAGI KITA BERANGKAT LEWAT JEMBATAN TUA',
+  'JANGAN BUKA KOTAK SEBELUM SEMUA REGU TIBA',
+  'SEMUA PESERTA BERKUMPUL DI DEPAN DAPUR UMUM',
+];
+const randKey = (ctx, len) => Array.from({ length: len }, () => ABC[ctx.rand.int(1, 25)]).join('');
+// Repeated three-letter runs in a ciphertext, as hints for the key length.
+function repeats(text) {
+  const seen = {}; const out = [];
+  for (let i = 0; i + 3 <= text.length; i++) { const s = text.slice(i, i + 3); if (s in seen && !out.some((o) => o.s === s)) out.push({ s, a: seen[s] + 1, b: i + 1 }); else if (!(s in seen)) seen[s] = i; }
+  return out;
+}
+const uniqTop = (c) => c.filter((v) => v === Math.max(...c)).length === 1;
+
+const HEAD21 = {
+  tabel: ['Tabel dan Pita Geser', 'Geser pita ke huruf kunci, lalu sandikan pesan untuk Pos 1.'],
+  baca: ['Petunjuk Kak Laras', 'Baca sandi dengan pita geser, mundur dari huruf kunci.'],
+  jejak: ['Pencari Jejak', 'Temukan deret yang berulang, lalu tebak panjang kuncinya.'],
+  kolom: ['Penghitung Kolom', 'Geser diagram setiap kolom sampai pesannya terbaca.'],
+  peta: ['Ikuti Petunjuk Pos Lima', 'Jalankan isi pesan di peta perkemahan.'],
+  sekali: ['Kunci Sekali Pakai', 'Baca sandi KQJDF, lalu lihat penyadap mencoba.'],
+  ulang: ['Kunci Dipakai Lagi', 'Satu lembar kunci untuk dua pesan: apa akibatnya?'],
+  regu: ['Duel Pemecah Sandi', 'Pesan sadapan dari regu lain. Panjang kunci pun belum tahu.'],
+  jebakan: ['Pesan Pendek', 'Huruf tersering belum tentu A. Tetap pecahkan!'],
+  boss: ['Sandi Dua Lapis', 'REGU lalu PELUIT: seberapa panjang kunci gabungannya?'],
+};
 
 export default {
   id: 'sma-21-sandi-berkunci',
@@ -170,32 +432,57 @@ export default {
     { id: 'giliran', icon: '🔁', label: 'Kirim dan Pecahkan', desc: 'Satu tim memilih pesan dan kunci, tim lain memecahkannya dengan penghitung per kolom; makin cepat makin besar poinnya', create: createTeams },
   ],
   create(root, ctx) {
-    const wrap = el('div', { class: 'act sandi-berkunci' });
+    const wrap = el('div', { class: 'act sandi-berkunci jm21-main' });
     root.append(wrap);
+    // The duel message and the short trap message are fixed per pane.
+    const duel = (() => {
+      for (let t = 0; t < 80; t++) {
+        const orig = ctx.rand.pick(MESSAGES); const plain = only(orig); const L = ctx.rand.int(2, 4); const key = randKey(ctx, L); const text = vig(plain, key);
+        if (columns(text, L).every((c, j) => uniqTop(c) && top(c) === n(key[j]))) return { orig, plain, text, key };
+      }
+      const orig = MESSAGES[2]; const plain = only(orig); return { orig, plain, text: vig(plain, 'KR'), key: 'KR' };
+    })();
+    const trap = (() => { const plain = only(ctx.rand.pick(PENDEK)); const key = randKey(ctx, 3); return { plain, text: vig(plain, key), key }; })();
     function render() {
       wrap.replaceChildren();
       const r = ctx.round;
       let solved = false;
-      const next = () => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, 2400); } };
-      const ask = (prompt, opts, columns = 1, subject = null, onRight = next) => choice(wrap, { prompt, subject, ctx, shuffle: true, onRight, columns, options: opts.map(([l, correct]) => ({ label: String(l), correct })) });
-      const then = (fn) => () => { wrap.replaceChildren(); fn(); };
-      const code = (t) => el('code', { class: 'sv-kode' }, t);
-      if (r === 0) vigBoard(wrap, ctx, { text: 'KUMPUL DI LAPANGAN', key: 'TUNAS', dir: 1, given: 5, prompt: 'Menyandikan KUMPUL DI LAPANGAN dengan kunci TUNAS. Lima huruf pertama sudah dikerjakan.', done: next });
-      else if (r === 1) ask('Huruf A pada LAPANGAN disandikan menjadi apa saja?', [['S, U, dan S, tergantung huruf kunci di bawahnya', true], ['Selalu S'], ['Selalu A'], ['T, U, dan N']], 1, code('L A P A N G A N\nA S T U N A S T'),
-        then(() => ask('Huruf ke-4, ke-9, dan ke-14 tidak berubah. Mengapa, dan apa pelajarannya?', [['Huruf kuncinya A (geser 0); kunci sebaiknya huruf acak, bukan kata biasa yang memuat A', true], ['Karena hurufnya vokal; vokal tidak disandikan'], ['Karena salah hitung; seharusnya berubah'], ['Karena kunci terlalu panjang']], 1, code('K U M P U L D I L A P A N G A N\nT U N A S T U N A S T U N A S T\nD O Z P M E X V L S I U A G S G'))));
-      else if (r === 2) vigBoard(wrap, ctx, { text: 'TJVUFZAHNVBHLADTENNBTGQEDTJNN', key: 'TUNAS', dir: -1, need: 12, prompt: 'Membaca petunjuk Kak Laras: TJVUF ZAHNV BHLAD TENNB TGQED TJNN, kunci TUNAS.', done: next });
-      else if (r === 3) traceRound(wrap, ctx, { done: then(() => ask('Jaraknya 8, 36, 20, dan 8. Panjang kunci harus membagi habis semuanya. Berapa panjang kunci kemungkinan besar?', [[4, true], [8], [12], [36]], 4, code('FPB(8, 36, 20, 8) = ?'))) });
-      else if (r === 4) freqRound(wrap, ctx, { done: next });
-      else if (r === 5) ask('Dengan kunci REGU, apa isi dua baris pertama (huruf 1–40)?', [['PESAN UNTUK POS LIMA DARI POHON BERINGIN BERJAL…', true], ['PESAN UNTUK POS ENAM DARI POHON BERINGIN BERJAL…'], ['API UNGGUN DINYALAKAN JAM DELAPAN…'], ['KUMPUL DI LAPANGAN SETELAH APEL PAGI…']], 1, code(group(CIPHER3.slice(0, 40))),
-        then(() => ask('Mengapa cara menghitung huruf per kolom hanya berhasil bila pesannya cukup panjang?', [['Setiap kolom hanya berisi seperempat huruf; pada pesan pendek huruf tersering bisa bukan sandi A dan deret berulang mungkin tidak muncul', true], ['Karena kunci pendek hanya dipakai untuk pesan panjang'], ['Karena pesan pendek tidak bisa disandikan'], ['Karena huruf A hanya muncul di pesan panjang']])));
-      else if (r === 6) ask('Kunci sekali pakai: sandi KQJDF, kuncinya QXJMF. Apa isi pesannya?', [['UTARA', true], ['BARAT'], ['TIMUR'], ['PUSAT']], 4, null,
-        then(() => ask('Kunci apa yang membuat KQJDF terbaca BARAT, dan kunci apa yang membuatnya terbaca TIMUR?', [['JQSDM dan RIXJO', true], ['QXJMF dan QXJMF'], ['BARAT dan TIMUR'], ['JQSDM dan QXJMF']], 1, null,
-          then(() => ask('Penyadap hanya punya sandi KQJDF. Bisakah ia tahu arah yang benar?', [['Tidak: untuk setiap kata lima huruf ada kunci yang cocok, dan semua kunci sama mungkin', true], ['Bisa, dengan menghitung huruf tersering'], ['Bisa, dengan mencari deret yang berulang'], ['Bisa, karena kuncinya hanya lima huruf']])))));
-      else if (r === 7) ask('Kunci sekali pakai tidak bisa dipecahkan hanya jika kuncinya…', [['benar-benar acak, sama panjang dengan pesan, dan tidak pernah dipakai ulang', true], ['berupa kata yang mudah diingat, pendek, dan dipakai semua regu'], ['acak, pendek, dan dipakai ulang setiap hari'], ['rahasia, tetapi boleh berulang seperti TUNAS']], 1, null,
-        then(() => ask('Mengapa kunci sekali pakai jarang dipakai untuk pesan sehari-hari di internet?', [['Kedua pihak harus lebih dulu bertukar kunci sepanjang semua pesannya lewat jalur aman; tidak praktis untuk miliaran pesan', true], ['Karena mudah dipecahkan komputer'], ['Karena hanya bisa dipakai untuk huruf kapital'], ['Karena dilarang untuk pesan internet']])));
-      else if (r === 8) matchRound(wrap, ctx, { done: then(() => ask('Manajer kata sandi membuat kata sandi seperti q7#Vm2!pLx9@Tf4z, berbeda untuk setiap akun. Apa yang tetap harus kamu jaga sendiri?', [['Kata sandi utama brankasnya: panjang, unik, tidak dibagikan, ditambah autentikasi dua langkah', true], ['Semua kata sandi acak itu, dengan menghafalnya'], ['Tidak ada; manajer kata sandi menjaga semuanya'], ['Kertas berisi semua kata sandi di dekat layar']])) });
-      else ask('Tantangan: disandikan dengan REGU, lalu dengan PELUIT. Sama dengan sekali menyandikan dengan kunci berapa huruf, dan apa kuncinya?', [['12 huruf: GIROZXVYCYON', true], ['10 huruf: REGUPELUIT'], ['6 huruf: GIROZX'], ['24 huruf: REGU dan PELUIT bergantian']], 1, code('R E G U R E G U R E G U\nP E L U I T P E L U I T'),
-        then(() => ask('Berapa panjang kunci gabungan REGU dan TUNAS, dan apakah menyandikan dua kali membuat Vigenère tidak bisa dipecahkan?', [['20 (KPK 4 dan 5); tetap bisa dipecahkan karena kuncinya tetap berulang, hanya butuh pesan lebih panjang', true], ['9; tidak bisa dipecahkan lagi'], ['20; tidak bisa dipecahkan lagi'], ['5; tetap bisa dipecahkan']])));
+      const next = (wait = 5200) => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, wait); } };
+      const head = (k, no) => wrap.append(misiHead(no, ...HEAD21[k], '🗝️'));
+      const area = el('div', { class: 'jm21-area' });
+      const go = (k, no) => { head(k, no); wrap.append(area); };
+      if (r === 0) {
+        go('tabel', 1);
+        const t = 'KUMPULDILAPANGAN';
+        const b = pitaBoard(area, ctx, { text: t, key: 'TUNAS', dir: 1, given: 5, need: 8, done: (out) => sameStep(area, ctx, b, t, out, () => next(6500)) });
+      } else if (r === 1) {
+        go('baca', 1);
+        const b = pitaBoard(area, ctx, { text: 'TJVUFZAHNVBHLADTENNBTGQEDTJNN', key: 'TUNAS', dir: -1, need: 10, done: () => {
+          area.insertBefore(el('div', { class: 'jm21-api' }, el('b', null, '🔥'), el('span', null, 'API UNGGUN DINYALAKAN JAM DELAPAN')), b.grid);
+          say(b.msg, '', 'Membaca berarti menggeser mundur sebanyak huruf kunci. Sandi yang sama dengan kunci yang sama selalu kembali ke pesan aslinya.'); next(5600);
+        } });
+      } else if (r === 2) { go('jejak', 2); traceRound(area, ctx, { done: () => next(6000) }); }
+      else if (r === 3) {
+        go('kolom', 3);
+        const g = crackGame(area, ctx, { text: CIPHER3, plain: only(PLAIN3), len: 4, hint: 'Panjang kunci 4, jadi huruf sandi dibagi ke empat kolom. Ketuk batang tertinggi di setiap kolom untuk menggesernya ke bawah A, lalu lihat pesannya.', done: () => {
+          say(g.msg, '', 'Huruf tersering kolom 1–4: R (10), E (11), G (11), U (9). Karena A digeser menjadi huruf kunci itu sendiri, kata kuncinya REGU.'); next(6000);
+        } });
+      } else if (r === 4) { go('peta', 3); mapRound(area, ctx, { done: () => next(6500) }); }
+      else if (r === 5) { go('sekali', 4); padRound(area, ctx, { done: () => next(7000) }); }
+      else if (r === 6) { go('ulang', 5); reuseRound(area, ctx, { done: () => next(6000) }); }
+      else if (r === 7) {
+        go('regu', 6);
+        const L = duel.key.length;
+        const rep = repeats(duel.text).filter((o) => (o.b - o.a) % L === 0).slice(0, 2);
+        const hint = rep.length ? `Jejak dari Misi 2: ${rep.map((o) => `${o.s} di huruf ${o.a} dan ${o.b} (jarak ${o.b - o.a})`).join('; ')}. Pilih panjang kunci, lalu ketuk batang tertinggi tiap kolom.` : 'Kuncinya 2 sampai 4 huruf. Pilih panjang kunci, lalu ketuk batang tertinggi tiap kolom.';
+        const g = crackGame(area, ctx, { text: duel.text, plain: duel.plain, lens: [2, 3, 4, 5], hint, done: (k) => { say(g.msg, '', `Kunci ${k}: ${duel.orig.split('. ')[0]}.`); next(6000); } });
+      } else if (r === 8) {
+        go('jebakan', 6);
+        const g = crackGame(area, ctx, { text: trap.text, plain: trap.plain, len: 3, hint: `Pesan pendek ${trap.plain.length} huruf, kunci 3 huruf. Ketuk batang tertinggi, lalu baca hasilnya: bila setiap huruf ketiga masih kacau, kolom itu salah. Geser dengan ◀ ▶.`, done: () => {
+          const a = [...trap.plain].filter((c) => c === 'A').length;
+          say(g.msg, '', `Terbaca: ${trap.plain}. Hanya ${a} huruf A dari ${trap.plain.length}, jadi di kolom pendek huruf tersering belum tentu A. Penghitung kolom butuh pesan yang panjang.`); next(7000);
+        } });
+      } else { go('boss', 'Bos'); gearRound(area, ctx, { done: () => next(7500) }); }
     }
     render();
   },

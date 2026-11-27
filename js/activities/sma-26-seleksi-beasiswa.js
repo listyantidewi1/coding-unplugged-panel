@@ -1,10 +1,12 @@
 // Seleksi Beasiswa oleh Mesin — SMA/SMK (16–18 tahun), pembelajaran mesin dan bias.
-// A decision tree learnt from last year's (biased) decisions, tested on new
-// applicants with a confusion matrix, then rebuilt without the biased column.
+// Mesin Penyaring Beasiswa: a decision tree learnt from last year's (biased)
+// decisions with question levers, walked by new applicants, a confusion matrix
+// and a fairness report, a bias detective, relabelling, and a proxy variable.
 
 import { el, onTap, button, shake } from '../core/util.js';
-import { choice } from '../core/kit.js';
+import { dnd } from '../core/kit.js';
 import { say, pickTeams, scoreBar, finishBoard } from './sma-kit.js';
+import { misiHead, fill } from './misi-kit.js';
 
 export const QS = [['rendah', 'Penghasilan rendah?'], ['nilai', 'Nilai ≥ 85?'], ['lomba', 'Prestasi lomba?'], ['jauh', 'Rumah jauh?']];
 const row = (id, s, d) => ({ id, rendah: s[0] === 'Y', nilai: s[1] === 'Y', lomba: s[2] === 'Y', jauh: s[3] === 'Y', d: d === 'D' });
@@ -51,91 +53,6 @@ function dataTable(rows, { hi = [], show = true } = {}) {
 }
 const chip = (r) => el('span', { class: `sb-chip ${r.d ? 'd' : 'x'}` }, r.id);
 
-// Try every question on a set of applicants; pick the one with the fewest mistakes.
-function splitRound(wrap, ctx, { rows, qs, title, best, done }) {
-  const tried = {}; let pick = null;
-  const msg = el('p', { class: 'reveal info' }, 'Ketuk setiap pertanyaan untuk membagi pelamar. Lalu pilih pertanyaan dengan kesalahan paling sedikit.');
-  const host = el('div', { class: 'sb-bagi' });
-  const draw = () => {
-    const s = pick && splitInfo(rows, pick);
-    host.replaceChildren(el('div', { class: 'seg sb-tanya' }, qs.map((q) => onTap(el('button', { class: `seg-btn ${pick === q ? 'on' : ''}`, type: 'button' }, qName(q)), () => { pick = q; tried[q] = splitInfo(rows, q); ctx.sound.tap(); draw(); }))),
-      pick ? el('div', { class: 'sb-cabang' }, [['Ya', rows.filter((r) => r[pick]), s.ya, s.eYa], ['Tidak', rows.filter((r) => !r[pick]), s.no, s.eNo]].map(([l, rs, [d, x], e]) => el('div', null, el('b', null, `${l}: ${d} D / ${x} X → tebak ${d > x ? 'diterima' : 'ditolak'}, salah ${e}`), el('div', { class: 'sb-chips' }, rs.map(chip)))))
-        : el('div', { class: 'sb-chips besar' }, rows.map(chip)),
-      el('table', { class: 'sb-tabel' }, el('tr', null, el('th', null, 'Pertanyaan'), el('th', null, 'Ya: D / X'), el('th', null, 'Salah Ya'), el('th', null, 'Tidak: D / X'), el('th', null, 'Salah Tidak'), el('th', null, 'Jumlah'), el('th', null, '')),
-        qs.map((q) => { const t = tried[q]; return el('tr', { class: pick === q ? 'tanda' : '' }, el('td', null, qName(q)), ...(t ? [`${t.ya[0]} / ${t.ya[1]}`, t.eYa, `${t.no[0]} / ${t.no[1]}`, t.eNo].map((v) => el('td', null, v)) : [el('td', { colspan: 4 }, '…')]), el('td', null, el('b', null, t ? t.total : '')),
-          el('td', null, t ? onTap(el('button', { class: 'seg-btn', type: 'button' }, 'Pilih'), () => {
-            if (Object.keys(tried).length < qs.length) { ctx.mistake(); say(msg, 'bad', 'Coba semua pertanyaan dulu sebelum memilih.'); return; }
-            if (q !== best) { ctx.mistake(); shake(host); say(msg, 'bad', `${qName(q)} salah ${t.total} kali. Ada yang lebih sedikit.`); return; }
-            ctx.sound.good(); say(msg, '', `Mesin memilih ${qName(q)} dengan ${t.total} kesalahan.`); done();
-          }) : null)); })));
-  };
-  draw();
-  wrap.append(el('p', { class: 'prompt' }, title), host, msg);
-}
-
-// The worksheet tree with blanks, filled in order.
-const BLANKS = [['Tidak →', 'ditolak'], ['Ya →', 'Rumah jauh?'], ['  Ya →', 'ditolak'], ['  Nilai ≥ 85? Ya →', 'diterima'], ['    Prestasi lomba? Ya →', 'diterima'], ['    Prestasi lomba? Tidak →', 'ditolak']];
-function treeText(fill) {
-  const f = (i) => el('span', { class: `sb-isian ${i === fill.length ? 'kini' : ''}` }, fill[i] ?? '……');
-  return el('div', { class: 'sb-pohon-teks' },
-    el('div', null, '❓ Penghasilan rendah?'),
-    el('div', { class: 'l1' }, '├─ Tidak → ', f(0)),
-    el('div', { class: 'l1' }, '└─ Ya → ', f(1)),
-    el('div', { class: 'l2' }, '├─ Ya → ', f(2)),
-    el('div', { class: 'l2' }, '└─ Tidak → ❓ Nilai ≥ 85?'),
-    el('div', { class: 'l3' }, '├─ Ya → ', f(3)),
-    el('div', { class: 'l3' }, '└─ Tidak → ❓ Prestasi lomba?'),
-    el('div', { class: 'l4' }, '├─ Ya → ', f(4)),
-    el('div', { class: 'l4' }, '└─ Tidak → ', f(5)));
-}
-function fillRound(wrap, ctx, { done }) {
-  const fill = [];
-  const msg = el('p', { class: 'reveal info' }, 'Isi kotak yang menyala. Mesin terus membagi sampai kesalahannya 0.');
-  const host = el('div', { class: 'sb-dua' });
-  const draw = () => host.replaceChildren(treeText(fill), fill.length < BLANKS.length ? el('div', { class: 'opts sb-opsi', style: { '--cols': 1 } }, ['diterima', 'ditolak', 'Rumah jauh?', 'Nilai ≥ 85?', 'Prestasi lomba?'].map((o) => onTap(el('button', { class: 'opt', type: 'button' }, el('span', { class: 'opt-label' }, o)), () => {
-    const want = BLANKS[fill.length][1];
-    if (o !== want) { ctx.mistake(); shake(host); say(msg, 'bad', fill.length === 1 ? 'Di cabang ini, pertanyaan mana yang kesalahannya hanya 1?' : 'Lihat lagi pelamar yang sampai di kotak ini: keputusan mana yang terbanyak?'); return; }
-    fill.push(o); ctx.sound.tap(); draw();
-    if (fill.length === BLANKS.length) { say(msg, '', 'Pohon lengkap, dan kesalahannya pada data tahun lalu 0.'); done(); }
-  }))) : null);
-  draw();
-  wrap.append(el('p', { class: 'prompt' }, 'Pohon lengkap: isi setiap kotak.'), host, msg);
-}
-
-function traceRound(wrap, ctx, { tree, done }) {
-  let k = 0; const res = [];
-  const msg = el('p', { class: 'reveal info' }, 'Jalankan pohon untuk setiap pelamar: ikuti jawaban Y/T dari atas.');
-  const host = el('div', { class: 'sb-dua' });
-  const draw = () => host.replaceChildren(treeText(BLANKS.map((b) => b[1])),
-    el('div', { class: 'sb-kanan' }, el('table', { class: 'sb-tabel' }, el('tr', null, el('th', null, 'Kode'), ...QS.map(([, l]) => el('th', null, l.replace('?', ''))), el('th', null, 'Panitia'), el('th', null, 'Pohon')),
-      NEW.map((r, i) => el('tr', { class: i === k ? 'tanda' : '' }, el('td', null, r.id), ...QS.map(([q]) => el('td', { class: r[q] ? 'ya' : '' }, yn(r[q]))), el('td', { class: r.d ? 'd' : 'x' }, r.d ? 'D' : 'X'), el('td', { class: i < k ? (res[i] === r.d ? 'cocok' : 'beda') : '' }, i < k ? (res[i] ? 'D' : 'X') : i === k ? '?' : '')))),
-    k < NEW.length ? el('div', { class: 'seg' }, [[true, 'D · diterima'], [false, 'X · ditolak']].map(([v, l]) => onTap(el('button', { class: 'seg-btn besar', type: 'button' }, l), () => {
-      const p = predict(tree, NEW[k]);
-      if (v !== p) { ctx.mistake(); shake(host); say(msg, 'bad', `Ikuti pohonnya, bukan keputusan panitia. ${NEW[k].id}: penghasilan ${yn(NEW[k].rendah)}, rumah jauh ${yn(NEW[k].jauh)}…`); return; }
-      res.push(p); k++; ctx.sound.tap(); draw();
-      if (k === NEW.length) { say(msg, '', 'B2 dan B5 seharusnya diterima, tetapi pohon menolaknya.'); done(); }
-    }))) : null));
-  draw();
-  wrap.append(el('p', { class: 'prompt' }, 'Menguji pada delapan pelamar baru'), host, msg);
-}
-
-function matrixRound(wrap, ctx, { tree, done }) {
-  const placed = {}; let sel = null;
-  const cell = (r) => (r.d ? (predict(tree, r) ? 'tp' : 'fn') : (predict(tree, r) ? 'fp' : 'tn'));
-  const msg = el('p', { class: 'reveal info' }, 'Ketuk kartu pelamar, lalu ketuk kotak matriks yang tepat.');
-  const host = el('div', { class: 'sb-dua' });
-  const box = (k) => onTap(el('td', { class: `sb-sel ${k === 'tp' || k === 'tn' ? 'benar' : 'salah'}` }, el('b', null, Object.values(placed).filter((x) => x === k).length), el('div', { class: 'sb-chips' }, NEW.filter((r) => placed[r.id] === k).map(chip))), () => {
-    if (!sel) return; const r = NEW.find((x) => x.id === sel);
-    if (cell(r) !== k) { ctx.mistake(); shake(host); say(msg, 'bad', `${r.id}: panitia ${r.d ? 'menerima' : 'menolak'}, pohon ${predict(tree, r) ? 'menerima' : 'menolak'}.`); return; }
-    placed[sel] = k; sel = null; ctx.sound.tap(); draw();
-    if (Object.keys(placed).length === NEW.length) { say(msg, '', 'Benar 6 dari 8: B2 dan B5 salah ditolak.'); done(); }
-  });
-  const draw = () => host.replaceChildren(el('div', { class: 'sb-chips besar' }, NEW.filter((r) => !(r.id in placed)).map((r) => onTap(el('button', { class: `sb-chip tombol ${r.d ? 'd' : 'x'} ${sel === r.id ? 'pilih' : ''}`, type: 'button' }, `${r.id} · panitia ${r.d ? 'D' : 'X'} · pohon ${predict(tree, r) ? 'D' : 'X'}`), () => { sel = r.id; draw(); }))),
-    el('table', { class: 'sb-matriks' }, el('tr', null, el('th', null, ''), el('th', null, 'Pohon: diterima'), el('th', null, 'Pohon: ditolak')), el('tr', null, el('th', null, 'Seharusnya diterima'), box('tp'), box('fn')), el('tr', null, el('th', null, 'Seharusnya ditolak'), box('fp'), box('tn'))));
-  draw();
-  wrap.append(el('p', { class: 'prompt' }, 'Matriks kebingungan'), host, msg);
-}
-
 // Free tree builder. Each open box offers the unused questions (with their mistakes) or stays a leaf.
 function treeBuilder(ctx, { rows, banned = [], onChange }) {
   const root = { rows };
@@ -164,6 +81,292 @@ function scoreCard(t, { rows = NEW, nums = true } = {}) {
 }
 const sameAsOfficial = (t) => [...OLD, ...NEW].every((r) => predict(t, r) === official(r));
 
+
+
+// --- game data (Mesin Penyaring Beasiswa) ---
+const QN = { ...Object.fromEntries(QS), smp: 'Asal SMP pegunungan?' };
+const SLOTS = [
+  ['Penghasilan rendah? Tidak →', (r) => !r.rendah, 'ditolak'],
+  ['Penghasilan rendah? Ya →', (r) => r.rendah, 'Rumah jauh?'],
+  ['Rumah jauh? Ya →', (r) => r.rendah && r.jauh, 'ditolak'],
+  ['Nilai ≥ 85? Ya →', (r) => r.rendah && !r.jauh && r.nilai, 'diterima'],
+  ['Prestasi lomba? Ya →', (r) => r.rendah && !r.jauh && !r.nilai && r.lomba, 'diterima'],
+  ['Prestasi lomba? Tidak →', (r) => r.rendah && !r.jauh && !r.nilai && !r.lomba, 'ditolak'],
+];
+const PALETTE = ['diterima', 'ditolak', 'Rumah jauh?', 'Nilai ≥ 85?', 'Prestasi lomba?'];
+export const FIXES = [
+  [true, '🏷️ Perbaiki label data lama yang tidak adil (P03, P10)'],
+  [true, '📋 Pakai hanya kolom yang sesuai syarat resmi'],
+  [true, '🗺️ Periksa hasil model untuk setiap wilayah sebelum dipakai'],
+  [true, '💻 Buat seleksi setara, misalnya wawancara daring'],
+  [false, '➕ Tambah lebih banyak kolom tentang tempat tinggal', 'Kolom tempat tinggal lain hanya menjadi pengganti baru bagi "rumah jauh".'],
+  [false, '🙈 Sembunyikan hasil per wilayah', 'Bila hasil per wilayah disembunyikan, biasnya tidak akan ketahuan.'],
+];
+
+const HEAD26 = {
+  malas: ['Pertanyaan Pertama', 'Hitung kesalahan mesin malas, lalu pasang pertanyaan pertama yang paling sedikit salah.'],
+  cabang: ['Tumbuhkan Cabang', 'Bagi sepuluh pelamar berpenghasilan rendah dengan pertanyaan terbaik.'],
+  pohon: ['Pohon Lengkap', 'Isi setiap kotak pohon sampai kesalahan pada data tahun lalu 0.'],
+  uji: ['Uji Pelamar Baru', 'Turunkan setiap pelamar baru dari puncak pohon sampai ke daun.'],
+  matriks: ['Matriks dan Rapor Keadilan', 'Isi matriks kebingungan, lalu bandingkan pelamar rumah dekat dan jauh.'],
+  detektif: ['Detektif Bias', 'Temukan siapa yang salah ditolak, ciri bersamanya, dan asal biasnya.'],
+  duel: ['Pohon Tanpa Rumah Jauh', 'Bangun pohon tanpa pertanyaan "Rumah jauh?" sampai sama dengan syarat resmi.'],
+  label: ['Perbaiki Label', 'Perbaiki keputusan lama yang tidak adil dan lihat pohonnya berubah.'],
+  tugas: ['Mesin atau Manusia', 'Seret setiap tugas: boleh dibantu mesin, atau harus diputuskan manusia.'],
+  bos: ['Variabel Pengganti', 'Kolom "rumah jauh" dihapus, tetapi ada kolom "asal SMP". Bongkar biasnya.'],
+};
+
+// --- game pieces ---
+const msgLine = (t) => el('p', { class: 'reveal info' }, t);
+const pc = (r, extra = '') => el('span', { class: `sb26-kartu ${r.d ? 'd' : 'x'} ${extra}`, 'data-id': r.id }, r.id, el('small', null, r.d ? 'D' : 'X'));
+const attrs = (r, qs = QS.map((q) => q[0])) => el('span', { class: 'sb26-ciri' }, qs.map((q) => el('i', { class: r[q] ? 'ya' : '' }, `${{ rendah: '💰', nilai: '📝', lomba: '🏅', jauh: '🏔️', smp: '🏫' }[q]}${yn(r[q])}`)));
+const legend = () => el('small', { class: 'sb26-legenda' }, '💰 penghasilan rendah · 📝 nilai ≥ 85 · 🏅 prestasi lomba · 🏔️ rumah jauh · Y ya, T tidak');
+
+function treeView(t, { cur = null, path = [], onNode = null } = {}) {
+  const node = (n, label) => {
+    const leaf = 'leaf' in n;
+    const cls = `${n === cur ? 'kini' : ''} ${path.includes(n) ? 'jejak' : ''}`;
+    const box = leaf ? el('span', { class: `sb26-daun ${n.leaf ? 'd' : 'x'} ${cls}` }, n.leaf ? '✅ diterima' : '❌ ditolak')
+      : onNode ? onTap(el('button', { class: `sb26-tanya ${cls}`, type: 'button', 'data-q': n.q }, `❓ ${QN[n.q]}`), (e) => onNode(n, e.currentTarget))
+        : el('span', { class: `sb26-tanya ${cls}` }, `❓ ${QN[n.q]}`);
+    return el('li', null, el('div', { class: 'sb26-simpul' }, label ? el('small', null, label) : null, box), leaf ? null : el('ul', null, node(n.ya, 'Ya'), node(n.no, 'Tidak')));
+  };
+  return el('ul', { class: 'sb26-pohon' }, node(t, null));
+}
+
+// Pull a lever: the cards fall into Ya/Tidak chutes; then install the best lever.
+function sieveRound(area, ctx, { rows, qs, best, done }) {
+  const tried = {}; let pick = null; let fin = false;
+  const msg = msgLine('Tarik setiap tuas pertanyaan untuk membagi kartu pelamar. Kartu bergaris merah = tebakan salah.');
+  const host = el('div', { class: 'sb26-papan' });
+  const draw = () => {
+    const s = pick && splitInfo(rows, pick);
+    const chute = (l, rs, [d, x], e) => { const g = d > x; return el('div', { class: 'sb26-corong' }, el('b', null, `${l} → tebak ${g ? 'diterima' : 'ditolak'}`), el('div', { class: 'sb26-tumpuk' }, rs.map((r) => pc(r, r.d !== g ? 'salah' : ''))), el('small', null, `salah ${e}`)); };
+    fill(host, el('div', { class: 'sb26-tuas-tuas' }, qs.map((q) => onTap(el('button', { class: `sb26-tuas ${pick === q ? 'on' : ''}`, type: 'button', 'data-q': q }, el('span', null, `🎚️ ${QN[q]}`), el('small', null, tried[q] ? `salah ${tried[q].total}` : 'belum dicoba')), () => { if (fin) return; pick = q; tried[q] = splitInfo(rows, q); ctx.sound.tap(); draw(); }))),
+      pick ? el('div', { class: 'sb26-corong-corong' }, chute('Ya', rows.filter((r) => r[pick]), s.ya, s.eYa), chute('Tidak', rows.filter((r) => !r[pick]), s.no, s.eNo))
+        : el('div', { class: 'sb26-tumpuk besar' }, rows.map((r) => pc(r))),
+      el('div', { class: 'kode-baris' }, button(`📌 Pasang ${pick ? QN[pick] : 'tuas ini'}`, () => {
+        if (fin || !pick) return;
+        if (Object.keys(tried).length < qs.length) { ctx.mistake(); say(msg, 'bad', 'Coba semua tuas dulu, lalu bandingkan kesalahannya.'); return; }
+        if (pick !== best) { ctx.mistake(); shake(host); say(msg, 'bad', `${QN[pick]} salah ${tried[pick].total} kali. Ada tuas yang lebih sedikit salahnya.`); return; }
+        fin = true; ctx.sound.good(); say(msg, '', `Mesin memasang ${QN[pick]} dengan ${tried[pick].total} kesalahan.${best === 'jauh' ? ' Pertanyaan "rumah jauh" bukan syarat resmi, tetapi paling cocok dengan keputusan lama!' : ''}`); done();
+      }, 'primary')));
+  };
+  draw();
+  area.append(host, msg);
+}
+
+function lazyRound(area, ctx, { done }) {
+  let hit = 0; const need = OLD.filter((r) => r.d).length;
+  const msg = msgLine('Mesin malas menolak semua pelamar tanpa bertanya. Ketuk setiap kartu yang membuatnya salah.');
+  const cards = OLD.map((r) => onTap(el('button', { class: `sb26-kartu tombol ${r.d ? 'd' : 'x'}`, type: 'button', 'data-id': r.id }, r.id, el('small', null, r.d ? 'D' : 'X')), (e) => {
+    const b = e.currentTarget; if (b.classList.contains('salah') || hit === need) return;
+    if (!r.d) { ctx.mistake(); shake(b); say(msg, 'bad', `${r.id} memang ditolak panitia (X), jadi tebakan "ditolak" benar.`); return; }
+    b.classList.add('salah'); ctx.sound.tap(); hit++;
+    if (hit < need) { say(msg, '', `Salah ${hit}.`); return; }
+    say(msg, '', `Mesin malas salah ${need} kali dari 16. Ia perlu bertanya.`);
+    setTimeout(() => { area.replaceChildren(); sieveRound(area, ctx, { rows: OLD, qs: QS.map((q) => q[0]), best: 'rendah', done }); }, 2600);
+  }));
+  area.append(el('p', { class: 'sb26-sub' }, '🗂️ 16 kartu pelamar tahun lalu · D diterima, X ditolak'), el('div', { class: 'sb26-tumpuk besar' }, cards), msg);
+}
+
+function growRound(area, ctx, { done }) {
+  const filled = [];
+  const msg = msgLine('Kotak yang menyala menunggu isian. Lihat pelamar yang sampai di kotak itu, lalu ketuk keping yang tepat.');
+  const host = el('div', { class: 'sb26-papan' });
+  const draw = () => {
+    const k = filled.length; const slot = SLOTS[k];
+    const f = (i) => el('span', { class: `sb26-isian ${i === k ? 'kini' : ''} ${i < k ? 'isi' : ''}` }, filled[i] ?? '……');
+    const tree = el('div', { class: 'sb26-pohon-teks' },
+      el('div', null, '❓ Penghasilan rendah?'), el('div', { class: 'l1' }, '├─ Tidak → ', f(0)), el('div', { class: 'l1' }, '└─ Ya → ', f(1)),
+      el('div', { class: 'l2' }, '├─ Ya → ', f(2)), el('div', { class: 'l2' }, '└─ Tidak → ❓ Nilai ≥ 85?'),
+      el('div', { class: 'l3' }, '├─ Ya → ', f(3)), el('div', { class: 'l3' }, '└─ Tidak → ❓ Prestasi lomba?'),
+      el('div', { class: 'l4' }, '├─ Ya → ', f(4)), el('div', { class: 'l4' }, '└─ Tidak → ', f(5)));
+    fill(host, el('div', { class: 'sb26-dua' }, tree, el('div', { class: 'sb26-sisi' },
+      slot ? [el('small', null, `Pelamar di kotak "${slot[0]}"`), el('div', { class: 'sb26-tumpuk' }, OLD.filter(slot[1]).map((r) => pc(r))),
+        el('div', { class: 'sb26-keping-keping' }, PALETTE.map((o) => onTap(el('button', { class: 'sb26-keping', type: 'button', 'data-o': o }, o), (e) => {
+          if (filled.length !== k) return;
+          if (o !== slot[2]) { ctx.mistake(); shake(e.currentTarget); say(msg, 'bad', k === 1 ? 'Di cabang ini mesin memasang pertanyaan yang salahnya hanya 1 (Misi sebelumnya).' : 'Lihat kartu di kotak ini: keputusan mana yang terbanyak? Bila semuanya sama, kotak ini menjadi daun.'); return; }
+          filled.push(o); ctx.sound.tap(); draw();
+          if (filled.length === SLOTS.length) { say(msg, '', 'Pohon lengkap. Kesalahannya pada data tahun lalu 0: pohon meniru keputusan lama dengan sempurna.'); done(); }
+          else say(msg, '', 'Tepat.');
+        })))] : el('b', null, '🌳 Pohon selesai'))));
+  };
+  draw();
+  area.append(host, msg);
+}
+
+function walkRound(area, ctx, { tree, done }) {
+  let k = 0; let at = tree; let path = []; const res = [];
+  const msg = msgLine('Pelamar berdiri di puncak pohon. Jawab pertanyaan yang menyala sesuai ciri pelamar sampai tiba di daun.');
+  const host = el('div', { class: 'sb26-papan' });
+  const draw = () => {
+    const r = NEW[k];
+    fill(host, el('div', { class: 'sb26-dua' }, treeView(tree, { cur: at, path }),
+      el('div', { class: 'sb26-sisi' }, r ? [el('div', { class: 'sb26-pelamar' }, el('b', null, `🧑‍🎓 ${r.id}`), attrs(r)), legend(),
+        el('div', { class: 'sb26-yt' }, [[true, '✔ Ya'], [false, '✘ Tidak']].map(([v, l]) => onTap(el('button', { class: `sb26-jawab ${v ? 'ya' : 'tidak'}`, type: 'button', 'data-v': v ? '1' : '0' }, l), (e) => {
+          if ('leaf' in at || !NEW[k]) return;
+          if (r[at.q] !== v) { ctx.mistake(); shake(e.currentTarget); say(msg, 'bad', `Lihat ciri ${r.id}: ${QN[at.q]} ${yn(r[at.q]) === 'Y' ? 'Ya' : 'Tidak'}.`); return; }
+          path.push(at); at = v ? at.ya : at.no; ctx.sound.tap();
+          if ('leaf' in at) {
+            res.push(at.leaf); say(msg, at.leaf === r.d ? '' : 'info', `${r.id} tiba di daun "${at.leaf ? 'diterima' : 'ditolak'}". Panitia: ${r.d ? 'diterima' : 'ditolak'}.`);
+            draw();
+            setTimeout(() => { k++; at = tree; path = []; draw(); if (k === NEW.length) { say(msg, '', 'B2 dan B5 seharusnya diterima, tetapi pohon menolak mereka.'); done(); } }, 1300);
+            return;
+          }
+          draw();
+        })))] : null,
+        el('div', { class: 'sb26-hasil' }, NEW.map((x, i) => el('span', { class: i < res.length ? (res[i] === x.d ? 'cocok' : 'beda') : i === k ? 'kini' : '' }, x.id, el('small', null, i < res.length ? (res[i] ? 'D' : 'X') : '·')))))));
+  };
+  draw();
+  area.append(host, msg);
+}
+
+function matrixFairRound(area, ctx, { tree, done }) {
+  const placed = {}; let sel = null;
+  const cell = (r) => (r.d ? (predict(tree, r) ? 'tp' : 'fn') : (predict(tree, r) ? 'fp' : 'tn'));
+  const msg = msgLine('Ketuk kartu pelamar, lalu ketuk kotak matriks yang tepat.');
+  const host = el('div', { class: 'sb26-papan' });
+  const fair = () => {
+    const L = NEW.filter((r) => r.d); const got = { dekat: [], jauh: [] }; let left = L.length;
+    const bins = [['dekat', '🏠 Rumah dekat'], ['jauh', '🏔️ Rumah jauh']].map(([k, l]) => el('div', { class: 'sb26-wadah', 'data-drop': k }, el('b', null, l), el('div', { class: 'sb26-tumpuk' }), el('div', { class: 'sb26-batang' }, el('i'), el('span', null, '–'))));
+    const tray = el('div', { class: 'sb26-baki' }, ctx.rand.shuffle(L.slice()).map((r) => el('div', { class: 'sb26-seret', 'data-drag': r.id }, `${r.id} · pohon ${predict(tree, r) ? 'D' : 'X'} `, attrs(r))));
+    const board = el('div', { class: 'sb26-papan' }, el('p', { class: 'sb26-sub' }, '⚖️ Rapor keadilan: pelamar yang seharusnya diterima'), el('div', { class: 'sb26-wadah-wadah' }, bins), tray, legend());
+    dnd(board, (card, box) => {
+      const r = NEW.find((x) => x.id === card.dataset.drag); const k = r.jauh ? 'jauh' : 'dekat';
+      if (box.dataset.drop !== k) { ctx.mistake(); shake(card); say(msg, 'bad', `Lihat 🏔️ pada kartu ${r.id}.`); return; }
+      card.remove(); got[k].push(r); box.querySelector('.sb26-tumpuk').append(pc(r, predict(tree, r) ? '' : 'salah')); ctx.sound.tap();
+      const p = Math.round((got[k].filter((x) => predict(tree, x)).length / got[k].length) * 100);
+      box.querySelector('.sb26-batang i').style.width = `${p}%`; box.querySelector('.sb26-batang span').textContent = `${p}% diterima pohon`;
+      if (--left) return;
+      say(msg, '', 'Rumah dekat 2 dari 2 diterima (100%), rumah jauh 0 dari 2 (0%). Akurasi 75% menyembunyikan ketidakadilan ini.'); done();
+    });
+    fill(area, board, msg); say(msg, 'info', 'Seret setiap pelamar layak ke kelompok rumahnya. Persentase yang diterima pohon terhitung sendiri.');
+  };
+  const box = (k) => onTap(el('td', { class: `sb26-sel ${k === 'tp' || k === 'tn' ? 'benar' : 'salah'}`, 'data-c': k }, el('b', null, Object.values(placed).filter((x) => x === k).length), el('div', { class: 'sb26-tumpuk' }, NEW.filter((r) => placed[r.id] === k).map((r) => pc(r)))), () => {
+    if (!sel) return; const r = NEW.find((x) => x.id === sel);
+    if (cell(r) !== k) { ctx.mistake(); shake(host); say(msg, 'bad', `${r.id}: panitia ${r.d ? 'menerima' : 'menolak'}, pohon ${predict(tree, r) ? 'menerima' : 'menolak'}.`); return; }
+    placed[sel] = k; sel = null; ctx.sound.tap(); draw();
+    if (Object.keys(placed).length === NEW.length) { say(msg, '', 'Benar 6 dari 8: akurasi 6 : 8 = 75%. B2 dan B5 salah ditolak.'); setTimeout(fair, 3000); }
+  });
+  const draw = () => fill(host, el('div', { class: 'sb26-tumpuk' }, NEW.filter((r) => !(r.id in placed)).map((r) => onTap(el('button', { class: `sb26-kartu tombol ${r.d ? 'd' : 'x'} ${sel === r.id ? 'pilih' : ''}`, type: 'button', 'data-id': r.id }, r.id, el('small', null, `panitia ${r.d ? 'D' : 'X'} · pohon ${predict(tree, r) ? 'D' : 'X'}`)), () => { sel = r.id; draw(); }))),
+    el('table', { class: 'sb26-matriks' }, el('tr', null, el('th', null, ''), el('th', null, 'Pohon: diterima'), el('th', null, 'Pohon: ditolak')), el('tr', null, el('th', null, 'Seharusnya diterima'), box('tp'), box('fn')), el('tr', null, el('th', null, 'Seharusnya ditolak'), box('fp'), box('tn'))));
+  draw();
+  area.append(host, msg);
+}
+
+function detectiveRound(area, ctx, { tree, done }) {
+  const msg = msgLine('Langkah 1: ketuk pelamar baru yang salah ditolak pohon.');
+  let hit = 0;
+  const stepC = () => {
+    let got = 0;
+    const cards = OLD.map((r) => onTap(el('button', { class: `sb26-kartu tombol lebar ${r.d ? 'd' : 'x'}`, type: 'button', 'data-id': r.id }, r.id, attrs(r), el('small', null, r.d ? 'D' : 'X')), (e) => {
+      const b = e.currentTarget; if (b.classList.contains('kena') || got === 2) return;
+      if (!(official(r) && !r.d)) { ctx.mistake(); shake(b); say(msg, 'bad', official(r) ? `${r.id} memenuhi syarat dan memang diterima.` : `${r.id} tidak memenuhi syarat resmi, jadi wajar ditolak.`); return; }
+      b.classList.add('kena'); ctx.sound.tap();
+      if (++got < 2) { say(msg, '', 'Satu lagi.'); return; }
+      say(msg, '', 'P03 dan P10 memenuhi syarat resmi tetapi ditolak tahun lalu; keduanya tinggal jauh, mungkin tidak bisa datang ke wawancara di kota. Pohon belajar ketidakadilan itu dari data.'); done();
+    }));
+    fill(area, el('p', { class: 'sb26-sub' }, '📜 Syarat resmi: 💰 penghasilan rendah DAN (📝 nilai ≥ 85 ATAU 🏅 prestasi lomba)'), el('div', { class: 'sb26-tumpuk' }, cards), legend(), msg);
+    say(msg, 'info', 'Langkah 3: di data tahun lalu, ketuk dua pelamar yang memenuhi syarat resmi tetapi ditolak.');
+  };
+  const stepB = () => {
+    const rows = ['B1', 'B6', 'B2', 'B5'].map((id) => NEW.find((r) => r.id === id));
+    let fin = false;
+    const head = QS.map(([q, l]) => onTap(el('button', { class: 'sb26-kolom', type: 'button', 'data-q': q }, l), (e) => {
+      if (fin) return;
+      if (q !== 'jauh') { ctx.mistake(); shake(e.currentTarget); say(msg, 'bad', `Kolom ini tidak memisahkan B2 dan B5 dari B1 dan B6.`); return; }
+      fin = true; e.currentTarget.classList.add('kena'); ctx.sound.good(); say(msg, '', 'Rumah jauh! B2 dan B5 memenuhi syarat resmi, tetapi ditolak karena rumahnya jauh.'); setTimeout(stepC, 3000);
+    }));
+    fill(area, el('table', { class: 'sb26-tabel' }, el('tr', null, el('th', null, 'Pelamar'), head.map((h) => el('th', null, h)), el('th', null, 'Pohon')),
+      rows.map((r) => el('tr', { class: predict(tree, r) ? '' : 'tanda' }, el('td', null, r.id), QS.map(([q]) => el('td', { class: r[q] ? 'ya' : '' }, yn(r[q]))), el('td', null, predict(tree, r) ? '✅ D' : '❌ X')))), msg);
+    say(msg, 'info', 'Langkah 2: semua pelamar ini layak. Ketuk judul kolom yang membedakan yang ditolak (merah) dari yang diterima.');
+  };
+  const cards = NEW.map((r) => onTap(el('button', { class: `sb26-kartu tombol lebar ${r.d ? 'd' : 'x'}`, type: 'button', 'data-id': r.id }, r.id, el('small', null, `panitia ${r.d ? 'D' : 'X'} · pohon ${predict(tree, r) ? 'D' : 'X'}`)), (e) => {
+    const b = e.currentTarget; if (b.classList.contains('kena') || hit === 2) return;
+    if (!(r.d && !predict(tree, r))) { ctx.mistake(); shake(b); say(msg, 'bad', `${r.id}: pohon dan panitia sepakat.`); return; }
+    b.classList.add('kena'); ctx.sound.tap();
+    if (++hit < 2) { say(msg, '', 'Satu lagi.'); return; }
+    say(msg, '', 'B2 dan B5 salah ditolak.'); setTimeout(stepB, 2200);
+  }));
+  area.append(el('div', { class: 'sb26-tumpuk' }, cards), msg);
+}
+
+function noFarRound(area, ctx, { done }) {
+  const msg = msgLine('Ketuk pertanyaan di setiap kotak; angka "salah" membantu memilih. Kotak tanpa kesalahan otomatis menjadi daun.');
+  let cur = null; let fin = false; const card = el('div');
+  const b = treeBuilder(ctx, { rows: OLD, banned: ['jauh'], onChange: (t) => { cur = t; card.replaceChildren(scoreCard(t)); } });
+  area.append(el('div', { class: 'sb26-dua lebar' }, b, card), msg, el('div', { class: 'kode-baris' }, button('Selesai membangun', () => {
+    if (fin) return;
+    if (!sameAsOfficial(cur)) { ctx.mistake(); say(msg, 'bad', 'Masih ada kotak yang bisa dibagi supaya kesalahannya berkurang.'); return; }
+    fin = true; ctx.sound.good(); say(msg, '', 'Pohon ini sama dengan syarat resmi: salah 2 pada data lama (P03, P10), tetapi akurasi pelamar baru 100% dan rumah dekat maupun jauh sama-sama 100%.'); done();
+  }, 'primary')));
+  b.draw();
+}
+
+function relabelRound(area, ctx, { done }) {
+  const data = OLD.map((r) => ({ ...r }));
+  const msg = msgLine('Pohon A dilatih dengan keempat pertanyaan. Ketuk label keputusan yang tidak adil di data lama untuk memperbaikinya.');
+  const host = el('div', { class: 'sb26-papan' }); let fixed = 0;
+  const draw = () => {
+    const t = buildTree(data);
+    fill(host, el('div', { class: 'sb26-dua' }, el('div', { class: 'sb26-sisi' }, el('b', null, '🌳 Pohon A (dilatih ulang)'), treeView(t)),
+      el('div', { class: 'sb26-sisi' }, el('small', null, '🗂️ Data tahun lalu: ketuk label D/X untuk membaliknya'), el('div', { class: 'sb26-tumpuk' }, data.map((r) => onTap(el('button', { class: `sb26-kartu tombol lebar ${r.d ? 'd' : 'x'} ${r.fix ? 'kena' : ''}`, type: 'button', 'data-id': r.id }, r.id, attrs(r), el('small', null, r.d ? 'D' : 'X')), (e) => {
+        if (fixed === 2 || r.fix) return;
+        if (!(official(r) && !r.d)) { ctx.mistake(); shake(e.currentTarget); say(msg, 'bad', `Label ${r.id} sudah sesuai syarat resmi.`); return; }
+        r.d = true; r.fix = true; fixed++; ctx.sound.tap(); draw();
+        if (fixed < 2) { say(msg, '', 'Satu lagi.'); return; }
+        say(msg, '', 'Setelah label P03 dan P10 diperbaiki, pohon dengan empat pertanyaan pun tidak lagi memakai "rumah jauh": sama dengan syarat resmi. Memperbaiki data lebih penting daripada menyembunyikan kolom.'); done();
+      }))), legend())));
+  };
+  draw();
+  area.append(el('p', { class: 'sb26-sub' }, '📜 Syarat resmi: 💰 penghasilan rendah DAN (📝 nilai ≥ 85 ATAU 🏅 prestasi lomba)'), host, msg);
+}
+
+function taskRound(area, ctx, { done }) {
+  const msg = msgLine('Seret setiap kartu tugas ke kotak yang tepat, atau ketuk kartu lalu ketuk kotaknya.');
+  const bins = [['M', '🤖 M · boleh dibantu mesin'], ['H', '🧑‍⚖️ H · harus diputuskan manusia']].map(([k, l]) => el('div', { class: 'sb26-wadah', 'data-drop': k }, el('b', null, l), el('div', { class: 'sb26-tumpuk' })));
+  const tray = el('div', { class: 'sb26-baki' }, ctx.rand.shuffle(TASKS.slice()).map(([k, t]) => el('div', { class: 'sb26-seret', 'data-drag': k }, el('b', null, k), t)));
+  const board = el('div', { class: 'sb26-papan' }, el('div', { class: 'sb26-wadah-wadah' }, bins), tray);
+  let left = TASKS.length;
+  dnd(board, (card, box) => {
+    const [k, , a] = TASKS.find((x) => x[0] === card.dataset.drag);
+    if (box.dataset.drop !== a) { ctx.mistake(); shake(card); say(msg, 'bad', a === 'H' ? 'Tugas ini menyangkut penilaian, keadaan khusus, atau tanggung jawab: manusia yang memutuskan.' : 'Ini pekerjaan hitung atau menyaring yang boleh dibantu mesin, lalu diperiksa manusia.'); return; }
+    card.remove(); box.querySelector('.sb26-tumpuk').append(el('span', { class: 'sb26-huruf' }, k)); ctx.sound.tap();
+    if (--left) { say(msg, '', 'Tepat.'); return; }
+    say(msg, '', 'Mesin membantu menghitung dan menyaring; syarat, keadaan khusus, keberatan, dan keputusan akhir dipegang manusia.'); done();
+  });
+  area.append(board, msg);
+}
+
+function proxyRound(area, ctx, { done }) {
+  const data = OLD.map((r) => ({ ...r, smp: r.jauh }));
+  const t = buildTree(data, ['rendah', 'nilai', 'lomba', 'smp']);
+  const msg = msgLine('Mesin dilatih ulang tanpa "rumah jauh", tetapi dengan kolom "asal SMP". Ketuk simpul pohon yang membawa biasnya kembali.');
+  let fin = false;
+  const fixes = () => {
+    const bins = [['ya', '✅ Membantu mengatasi'], ['tidak', '❌ Tidak membantu']].map(([k, l]) => el('div', { class: 'sb26-wadah', 'data-drop': k }, el('b', null, l), el('div', { class: 'sb26-tumpuk' })));
+    const tray = el('div', { class: 'sb26-baki' }, ctx.rand.shuffle(FIXES.map((f, i) => i)).map((i) => el('div', { class: 'sb26-seret', 'data-drag': i }, FIXES[i][1])));
+    const board = el('div', { class: 'sb26-papan' }, el('div', { class: 'sb26-wadah-wadah' }, bins), tray);
+    let left = FIXES.length;
+    dnd(board, (card, box) => {
+      const f = FIXES[+card.dataset.drag];
+      if ((box.dataset.drop === 'ya') !== f[0]) { ctx.mistake(); shake(card); say(msg, 'bad', f[0] ? 'Cara ini justru membantu: pikirkan lagi.' : f[2]); return; }
+      card.remove(); box.querySelector('.sb26-tumpuk').append(el('span', { class: 'sb26-cara' }, f[1])); ctx.sound.tap();
+      if (--left) { say(msg, '', 'Tepat.'); return; }
+      say(msg, '', 'Menghapus satu kolom tidak cukup. Perbaiki labelnya, pakai kolom sesuai syarat, periksa hasil per wilayah, dan buat proses seleksinya setara.'); done();
+    });
+    fill(area, board, msg); say(msg, 'info', 'Seret setiap cara ke kotak yang tepat.');
+  };
+  area.append(el('div', { class: 'sb26-dua' }, treeView(t, { onNode: (n, b) => {
+    if (fin) return;
+    if (n.q !== 'smp') { ctx.mistake(); shake(b); say(msg, 'bad', `${QN[n.q]} adalah syarat resmi. Cari pertanyaan yang bukan syarat.`); return; }
+    fin = true; b.classList.add('bias'); ctx.sound.good();
+    say(msg, '', 'Semua pelamar dari SMP pegunungan juga tinggal jauh, jadi "asal SMP" menjadi pengganti "rumah jauh". Biasnya kembali, hanya lebih tersembunyi: variabel pengganti.');
+    setTimeout(fixes, 4200);
+  } }), el('div', { class: 'sb26-sisi' }, el('small', null, '🏫 Kolom baru: asal SMP pegunungan'), el('div', { class: 'sb26-tumpuk' }, data.filter((r) => r.rendah).map((r) => el('span', { class: 'sb26-kartu lebar' }, r.id, attrs(r, ['smp', 'jauh'])))))), msg);
+}
+
 export default {
   id: 'sma-26-seleksi-beasiswa',
   title: 'Seleksi Beasiswa oleh Mesin',
@@ -174,56 +377,33 @@ export default {
   source: null,
   rounds: 10,
   maxPlayers: 4,
-  goal: 'Bangun pohon keputusan dari keputusan beasiswa tahun lalu, uji pada pelamar baru, temukan bias yang terbawa dari data, lalu tentukan bagian yang harus diputuskan manusia.',
+  goal: 'Mesin Penyaring Beasiswa: bangun pohon keputusan dari keputusan tahun lalu, uji pada pelamar baru, bongkar bias yang terbawa dari data, perbaiki labelnya, lalu tentukan bagian yang harus diputuskan manusia.',
   extraModes: [
     { id: 'pohon', icon: '🌳', label: 'Pembangun Pohon', desc: 'Bangun pohon sendiri atau otomatis, uji pada pelamar baru, perbaiki label data lama, dan bandingkan kelompok rumah dekat dan jauh', create: createBuilder },
-    { id: 'giliran', icon: '⚖️', label: 'Pohon Antartim', desc: 'Tim bergiliran membangun pohon dengan pertanyaan pilihannya; skor dari akurasi pada pelamar baru dan keadilan antarkelompok', create: createTeams },
+    { id: 'giliran', icon: '⚖️', label: 'Duel Dua Pohon', desc: 'Tim bergiliran membangun pohon dengan pertanyaan pilihannya; skor dari akurasi pada pelamar baru dan keadilan antarkelompok', create: createTeams },
   ],
   create(root, ctx) {
-    const wrap = el('div', { class: 'act seleksi-beasiswa' });
+    const wrap = el('div', { class: 'act sb26-main' });
     root.append(wrap);
     const biased = buildTree(OLD);
     function render() {
       wrap.replaceChildren();
       const r = ctx.round;
       let solved = false;
-      const next = () => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, 2400); } };
-      const ask = (prompt, opts, columns = 1, subject = null, onRight = next) => choice(wrap, { prompt, subject, ctx, shuffle: true, onRight, columns, options: opts.map(([l, correct]) => ({ label: String(l), correct })) });
-      const then = (fn) => () => { wrap.replaceChildren(); fn(); };
-      if (r === 0) ask('Syarat resmi: penghasilan rendah DAN (nilai ≥ 85 ATAU prestasi lomba). Tanpa bertanya apa pun, mesin menebak "ditolak" untuk semua. Berapa kali ia salah?', [4, 6, 10, 16].map((x) => [x, x === 6]), 4, dataTable(OLD),
-        then(() => splitRound(wrap, ctx, { rows: OLD, qs: QS.map((q) => q[0]), best: 'rendah', title: 'Pertanyaan pertama: bagi keenam belas pelamar.', done: next })));
-      else if (r === 1) splitRound(wrap, ctx, { rows: OLD.filter((x) => x.rendah), qs: ['nilai', 'lomba', 'jauh'], best: 'jauh', title: 'Cabang "penghasilan rendah": bagi sepuluh pelamar itu.', done: next });
-      else if (r === 2) fillRound(wrap, ctx, { done: next });
-      else if (r === 3) traceRound(wrap, ctx, { tree: biased, done: next });
-      else if (r === 4) matrixRound(wrap, ctx, { tree: biased, done: then(() => ask('Akurasi = tebakan benar : banyak pelamar. Berapa akurasinya?', [['6 : 8 = 75%', true], ['4 : 8 = 50%'], ['8 : 8 = 100%'], ['2 : 4 = 50%']], 2, scoreCard(biased, { nums: false }),
-        then(() => ask('Dari pelamar yang seharusnya diterima, berapa persen diterima pohon bila rumahnya dekat, dan bila rumahnya jauh?', [['Dekat 100% (2 dari 2), jauh 0% (0 dari 2)', true], ['Dekat 50%, jauh 50%'], ['Dekat 75%, jauh 75%'], ['Dekat 0%, jauh 100%']], 1, el('div', { class: 'sb-dua' }, scoreCard(biased, { nums: false }), dataTable(NEW.filter((x) => x.d))))))) });
-      else if (r === 5) ask('Apa persamaan semua pelamar yang salah ditolak pohon (B2 dan B5)?', [['Rumahnya jauh, padahal mereka memenuhi syarat resmi', true], ['Nilainya di bawah 85'], ['Penghasilan keluarganya tinggi'], ['Tidak punya prestasi lomba']], 1, dataTable(NEW.filter((x) => ['B2', 'B5'].includes(x.id))),
-        then(() => ask('P03 dan P10 memenuhi syarat resmi. Mengapa mereka ditolak tahun lalu?', [['Kemungkinan tidak bisa datang ke wawancara di kota yang jauh; data mencatat hambatan itu seolah-olah "tidak layak"', true], ['Mereka tidak memenuhi syarat'], ['Mesin yang menolak mereka'], ['Kuotanya sudah penuh']], 1, dataTable(OLD, { hi: ['P03', 'P10'] }),
-          then(() => ask('Mengapa pohon yang kesalahannya 0 pada data tahun lalu justru tidak adil?', [['Ia meniru keputusan lama dengan sempurna, termasuk ketidakadilannya: bias terbawa dari data', true], ['Karena mesin membenci desa'], ['Karena datanya terlalu sedikit untuk dihitung'], ['Pohon itu adil; kesalahan 0 berarti benar']])))));
-      else if (r === 6) {
-        const msg = el('p', { class: 'reveal info' }, 'Bangun pohon tanpa pertanyaan "Rumah jauh". Pilih pertanyaan di setiap kotak; angka "salah" membantu memilih.');
-        let cur = null; const card = el('div');
-        const b = treeBuilder(ctx, { rows: OLD, banned: ['jauh'], onChange: (t) => { cur = t; } });
-        wrap.append(el('p', { class: 'prompt' }, 'Pohon tanpa pertanyaan "rumah jauh"'), el('div', { class: 'sb-dua' }, b, card), msg, el('div', { class: 'kode-baris' }, button('Selesai membangun', () => {
-          if (!sameAsOfficial(cur)) { ctx.mistake(); say(msg, 'bad', 'Masih ada kotak yang bisa dibagi supaya kesalahannya berkurang.'); return; }
-          say(msg, '', 'Pohon ini sama dengan syarat resmi.'); setTimeout(then(() => ask('Berapa kesalahannya pada data tahun lalu, dan berapa akurasinya pada pelamar baru?', [['2 kesalahan (P03, P10); akurasi 100%', true], ['0 kesalahan; akurasi 75%'], ['2 kesalahan (B2, B5); akurasi 75%'], ['4 kesalahan; akurasi 50%']], 1, el('div', { class: 'sb-dua' }, scoreCard(cur, { nums: false }), dataTable(OLD, { hi: ['P03', 'P10'] })))), 1600);
-        }, 'primary')));
-        b.draw();
-      } else if (r === 7) ask('Pohon mana yang lebih baik, dan apa pelajarannya tentang angka akurasi?', [['Pohon tanpa "rumah jauh": akurasi pada data lama hanya mengukur kemiripan dengan keputusan lama; bila keputusan lama berbias, akurasi tinggi berarti meniru biasnya', true], ['Pohon pertama, karena kesalahannya 0 pada data lama'], ['Keduanya sama baiknya'], ['Tidak perlu pohon; pilih acak saja']], 1,
-        el('div', { class: 'sb-dua' }, el('div', null, el('b', null, 'Pohon dengan rumah jauh'), scoreCard(biased)), el('div', null, el('b', null, 'Pohon tanpa rumah jauh'), scoreCard(buildTree(OLD, ['rendah', 'nilai', 'lomba'])))));
-      else if (r === 8) {
-        const res = {};
-        const msg = el('p', { class: 'reveal info' }, 'M: boleh dibantu mesin. H: harus diputuskan manusia.');
-        const rows = el('div', { class: 'sb-tugas' });
-        const draw = () => rows.replaceChildren(...TASKS.map(([k, t, a]) => el('div', { class: `sb-t-baris ${k in res ? 'beres' : ''}` }, el('span', null, `${k}. ${t}`), k in res ? el('b', null, a === 'M' ? 'M · mesin membantu' : 'H · manusia') : el('div', { class: 'seg' }, [['M', 'M · mesin'], ['H', 'H · manusia']].map(([v, l]) => onTap(el('button', { class: 'seg-btn', type: 'button' }, l), () => {
-          if (v !== a) { ctx.mistake(); say(msg, 'bad', a === 'H' ? 'Tugas ini menyangkut penilaian, keadaan khusus, atau tanggung jawab: manusia yang memutuskan.' : 'Ini pekerjaan hitung atau menyaring yang boleh dibantu mesin, lalu diperiksa manusia.'); return; }
-          res[k] = v; ctx.sound.tap(); draw();
-          if (Object.keys(res).length === TASKS.length) { say(msg, '', 'Mesin membantu hitung dan menyaring; syarat, keadaan khusus, keberatan, dan keputusan akhir dipegang manusia.'); next(); }
-        }))))));
-        draw();
-        wrap.append(el('p', { class: 'prompt' }, 'Mesin membantu, manusia memutuskan'), rows, msg);
-      } else ask('Tantangan: kolom "rumah jauh" dihapus, tetapi ditambah kolom "asal SMP". Semua pelamar dari SMP pegunungan juga tinggal jauh. Apa yang bisa terjadi?', [['Pohon memilih "asal SMP" sebagai pengganti; biasnya kembali, hanya lebih tersembunyi (variabel pengganti)', true], ['Bias hilang karena kolomnya sudah dihapus'], ['Pohon tidak bisa dibangun'], ['Semua pelamar diterima']], 1, null,
-        then(() => ask('Cara mana yang membantu mengatasinya?', [['Memperbaiki label data lama yang tidak adil dan memeriksa hasil model untuk setiap kelompok wilayah sebelum dipakai', true], ['Menambah lebih banyak kolom tentang tempat tinggal'], ['Menyembunyikan hasil per kelompok'], ['Memakai data tahun lalu apa adanya']])));
+      const next = (wait = 5200) => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, wait); } };
+      const area = el('div', { class: 'sb26-area' });
+      const go = (k, no) => { wrap.append(misiHead(no, ...HEAD26[k], '🌳'), area); };
+      const fin = (ms) => ({ done: () => next(ms) });
+      if (r === 0) { go('malas', 1); lazyRound(area, ctx, fin(5500)); }
+      else if (r === 1) { go('cabang', 2); sieveRound(area, ctx, { rows: OLD.filter((x) => x.rendah), qs: ['nilai', 'lomba', 'jauh'], best: 'jauh', ...fin(6000) }); }
+      else if (r === 2) { go('pohon', 2); growRound(area, ctx, fin(5500)); }
+      else if (r === 3) { go('uji', 3); walkRound(area, ctx, { tree: biased, ...fin(5500) }); }
+      else if (r === 4) { go('matriks', 3); matrixFairRound(area, ctx, { tree: biased, ...fin(6500) }); }
+      else if (r === 5) { go('detektif', 4); detectiveRound(area, ctx, { tree: biased, ...fin(7000) }); }
+      else if (r === 6) { go('duel', 5); noFarRound(area, ctx, fin(6500)); }
+      else if (r === 7) { go('label', 5); relabelRound(area, ctx, fin(7000)); }
+      else if (r === 8) { go('tugas', 6); taskRound(area, ctx, fin(6000)); }
+      else { go('bos', 'Bos'); proxyRound(area, ctx, fin(7500)); }
     }
     render();
   },
@@ -254,7 +434,7 @@ function createTeams(root, ctx) {
   function start(nT) {
     const pts = Array(nT).fill(0); let k = 0;
     function turn() {
-      if (k >= nT) { finishBoard(wrap, ctx, { title: 'Pohon antartim selesai', pts, again: () => pickTeams(wrap, 'Pohon Antartim', start) }); return; }
+      if (k >= nT) { finishBoard(wrap, ctx, { title: 'Pohon antartim selesai', pts, again: () => pickTeams(wrap, 'Duel Dua Pohon', start) }); return; }
       let cur = null; const card = el('div');
       const b = treeBuilder(ctx, { rows: OLD, onChange: (t) => { cur = t; card.replaceChildren(scoreCard(t)); } });
       const msg = el('p', { class: 'reveal info' }, 'Skor = banyak pelamar baru yang ditebak benar (0–8) + 2 bila pelamar layak dari rumah dekat dan jauh diterima sama besar.');
@@ -268,5 +448,5 @@ function createTeams(root, ctx) {
     }
     turn();
   }
-  pickTeams(wrap, 'Pohon Antartim', start);
+  pickTeams(wrap, 'Duel Dua Pohon', start);
 }
