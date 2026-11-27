@@ -296,7 +296,7 @@ function bosRound(area, ctx, { oops, done }) {
 }
 
 // The stopwatch results as a race, before the timing table.
-const adegan43 = () => ({ judul: 'Lomba lari dua program', ket: 'Setiap kali banyak kode digandakan, batang 🐢 bersarang melonjak kira-kira 4 kali. Batang 🐇 set hampir tidak terlihat.',
+const adegan43 = () => ({ judul: 'Lomba lari dua program', ket: 'Setiap kali banyak kode digandakan, seberapa jauh batang 🐢 bersarang melonjak? Bandingkan dengan 🐇 set.',
   isi: grafikKelompok(WAKTU.map(([n, a, b]) => ({ label: `${fmtNum(n)} kode`, ikon: '⏱️', nilai: [a, b] })), [{ label: '🐢 bersarang', warna: '#b45309' }, { label: '🐇 set', warna: '#2563eb' }], { tinggi: 8 }) });
 
 export default {
