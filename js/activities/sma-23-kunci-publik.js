@@ -5,7 +5,7 @@
 
 import { el, onTap, button, shake } from '../core/util.js';
 import { say, pickTeams, scoreBar, finishBoard } from './sma-kit.js';
-import { misiHead } from './misi-kit.js';
+import { misiHead, adeganDulu } from './misi-kit.js';
 
 export const P = 23; export const G = 5;
 export const RSA = { n: 55, e: 3, d: 27 };
@@ -309,6 +309,20 @@ const HEAD23 = {
   boss: ['Rudi di Tengah', 'Rudi menukar tempelan di papan. Apa akibatnya, dan apa penangkalnya?'],
 };
 
+// A clock with 23 numbers: each hop multiplies by 5 and wraps around, before the table.
+function jam23() {
+  const NS = 'http://www.w3.org/2000/svg'; const sv = (t, a, txt) => { const n = document.createElementNS(NS, t); for (const [k, v] of Object.entries(a)) n.setAttribute(k, v); if (txt != null) n.textContent = txt; return n; };
+  const R = 80; const pos = (x) => [100 + R * Math.sin((2 * Math.PI * x) / 23), 100 - R * Math.cos((2 * Math.PI * x) / 23)];
+  const hop = [1, 5, 2, 10, 4]; const svg = sv('svg', { viewBox: '0 0 200 200', class: 'gp23-jam' });
+  svg.append(sv('circle', { cx: 100, cy: 100, r: R, class: 'gp23-jam-lingkar' }));
+  hop.slice(1).forEach((b, i) => { const [x1, y1] = pos(hop[i]); const [x2, y2] = pos(b); svg.append(sv('line', { x1, y1, x2, y2, class: 'gp23-jam-lompat', style: `animation-delay:${0.4 + i * 0.7}s` })); });
+  for (let x = 0; x < 23; x++) { const [cx, cy] = pos(x); const on = hop.indexOf(x); svg.append(sv('circle', { cx, cy, r: on >= 0 ? 7.5 : 5.5, class: on >= 0 ? 'gp23-jam-titik on' : 'gp23-jam-titik', style: on >= 0 ? `animation-delay:${0.2 + on * 0.7}s` : '' }), sv('text', { x: cx, y: cy + 2.4, class: 'gp23-jam-angka' }, String(x))); }
+  svg.append(sv('text', { x: 100, y: 104, class: 'gp23-jam-tengah' }, '× 5'));
+  return svg;
+}
+const adegan23 = () => ({ judul: 'Jam dengan 23 angka', isi: jam23(), tombol: '📋 Tampilkan tabelnya',
+  ket: 'Tiap lompatan: kali 5, lalu putar jam 23 angka. 1 → 5 → 2 → 10 → 4 → … Tampak acak, padahal aturannya sederhana.' });
+
 export default {
   id: 'sma-23-kunci-publik',
   title: 'Gembok yang Dibagikan',
@@ -338,7 +352,7 @@ export default {
       const go = (k, no) => { wrap.append(misiHead(no, ...HEAD23[k], '🔐'), area); };
       const later = (fn, ms = 2600) => () => setTimeout(() => { area.replaceChildren(); fn(); }, ms);
       if (r === 0) { go('kotak', 1); boxRound(area, ctx, { done: () => next(6000) }); }
-      else if (r === 1) { go('tabel', 2); tableRound(area, ctx, { done: () => next(5000) }); }
+      else if (r === 1) { go('tabel', 2); tableRound(area, ctx, { done: () => next(5000) }); adeganDulu(ctx, area, adegan23()); }
       else if (r === 2) {
         go('bersama', 2);
         stepRound(area, ctx, { b: 11, e: 6, m: 23, intro: 'Nadia mengambil 11 (tempelan Fajar) dan memangkatkannya dengan rahasianya 6. Ambil sisa bagi 23 setelah setiap perkalian.', after: 'Kunci Nadia 9.', done: later(() => stepRound(area, ctx, { b: 8, e: 9, m: 23, intro: 'Fajar mengambil 8 (tempelan Nadia) dan memangkatkannya dengan rahasianya 9.', after: 'Kunci Fajar juga 9, padahal angka 9 tidak pernah ditempel di papan.', done: () => next(5500) })) });

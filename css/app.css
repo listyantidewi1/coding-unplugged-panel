@@ -9936,3 +9936,63 @@ button.pw45-kotak { cursor: pointer; }
   .dr57-area, .dr57-kolom { gap: 0.3em; }
 }
 @container (max-aspect-ratio: 1/1) { .dr57-dua { flex-direction: column; align-items: center; } }
+/* misi-kit: adegan sebelum tabel (gambar data dulu, lalu tabelnya) */
+.mk-adegan { display: flex; flex-direction: column; align-items: center; gap: 0.5em; width: min(100%, 46em); font-size: 1.2em; padding: 0.6em 1em 0.8em; border: 3px solid var(--mk); border-radius: 1.1em; background: linear-gradient(180deg, var(--mk-muda), #fff 70%); color: #1f2937; animation: mk-muncul 0.35s ease-out; }
+.mk-adegan-judul { padding: 0.1em 0.8em; border-radius: 999px; background: var(--mk); color: #fff; font-size: 0.95em; }
+.mk-adegan-panggung { display: flex; flex-wrap: wrap; gap: 0.6em 1.2em; align-items: flex-end; justify-content: center; max-width: 100%; min-width: 0; }
+.mk-adegan-ket { margin: 0; color: #374151; text-align: center; font-weight: 700; }
+.mk-adegan .mk-adegan-lanjut { padding: 0.3em 1.2em; font-size: 1em; }
+@keyframes mk-muncul { from { opacity: 0; transform: translateY(0.6em) scale(0.97); } to { opacity: 1; transform: none; } }
+@keyframes mk-tumbuh { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes mk-melebar { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes mk-pudar { from { opacity: 0; } to { opacity: 1; } }
+@keyframes mk-loncat { 0% { opacity: 0; transform: translateY(0.8em) scale(0.6); } 70% { transform: translateY(-0.15em) scale(1.06); } 100% { opacity: 1; transform: none; } }
+.mk-grafik { display: flex; gap: 0.5em; align-items: flex-end; justify-content: center; }
+.mk-grafik-kolom { display: flex; flex-direction: column; align-items: center; gap: 0.1em; min-width: 2.6em; max-width: 7em; }
+.mk-grafik-rel { display: flex; align-items: flex-end; justify-content: center; gap: 0.12em; width: 2.4em; height: var(--tinggi, 8em); border-bottom: 2px solid #6b7280; }
+.mk-grafik-rel.kelompok { width: auto; min-width: 2.4em; }
+.mk-grafik-batang { display: block; width: 100%; min-width: 0.7em; border-radius: 0.35em 0.35em 0 0; transform-origin: bottom; animation: mk-tumbuh 0.6s ease-out both; }
+.mk-grafik-rel.kelompok .mk-grafik-batang { width: 0.9em; }
+.mk-grafik-nilai { font-weight: 800; color: #111827; animation: mk-pudar 0.4s ease-out both; }
+.mk-grafik-ikon { font-size: 1.5em; line-height: 1.1; animation: mk-loncat 0.5s ease-out both; }
+.mk-grafik-label { max-width: 7em; color: #374151; font-size: 0.75em; text-align: center; line-height: 1.15; }
+.mk-grafik-wadah, .mk-tumpuk-wadah { display: flex; flex-direction: column; align-items: center; gap: 0.4em; max-width: 100%; }
+.mk-legenda { display: flex; flex-wrap: wrap; gap: 0.3em 0.9em; justify-content: center; font-size: 0.8em; color: #374151; }
+.mk-legenda span { display: inline-flex; align-items: center; gap: 0.3em; }
+.mk-legenda i { width: 0.9em; height: 0.9em; border-radius: 0.2em; }
+.mk-tumpuk { display: flex; flex-direction: column; gap: 0.25em; max-width: 100%; }
+.mk-tumpuk-baris { display: flex; align-items: center; gap: 0.5em; min-width: 0; }
+.mk-tumpuk-label { width: 10em; flex-shrink: 0; overflow: hidden; color: #374151; font-weight: 700; text-align: right; text-overflow: ellipsis; white-space: nowrap; }
+.mk-tumpuk-rel { max-width: 100%; min-width: 0; }
+.mk-tumpuk-isi { display: flex; height: 1.3em; overflow: hidden; border-radius: 0.4em; transform-origin: left; animation: mk-melebar 0.6s ease-out both; }
+.mk-tumpuk-isi i { display: flex; align-items: center; justify-content: center; min-width: 0; color: #fff; font-size: 0.75em; font-style: normal; font-weight: 800; border-right: 2px solid #fff; }
+@media (prefers-reduced-motion: reduce) { .mk-adegan, .mk-adegan * { animation: none !important; } }
+.sq34-struk-struk { display: grid; grid-template-columns: repeat(6, minmax(0, 6.2em)); gap: 0.35em; justify-content: center; }
+.sq34-struk { display: flex; flex-direction: column; align-items: center; padding: 0.2em 0.3em; border: 1px dashed #a8a29e; border-radius: 0.3em; background: #fffdf5; color: #1f2937; box-shadow: 0 0.1em 0.2em rgb(0 0 0 / 0.1); font-size: 0.8em; line-height: 1.2; animation: mk-loncat 0.45s ease-out both; }
+.sq34-struk:nth-child(odd) { transform: rotate(-1.5deg); }
+.sq34-struk small { color: #6b7280; }
+.sq34-struk-wajah { font-size: 1.5em; }
+.mk-grafik-rel.tegak { flex-direction: column; align-items: center; justify-content: flex-end; width: 4.2em; }
+.mk-grafik-rel.tegak .mk-grafik-batang { width: 2.4em; flex-shrink: 0; }
+.mk-grafik-rel.tegak .mk-grafik-nilai { white-space: nowrap; font-size: 0.85em; }
+.tu25-dadu-dadu { display: flex; flex-direction: column; gap: 0.3em; }
+.tu25-dadu-baris { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4em; animation: mk-loncat 0.45s ease-out both; }
+.tu25-dadu-baris > b { width: 4.2em; text-align: right; }
+.tu25-dadu-kelompok { display: inline-flex; align-items: center; gap: 0.1em; padding: 0.05em 0.4em; border: 2px solid var(--w); border-radius: 0.5em; background: #fff; color: var(--w); }
+.tu25-dadu-kelompok i { font-size: 1.6em; font-style: normal; line-height: 1; }
+.tu25-dadu-kelompok small { margin-left: 0.2em; color: #1f2937; font-weight: 800; }
+.gp23-jam { width: min(15em, 52cqh); height: auto; }
+.gp23-jam-lingkar { fill: #f8fafc; stroke: #cbd5e1; stroke-width: 2; }
+.gp23-jam-titik { fill: #fff; stroke: #94a3b8; stroke-width: 1.2; }
+.gp23-jam-titik.on { fill: #fde68a; stroke: #b45309; stroke-width: 2; animation: mk-pudar 0.3s ease-out both; }
+.gp23-jam-angka { fill: #1f2937; font-size: 6.5px; font-weight: 700; text-anchor: middle; }
+.gp23-jam-lompat { stroke: #dc2626; stroke-width: 2.2; stroke-linecap: round; stroke-dasharray: 200; stroke-dashoffset: 200; animation: gp23-garis 0.6s ease-out forwards; }
+.gp23-jam-tengah { fill: #b45309; font-size: 14px; font-weight: 900; text-anchor: middle; }
+@keyframes gp23-garis { to { stroke-dashoffset: 0; } }
+@container (max-height: 520px) {
+  .mk-adegan { font-size: 0.9em; gap: 0.3em; padding: 0.4em 0.7em 0.5em; }
+  .mk-adegan-ket { display: none; }
+  .tu25-dadu-dadu { gap: 0.15em; }
+  .tu25-dadu-baris { gap: 0.25em; }
+  .tu25-dadu-kelompok i { font-size: 1.2em; }
+}

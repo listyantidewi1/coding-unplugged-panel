@@ -7,7 +7,7 @@
 import { el, onTap, button, shake } from '../core/util.js';
 import { dnd } from '../core/kit.js';
 import { say, pickTeams, scoreBar, finishBoard } from './sma-kit.js';
-import { misiHead, fill } from './misi-kit.js';
+import { misiHead, fill, adeganDulu } from './misi-kit.js';
 
 const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const hasWord = (msg, w) => new RegExp(`(^|[^a-z0-9])${esc(w.toLowerCase())}($|[^a-z0-9])`).test(msg.toLowerCase());
@@ -391,6 +391,12 @@ function loopRound(area, ctx, { done }) {
   draw();
 }
 
+// The dice table as dice: each face coloured by the word it picks.
+const WARNA25 = ['#2563eb', '#d97706', '#059669', '#db2777'];
+const adegan25 = () => ({ judul: 'Dadu penentu kata berikutnya', ket: 'Warna mata dadu = kata yang dipilih. Kata "ke" punya tiga kata berikutnya, jadi dadunya dibagi tiga warna.',
+  isi: el('div', { class: 'tu25-dadu-dadu' }, Object.entries(DICE).map(([w, r], i) => el('div', { class: 'tu25-dadu-baris', style: { animationDelay: `${i * 0.2}s` } }, el('b', null, w), el('span', null, '→'),
+    r.map(([a, b, x], j) => el('span', { class: 'tu25-dadu-kelompok', style: { '--w': x === null ? '#9ca3af' : WARNA25[j] } }, Array.from({ length: b - a + 1 }, (_, d) => el('i', null, '⚀⚁⚂⚃⚄⚅'[a - 1 + d])), el('small', null, x === null ? 'lempar ulang' : x === END ? 'SELESAI' : x)))))) });
+
 export default {
   id: 'sma-25-uji-turing',
   title: 'Manusia atau Mesin?',
@@ -424,7 +430,7 @@ export default {
       else if (r === 2) { go('turing', 2); turingRound(area, ctx, fin(7000)); }
       else if (r === 3) { go('tambal', 3); patchRound(area, ctx, fin(6500)); }
       else if (r === 4) { go('hitung', 4); countRound(area, ctx, fin(5000)); }
-      else if (r === 5) { go('dadu', 4); diceRound(area, ctx, { starts: ['mari', 'pergi'], done: () => next(6000) }); }
+      else if (r === 5) { go('dadu', 4); diceRound(area, ctx, { starts: ['mari', 'pergi'], done: () => next(6000) }); adeganDulu(ctx, area, adegan25()); }
       else if (r === 6) { go('pohon', 4); treeRound(area, ctx, fin(7000)); }
       else if (r === 7) { go('lancar', 5); fluentRound(area, ctx, fin(6500)); }
       else if (r === 8) { go('sidang', 6); trialRound(area, ctx, fin(6500)); }
