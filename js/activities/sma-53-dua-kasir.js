@@ -9,7 +9,9 @@
 // enumerator below, not from a table.
 
 import { el, onTap, button, shake } from '../core/util.js';
-import { say, pickTeams, scoreBar, finishBoard, rowsChoose, pyCode } from './smp-kit.js';
+import { say, pickTeams, scoreBar, finishBoard, pyCode } from './smp-kit.js';
+import { dnd } from '../core/kit.js';
+import { misiHead, fill, codeView, codeFill, rowsView, fillBoard, tileSlots, layar, play } from './misi-kit.js';
 
 // ---- programs as shown on the worksheet ----
 export const KODE = {
@@ -126,6 +128,193 @@ const kirimTeks = (S) => (S.dikirim.length === 0 ? 'tidak ada yang dikirimi' : S
 const akhirTeks = (S) => `stok ${S.stok}, ${kirimTeks(S)}`;
 const kunciTeks = (S) => kunciOf(S.v).map((L) => `${NAMA_KUNCI[L]}: ${S.pegang[L] ? `dipegang ${S.pegang[L]}` : 'bebas'}`).join(' · ');
 
+// ---- Permainan: Promo Tengah Malam ----
+// The team runs the shop server of Usaha Tenun Ikat Wanasari at midnight: two
+// cashiers run one line each time the scheduler points at them, the lock card
+// is dragged from cashier to cashier, and Si Penjadwal Jahil hunts for the
+// worst order. Every state comes from langkah(), the same machine as the
+// extra modes.
+const HEAD53 = {
+  pertama: ['Pesanan Pertama', 'Jalankan Kasir A sampai selesai, lalu Kasir B.', 'Satu pesanan? Membosankan.'],
+  x: ['Urutan X', 'Tekan A dan B sesuai urutan penjadwal.', 'Sela di tengah, hehe!'],
+  y: ['Urutan Y', 'Tekan A dan B sesuai urutan penjadwal.', 'Kali ini kesalahanku tak terlihat.'],
+  buru: ['Berburu Urutan Celaka', 'Jadilah penjadwal: temukan urutan benar, stok −1, dan pembaruan hilang.', 'Ada 64 urutan, pilih yang terburuk!'],
+  kunci: ['Kartu KUNCI STOK', 'Seret kartu kunci ke kasir yang menjalankan ambil(kunci).', 'Kunci? Aku tetap menunjuk B!'],
+  dodi: ['Dodi Lupa Melepas', 'Jalankan A, lalu B, lalu C pada versi Dodi.', 'Kuncinya hilang di saku B!'],
+  buntu: ['Paket dan Si Buntu', 'Jadilah penjadwal jahil: buat kedua kasir saling menunggu.', 'Kain dan tas, saling kunci!'],
+  sama: ['Urutan Kunci yang Sama', 'Samakan urutan kunci, lalu coba buat buntu lagi.', 'Pasti masih bisa buntu…'],
+  adu: ['Kasir lawan Penjadwal Jahil', 'Ramalkan hasil urutan pilihan penjadwal, lalu jalankan.', 'Urutan rahasiaku!'],
+  bos: ['Balapan di Komputer Sungguhan', 'Susun program threading yang memakai kunci.', 'Di komputer, aku secepat kilat!'],
+};
+const msg53 = (t) => el('p', { class: 'reveal info' }, t);
+const dua53 = (...k) => el('div', { class: 'pm53-dua' }, ...k);
+const kol53 = (...k) => el('div', { class: 'pm53-kolom' }, ...k);
+const kode53 = (v, k) => kodeOf(v, k).map((x) => x.replace(/\s+#.*$/, '').replace(/^ {4}/, '  ').replace('bila kain dan tas masih ada: kurangi keduanya, kirim paket', 'bila ada: kurangi, kirim paket'));
+const KUNCI53 = { stok: '🔑 kunci', kain: '🧶 kunci_kain', tas: '👜 kunci_tas' };
+
+// The stage: board, cashiers with their own s, programs and run buttons. strip = scheduler's order.
+function jadwal53(ctx, { oops, msg, v, strip = null, seret = false, onStep = null, onEnd }) {
+  let S = awal(v); let k = 0; const api = { jeda: false };
+  const host = el('div', { class: 'pm53-panggung' });
+  const tokenKasir = (t) => t[0]; const tunggu = (t) => t.includes('menunggu');
+  const draw = () => {
+    const nextT = strip && k < strip.length ? strip[k] : null; const K = nextT ? tokenKasir(nextT) : null;
+    const pakaiSeret = nextT && seret && !tunggu(nextT) && butuh(S, K) && !S.pegang[butuh(S, K)];
+    const bebasKunci = kunciOf(v).filter((L) => !S.pegang[L]);
+    fill(host,
+      el('div', { class: 'pm53-papan' }, el('div', { class: `pm53-stok ${S.stok < 0 ? 'minus' : ''}` }, el('small', null, paket(v) ? 'kain' : 'stok'), el('b', null, String(S.stok))),
+        paket(v) ? el('div', { class: 'pm53-stok' }, el('small', null, 'tas'), el('b', null, String(S.tas))) : null,
+        seret ? bebasKunci.map((L) => el('div', { class: 'pm53-kunci-kartu', 'data-drag': L }, KUNCI53[L])) : kunciOf(v).map((L) => el('span', { class: `pm53-kunci ${S.pegang[L] ? 'dipegang' : ''}` }, `${KUNCI53[L]} ${S.pegang[L] ? `→ ${S.pegang[L]}` : 'bebas'}`)),
+        el('div', { class: 'pm53-kirim' }, el('small', null, 'dikirim'), el('b', null, S.dikirim.length ? S.dikirim.map((x) => `📦${x}`).join(' ') : '–'))),
+      strip ? el('div', { class: 'pm53-strip', 'data-next': K || '', 'data-seret': pakaiSeret ? butuh(S, K) : '' }, strip.map((t, i) => el('code', { class: i === k ? 'aktif' : i < k ? 'beres' : '' }, t.replace(' (menunggu)', '⏸')))) : null,
+      el('div', { class: 'pm53-kasir-kasir', 'data-jejak': S.jejak.join(',') }, kasirOf(S).map((c) => {
+        const beku = menunggu(S, c); const idx = S.selesai[c] ? -1 : S.pc[c] - VERSI[v].mulai; const L = butuh(S, c);
+        return el('div', { class: `pm53-kasir ${beku ? 'beku' : ''} ${S.selesai[c] ? 'beres' : ''}`, 'data-drop': c },
+          el('div', { class: 'pm53-kepala' }, el('b', null, `${beku ? '🥶' : '🧑‍💼'} Kasir ${c}`), paket(v) ? null : el('span', { class: 'pm53-s' }, `s = ${nilai(S.s[c])}`),
+            Object.keys(S.pegang).filter((x) => S.pegang[x] === c).map((x) => el('span', { class: 'pm53-pegang' }, KUNCI53[x].split(' ')[0]))),
+          codeView(kode53(v, c), { labels: labelOf(v), hl: idx >= 0 ? [idx] : [] }),
+          el('small', { class: 'pm53-status' }, statusKasir(S, c)),
+          S.selesai[c] ? null : Object.assign(button(seret && L && !S.pegang[L] ? `seret ${KUNCI53[L].split(' ')[0]} ke ${c}` : `▶ ${c}${S.pc[c]}`, () => pilih(c), `pm53-jalan ${beku ? 'redup' : ''}`), { title: `Kasir ${c}` }));
+      })),
+      hasil(S) ? banner(S) : null);
+    host.querySelectorAll('.pm53-kasir').forEach((x) => x.querySelector('.pm53-jalan')?.setAttribute('data-k', x.dataset.drop));
+  };
+  function pilih(c, dariSeret = false) {
+    if (hasil(S)) return; if (api.jeda) { say(msg, 'info', 'Jawab dulu pertanyaannya.'); return; }
+    if (strip) {
+      const t = strip[k]; if (!t) return;
+      if (tokenKasir(t) !== c) { say(msg, 'info', `Penjadwal menunjuk ${t.replace(' (menunggu)', '')}.`); return; }
+      if (tunggu(t)) { k++; ctx.sound.tap(); draw(); say(msg, 'info', `${c} membeku: ${KUNCI53[butuh(S, c)]} dipegang ${S.pegang[butuh(S, c)]}. Langkah menunggu tidak dihitung.`); return; }
+    } else if (menunggu(S, c)) { say(msg, 'info', `${c} membeku: ${KUNCI53[butuh(S, c)]} dipegang ${S.pegang[butuh(S, c)]}.`); return; }
+    const L = butuh(S, c);
+    if (seret && L && !S.pegang[L] && !dariSeret) { say(msg, 'info', `Baris ini ambil(kunci): seret kartu ${KUNCI53[L]} ke Kasir ${c}.`); return; }
+    S = langkah(S, c); k++; ctx.sound.tap(); draw(); onStep?.(S);
+    if (hasil(S)) onEnd(S);
+  }
+  dnd(host, (card, target) => {
+    const c = target.closest('.pm53-kasir')?.dataset.drop; if (!c || hasil(S)) return; const L = card.dataset.drag;
+    if (butuh(S, c) !== L) { oops(); shake(card); say(msg, 'bad', S.selesai[c] ? `Kasir ${c} sudah selesai.` : `Kasir ${c} belum sampai baris ambil(kunci).`); return; }
+    pilih(c, true);
+  });
+  api.node = host; api.reset = () => { S = awal(v); k = 0; draw(); }; api.S = () => S; api.draw = draw;
+  draw();
+  return api;
+}
+
+// Misi 1: one order, then B.
+function pertamaRound(area, ctx, { oops, done }) {
+  const msg = msg53('Mula-mula stok = 1. Tekan A empat kali.'); const kanan = kol53();
+  const J = jadwal53(ctx, { oops, msg, v: 'v1', strip: ['A1', 'A2', 'A3', 'A4', 'B1'],
+    onStep: (S) => { if (S.jejak.length !== 4) return; J.jeda = true; say(msg, 'info', 'A selesai. Sebelum B jalan, ramalkan.');
+      fill(kanan, fillBoard(ctx, { oops, msg, view: rowsView([['stok = ', '_'], ['bila B jalan: ', '_']]), chips: ['0', '1', '-1', 'ditolak di baris 1', 'dikirimi barang'], want: [String(S.stok), 'ditolak di baris 1'],
+        hints: ['A sudah mengurangi stok dari 1.', 'stok >= 1 bernilai False.'], done: () => { J.jeda = false; fill(kanan); say(msg, 'info', 'Tekan B.'); } })); },
+    onEnd: (S) => { say(msg, '', `${akhirTeks(S)}. Tanpa sela, program ini benar.`); done(); } });
+  area.append(dua53(J.node, kanan), msg);
+}
+
+// Misi 2: orders X and Y.
+function urutRound(area, ctx, { oops, done }, U, nama) {
+  const msg = msg53(`Penjadwal memilih urutan ${nama}. Tekan tombol sesuai urutan.`); const kanan = kol53();
+  const J = jadwal53(ctx, { oops, msg, v: 'v1', strip: U, onEnd: (S) => {
+    say(msg, 'info', 'Urutan selesai. Isi catatan akhirnya.');
+    const board = nama === 'X' ? fillBoard(ctx, { oops, msg, view: rowsView([['stok = ', '_'], ['s milik A = ', '_'], ['s milik B = ', '_']]), chips: ['-1', '0', '1', '-'], want: [String(S.stok), nilai(S.s.A), nilai(S.s.B)],
+      hints: ['B menulis paling akhir: s milik B dikurangi 1.', 'A membaca stok sebelum siapa pun menulis.', 'B membaca stok setelah A menulis.'], done: () => { say(msg, '', 'Stok −1: barang terjual dua kali, dan kesalahannya terlihat.'); done(); } })
+      : fillBoard(ctx, { oops, msg, view: rowsView([['stok = ', '_'], ['barang terkirim = ', '_'], ['lebih sulit ketahuan: urutan ', '_']]), chips: ['0', '-1', '2', '1', 'X', 'Y'], want: [String(S.stok), String(S.dikirim.length), 'Y'],
+        hints: ['Kedua kasir membaca stok 1, lalu sama-sama menulis 0.', 'Hitung kardus di papan.', 'Stok 0 tampak wajar, padahal dua terjual.'], done: () => { say(msg, '', 'Pembaruan yang hilang: tulisan A ditimpa B yang memakai salinan lamanya.'); done(); } });
+    fill(kanan, board); } });
+  area.append(dua53(J.node, kanan), msg);
+}
+
+// Misi 3: hunt for one order of each kind.
+const CARI53 = { benar: '✅ benar (selain Misi 1)', minus: '❌ stok −1', hilang: '👻 pembaruan hilang' };
+function buruRound(area, ctx, { oops, done }) {
+  const msg = msg53('Jadilah penjadwal. Tekan A dan B bebas untuk menemukan ketiga hasil.'); const got = new Set(); const kanan = kol53();
+  const H = hitung('v1'); const n = semua('v1').length;
+  const daftar = () => el('div', { class: 'pm53-cari', 'data-cari': Object.keys(CARI53).filter((x) => !got.has(x)).join(',') }, Object.entries(CARI53).map(([x, t]) => el('span', { class: got.has(x) ? 'dapat' : '' }, t)));
+  const J = jadwal53(ctx, { oops, msg, v: 'v1', onEnd: (S) => {
+    const h = hasil(S); const serial = S.jejak.join(',') === 'A1,A2,A3,A4,B1' || S.jejak.join(',') === 'B1,B2,B3,B4,A1';
+    if (h === 'benar' && serial) say(msg, 'info', 'Itu tanpa sela, seperti Misi 1. Cari urutan benar yang menyela.');
+    else if (got.has(h)) say(msg, 'info', `${HASIL[h].t} sudah ketemu. Cari yang lain.`);
+    else { got.add(h); ctx.sound.good?.(); say(msg, 'info', `Ketemu: ${HASIL[h].t} (${S.jejak.join(', ')}).`); }
+    fill(kanan, daftar());
+    if (got.size < 3) { setTimeout(() => J.reset(), 1400); return; }
+    kanan.append(fillBoard(ctx, { oops, msg, view: rowsView([['urutan benar: ', '_', ` dari ${n}`], ['stok −1: ', '_', ', pembaruan hilang: ', '_']]), chips: uniq([String(H.benar), String(H.minus), String(H.hilang), '8', '30']), want: [String(H.benar), String(H.minus), String(H.hilang)],
+      hints: ['Benar hanya bila satu kasir sudah menulis (baris 3) sebelum yang lain memeriksa (baris 1).', 'Stok −1 terjadi bila kasir kedua membaca stok setelah kasir pertama menulis.', 'Sisanya: keduanya membaca stok 1 sebelum ada yang menulis.'], done: () => { say(msg, '', `Hanya ${H.benar} dari ${n} urutan yang benar. Uji Rudi lolos karena ia memesan satu per satu.`); done(); } })); } });
+  fill(kanan, daftar());
+  area.append(dua53(J.node, kanan), msg);
+}
+
+// Misi 4: the lock card, scheduler alternating.
+function kunciRound(area, ctx, { oops, done }) {
+  const msg = msg53('Penjadwal menunjuk bergantian. Baris ambil(kunci): seret kartu kunci ke kasir.'); const kanan = kol53(); const G = bergantian('v2');
+  const J = jadwal53(ctx, { oops, msg, v: 'v2', strip: G.log, seret: true, onEnd: (S) => {
+    say(msg, 'info', 'Selesai. Isi catatannya.');
+    fill(kanan, fillBoard(ctx, { oops, msg, view: rowsView([['stok akhir = ', '_'], ['dikirim ke ', '_'], ['banyak urutan dengan kunci: ', '_']]), chips: ['0', '-1', 'A saja', 'A dan B', String(semua('v2').length), '64'], want: [String(S.stok), 'A saja', String(semua('v2').length)],
+      hints: ['B baru memeriksa stok setelah A selesai.', 'B ditolak di baris 1.', 'Siapa pun yang lebih dulu memegang kunci menjalankan baris 1–4 tanpa disela.'], done: () => { say(msg, '', 'Baris 1–4 menjadi bagian kritis: hanya pemegang kunci yang boleh menjalankannya.'); done(); } })); } });
+  area.append(dua53(J.node, kanan), msg);
+}
+
+// Misi 4b: Dodi forgets to release when the order is rejected.
+function dodiRound(area, ctx, { oops, done }) {
+  const msg = msg53('Versi Dodi, tiga kasir, stok 1. Jalankan A sampai selesai, lalu B.'); const kanan = kol53();
+  let S = awal('dodi'); const strip = []; for (const c of ['A', 'B']) while (!S.selesai[c]) { strip.push(`${c}${S.pc[c]}`); S = langkah(S, c); }
+  const J = jadwal53(ctx, { oops, msg, v: 'dodi', strip, seret: true, onEnd: () => {
+    say(msg, 'info', 'B ditolak dan pergi sambil membawa kunci. C membeku di baris 0.');
+    J.node.classList.add('pm53-ringkas');
+    fill(kanan, fillBoard(ctx, { oops, msg, view: rowsView([['C menunggu kunci ', '_'], ['di Python, kunci selalu dilepas dengan ', '_'], ['kemas barang (lama) diletakkan ', '_']]), chips: ['selamanya', 'sampai B selesai', 'with kunci:', 'if kunci:', 'sesudah lepas(kunci)', 'sebelum lepas(kunci)'], want: ['selamanya', 'with kunci:', 'sesudah lepas(kunci)'],
+      hints: ['B sudah selesai, tetapi tidak pernah menjalankan lepas.', 'Blok with melepas kunci saat blok selesai, bagaimanapun caranya.', 'Pengemasan tidak mengubah stok: bagian kritis sependek mungkin.'], done: () => { say(msg, '', 'Kunci harus dilepas di setiap jalan keluar, termasuk saat pesanan ditolak.'); done(); } })); } });
+  area.append(dua53(J.node, kanan), msg);
+}
+
+// Misi 5: create the deadlock with two locks taken in different orders.
+function buntuRound(area, ctx, { oops, done }) {
+  const msg = msg53('A mengambil kunci_kain dulu, B mengambil kunci_tas dulu. Buat keduanya saling menunggu!'); const kanan = kol53(); const H = hitung('beda');
+  const awalBuntu = semua('beda').filter((x) => x.hasil === 'buntu').map((x) => x.urutan.join(', ')).join(' atau ');
+  const J = jadwal53(ctx, { oops, msg, v: 'beda', onEnd: (S) => {
+    if (hasil(S) !== 'buntu') { say(msg, 'info', 'Paket terkirim dengan benar. Coba lagi: biarkan setiap kasir memegang satu kunci.'); setTimeout(() => J.reset(), 1500); return; }
+    say(msg, 'info', '🥶🥶 Si Buntu muncul! Tidak ada yang bisa bergerak.');
+    fill(kanan, fillBoard(ctx, { oops, msg, view: rowsView([[`dari ${semua('beda').length} urutan, buntu: `, '_'], ['urutan buntu dimulai ', '_']]), chips: uniq([String(H.buntu), '0', '1', '4', awalBuntu, 'A1, A2', 'B1, B2']), want: [String(H.buntu), awalBuntu],
+      hints: ['Buntu bila masing-masing sempat memegang satu kunci.', 'Kedua kasir mengambil kunci pertamanya sebelum yang lain mengambil kunci kedua.'], done: () => { say(msg, '', 'Kebuntuan: dua kasir saling menunggu kunci yang dipegang lawannya.'); done(); } })); } });
+  area.append(dua53(J.node, kanan), msg);
+}
+
+// Misi 5b: same lock order, then try again.
+function samaRound(area, ctx, { oops, done }) {
+  const msg = msg53('Ubah urutan ambil Kasir B supaya sama dengan A.'); const box = kol53(); const n = semua('sama').length; const H = hitung('sama');
+  fill(box, fillBoard(ctx, { oops, msg, view: codeFill([['ambil(', '_', ')'], ['ambil(', '_', ')'], 'bila ada: kurangi, kirim paket', '…']), chips: ['kunci_kain', 'kunci_tas'], want: ['kunci_kain', 'kunci_tas'], hints: ['A mengambil kunci_kain dulu.', 'Lalu kunci_tas.'],
+    done: () => { say(msg, 'info', 'Sekarang coba buat buntu: tekan A1, lalu B1.'); const kanan = kol53();
+      const J = jadwal53(ctx, { oops, msg, v: 'sama', onEnd: () => { say(msg, 'info', 'Tidak bisa buntu! Siapa yang lebih dulu memegang kunci_kain menyelesaikan paketnya.');
+        fill(kanan, fillBoard(ctx, { oops, msg, view: rowsView([['banyak urutan sekarang: ', '_'], ['yang buntu: ', '_']]), chips: uniq([String(n), String(H.buntu || 0), '6', '2', '4']), want: [String(n), String(H.buntu || 0)],
+          hints: ['Kasir kedua membeku di baris 1 sampai kasir pertama selesai.', 'Tidak ada yang bisa memegang kunci_tas tanpa kunci_kain.'], done: () => { say(msg, '', 'Semua kasir mengambil kunci dengan urutan yang sama: kebuntuan mustahil.'); done(); } })); } });
+      fill(box, dua53(J.node, kanan)); } }));
+  area.append(box, msg);
+}
+
+// Misi 6: predict the scheduler's secret order, then run it.
+function aduRound(area, ctx, { oops, done }) {
+  const S0 = acak('v1', ctx.rand); const h = hasil(S0); const msg = msg53('Penjadwal Jahil memilih urutan ini. Ramalkan hasilnya sebelum menjalankan.'); const kanan = kol53();
+  const J = jadwal53(ctx, { oops, msg, v: 'v1', strip: S0.jejak, onEnd: (S) => { say(msg, '', `${HASIL[hasil(S)].t}: ${akhirTeks(S)}. Ramalanmu tepat!`); done(); } });
+  J.jeda = true;
+  const PIL = [['benar', '✅ benar'], ['minus', '❌ stok −1'], ['hilang', '👻 pembaruan hilang']];
+  fill(kanan, el('div', { class: 'pm53-ramal', 'data-want': h }, el('b', null, 'Hasilnya?'), el('div', { class: 'pm53-tombol' }, PIL.map(([x, t]) => onTap(el('button', { type: 'button', class: 'pm53-pilih', 'data-v': x }, t), () => {
+    if (!J.jeda) return; if (x !== h) { oops(); say(msg, 'bad', 'Telusuri: apakah kasir kedua memeriksa stok sebelum kasir pertama menulis? Dan siapa yang membaca stok setelah ditulis?'); return; }
+    J.jeda = false; ctx.sound.tap(); fill(kanan, el('p', { class: 'pm53-catat' }, `Ramalan: ${t}`)); say(msg, 'info', 'Ramalan dicatat. Jalankan urutannya.'); })))));
+  area.append(dua53(J.node, kanan), msg);
+}
+
+// Misi Bos: threading with a lock.
+function bosRound(area, ctx, { oops, done }) {
+  const msg = msg53('Susun fungsi pesan yang memakai kunci.'); const box = kol53(); const out = layar();
+  fill(box, tileSlots(ctx, { oops, msg, build: ['kunci = threading.Lock()', 'def pesan(nama):', '  global stok', ['w', 1], ['i', 2], ['s', 3], '      time.sleep(0.01)', ['t', 3]],
+    tiles: [['w', 'with kunci:'], ['i', 'if stok >= 1:'], ['s', 's = stok'], ['t', 'stok = s - 1; terjual.append(nama)'], ['x', 'kunci.lock()', 'Di Python, Lock dipakai dengan with kunci: agar pasti dilepas.']],
+    order: 'Kunci dulu, periksa, baca, tunggu, lalu tulis.',
+    onFull: () => { say(msg, 'info', 'Dua thread, A dan B, dijalankan 8 kali…'); const kn = kol53(out); fill(box, dua53(box.firstChild, kn));
+      play(out, ['tanpa kunci:', ...Array.from({ length: 3 }, () => `  ${TANTANGAN.tanpa}`), '  … (8 dari 8 percobaan)', 'dengan kunci:', `  ${TANTANGAN.dengan}`], { gap: 380, end: () => {
+        kn.append(fillBoard(ctx, { oops, msg, view: rowsView([['tanpa kunci, keluarannya seperti urutan ', '_'], ['dengan with kunci: ', '_']]), chips: ['Y', 'X', TANTANGAN.dengan, "-1 ['A', 'B']"], want: ['Y', TANTANGAN.dengan],
+          hints: ['time.sleep membuat kedua thread membaca stok 1 sebelum ada yang menulis.', 'Hanya satu yang mendapat barang.'], done: () => { say(msg, '', 'Balapan di komputer sungguhan persis seperti di papan. with kunci: menutup celahnya.'); done(); } })); } }); } }));
+  area.append(box, msg);
+}
+
 export default {
   id: 'sma-53-dua-kasir',
   title: 'Dua Kasir, Satu Stok',
@@ -143,125 +332,28 @@ export default {
     { id: 'giliran', icon: '😈', label: 'Penjadwal Jahat', desc: 'Satu tim memilih versi program dan urutan kunci, tim berikutnya menjadi penjadwal yang berusaha mengacaukannya', create: createTeams },
   ],
   create(root, ctx) {
-    const wrap = el('div', { class: 'act dua-kasir' });
-    root.append(wrap);
+    const wrap = el('div', { class: 'act dua-kasir pm53-main' }); root.append(wrap);
     function render() {
-      wrap.replaceChildren();
-      const r = ctx.round;
-      let solved = false;
-      const next = () => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, 2400); } };
-      if (r === 0) {
-        const S = jalankan('v1', ['A1', 'A2', 'A3', 'A4']); const T = langkah(S, 'B');
-        wrap.append(kodeKecil('v1'));
-        rowsChoose(wrap, ctx, { prompt: 'Satu pesanan. Mula-mula stok = 1.', cls: 'dk-isi', rows: [
-          ['a', 'Kasir A menjalankan baris 1–4 tanpa disela: stok', ['-1', '0', '1'], String(S.stok)],
-          ['k', 'Yang dikirimi barang', ['pembeli A', 'pembeli B', 'A dan B', 'tidak ada'], `pembeli ${S.dikirim[0]}`],
-          ['b', 'Setelah itu Kasir B menjalankan programnya', ['ditolak di baris 1, karena stok >= 1 salah', 'dikirimi barang, stok menjadi -1', 'menunggu sampai stok bertambah', 'berhenti dengan galat'], T.ditolak.includes('B') ? 'ditolak di baris 1, karena stok >= 1 salah' : '?'],
-        ], done: next });
-      }
-      else if (r === 1 || r === 2) {
-        const U = r === 1 ? URUT_X : URUT_Y;
-        wrap.append(kodeKecil('v1'), el('p', { class: 'dk-urutan' }, `Urutan ${r === 1 ? 'X' : 'Y'}: ${U.join(', ')}`));
-        rowsChoose(wrap, ctx, { prompt: 'Setelah langkah ini: stok · s milik A · s milik B', cls: 'dk-isi dk-mono', rows: tabelRows(U), done: next, info: 'Mula-mula stok = 1. Kasir yang belum menjalankan baris 2 belum punya s, tulis "-".' });
-      }
-      else if (r === 3) {
-        const X = jalankan('v1', URUT_X); const Y = jalankan('v1', URUT_Y);
-        const opsi = ['stok -1, dikirim ke A dan B', 'stok 0, dikirim ke A dan B', 'stok 0, dikirim ke A saja', 'stok -1, dikirim ke A saja'];
-        wrap.append(el('p', { class: 'dk-urutan' }, `X: ${URUT_X.join(', ')}`), el('p', { class: 'dk-urutan' }, `Y: ${URUT_Y.join(', ')}`));
-        rowsChoose(wrap, ctx, { prompt: 'Keadaan akhir kedua urutan', cls: 'dk-isi', rows: [
-          ['x', 'Urutan X', opsi, akhirTeks(X)],
-          ['y', 'Urutan Y', opsi, akhirTeks(Y)],
-          ['s', 'Kesalahan yang lebih sulit ketahuan dari catatan stok', ['Urutan Y: stok 0 tampak wajar, padahal dua barang terjual', 'Urutan X: stok -1 tampak wajar', 'keduanya sama mudah ketahuan', 'tidak ada yang salah'], 'Urutan Y: stok 0 tampak wajar, padahal dua barang terjual'],
-          ['n', 'Nama masalah di urutan Y', ['pembaruan yang hilang: pengurangan oleh A ditimpa B yang menulis dari salinan lamanya', 'kebuntuan: kedua kasir saling menunggu', 'galat sintaks di baris 3', 'stok dibaca dua kali oleh A'], 'pembaruan yang hilang: pengurangan oleh A ditimpa B yang menulis dari salinan lamanya'],
-        ], done: next });
-      }
-      else if (r === 4) {
-        const H = hitung('v1'); const n = semua('v1').length; const benarLain = ['A1', 'A2', 'A3', 'B1', 'A4'];
-        const contoh = [benarLain, ['A1', 'A2', 'B1', 'A3', 'A4'], ['A1', 'B1', 'A2', 'A3', 'A4'], ['B1', 'A1', 'B2', 'B3', 'B4']].map((u) => u.join(', '));
-        rowsChoose(wrap, ctx, { prompt: `Penjadwal bisa memilih ${n} urutan langkah yang berbeda.`, cls: 'dk-isi', rows: [
-          ['a', 'Urutan lain yang hasilnya tetap benar', contoh, contoh[hasil(jalankan('v1', benarLain)) === 'benar' ? 0 : 1]],
-          ['n', `Banyak urutan yang benar dari ${n}`, ['2', '4', '8', '16'], String(H.benar)],
-          ['r', 'Aturan urutan yang benar', ['salah satu kasir sudah menjalankan baris 3 sebelum kasir lain menjalankan baris 1', 'Kasir A selalu lebih dulu', 'kedua kasir menjalankan baris 1 berurutan', 'baris 4 dijalankan paling akhir'], 'salah satu kasir sudah menjalankan baris 3 sebelum kasir lain menjalankan baris 1'],
-          ['m', `Dari ${n - H.benar} urutan yang salah: stok -1 · stok 0`, uniq([`${H.minus} · ${H.hilang}`, `${H.hilang} · ${H.minus}`, '30 · 30', '12 · 48']), `${H.minus} · ${H.hilang}`],
-          ['c', 'Uji Rudi (memesan sendiri berkali-kali) selalu lolos, karena', ['pesanannya satu per satu, jadi tidak pernah ada dua program yang saling menyela; bug muncul saat banyak pembeli memesan pada detik yang sama', 'program Rudi sudah memakai kunci', 'komputer Rudi lebih cepat', 'stok Rudi selalu 0'], 'pesanannya satu per satu, jadi tidak pernah ada dua program yang saling menyela; bug muncul saat banyak pembeli memesan pada detik yang sama'],
-        ], done: next });
-      }
-      else if (r === 5) {
-        const G = bergantian('v2'); const iA5 = G.log.indexOf('A5'); const sesudah = G.log.slice(iA5 + 1).join(', ');
-        wrap.append(kodeKecil('v2'));
-        rowsChoose(wrap, ctx, { prompt: 'Memakai kunci. Penjadwal bergantian menunjuk A, B, A, B, …', cls: 'dk-isi', rows: [
-          ['w', 'Selama A memegang kunci, setiap giliran B', ['B0 (menunggu): B tidak berpindah baris', 'B1: B memeriksa stok', 'B5: B melepas kunci', 'B ditolak'], 'B0 (menunggu): B tidak berpindah baris'],
-          ['s', 'Langkah sesudah A5', uniq([sesudah, 'B0, B1, B2, B3, B4, B5', 'B1, B5', 'B0, B5']), sesudah, `Urutan lengkap: ${G.log.join(', ')}. B mengambil kunci, tetapi stok sudah 0, jadi B ditolak dan melepas kunci.`],
-          ['k', 'Keadaan akhir', ['stok 0, dikirim ke A saja', 'stok -1, dikirim ke A dan B', 'stok 0, dikirim ke A dan B', 'stok 1, tidak ada yang dikirimi'], akhirTeks(G.S)],
-          ['b', 'Hasilnya selalu benar, karena', ['baris 1–4 menjadi bagian kritis: hanya pemegang kunci yang menjalankannya, jadi tidak bisa disela', 'kunci membuat program lebih cepat', 'B selalu kalah cepat', 'stok dibaca dua kali'], 'baris 1–4 menjadi bagian kritis: hanya pemegang kunci yang menjalankannya, jadi tidak bisa disela'],
-          ['n', 'Banyak urutan yang mungkin dengan kunci', ['1', '2', '4', '64'], String(semua('v2').length)],
-        ], done: next });
-      }
-      else if (r === 6) {
-        wrap.append(kodeKecil('dodi', [5]));
-        rowsChoose(wrap, ctx, { prompt: 'Lupa melepas, bagian kritis, dan operasi atomik', cls: 'dk-isi', rows: [
-          ['c', 'Dodi lupa lepas(kunci) bila ditolak. A, lalu B, lalu C, stok = 1. Nasib C', [`menunggu di baris 0 selamanya, padahal tidak ada yang memakai stok`, 'ditolak di baris 1', 'dikirimi barang', 'stok menjadi -1'], tertahanC()],
-          ['w', 'Di Python, kunci dilepas otomatis ketika blok selesai dengan', ['with kunci:', 'if kunci:', 'for kunci in stok:', 'kunci = None'], 'with kunci:'],
-          ['d', 'Baris 4 lama karena barang harus dikemas. Letakkan', ['sesudah lepas(kunci): pengemasan tidak mengubah stok, bagian kritis sependek mungkin', 'sebelum ambil(kunci)', 'di dalam bagian kritis supaya aman', 'dua kali, sebelum dan sesudah'], 'sesudah lepas(kunci): pengemasan tidak mengubah stok, bagian kritis sependek mungkin'],
-          ['e', '"Kurangi 1 bila stok masih paling sedikit 1" sebagai operasi atomik mencegah soal 2, karena', ['memeriksa dan mengurangi terjadi dalam satu langkah yang tidak bisa disela', 'stok disimpan di dua tempat', 'kasir lain dimatikan', 'basis data selalu lebih cepat'], 'memeriksa dan mengurangi terjadi dalam satu langkah yang tidak bisa disela'],
-        ], done: next });
-      }
-      else if (r === 7) {
-        const B = jalankan('beda', ['A1', 'B1']); const H = hitung('beda');
-        wrap.append(paketView('beda'));
-        rowsChoose(wrap, ctx, { prompt: 'Dua kunci: kunci_kain dan kunci_tas. Kain 1, tas 1.', cls: 'dk-isi', rows: [
-          ['a', 'Penjadwal memilih A1, B1, A2, B2', [buntu(B) ? 'kebuntuan: A memegang kunci_kain dan menunggu kunci_tas, B memegang kunci_tas dan menunggu kunci_kain' : '?', 'A mengirim paket', 'B mengirim paket', 'keduanya ditolak'], 'kebuntuan: A memegang kunci_kain dan menunggu kunci_tas, B memegang kunci_tas dan menunggu kunci_kain'],
-          ['p', 'Pembeli lain yang ingin membeli kain saja', ['ikut tertahan, karena kunci_kain tidak pernah dilepas', 'tetap dilayani', 'mendapat paket', 'ditolak karena stok habis'], 'ikut tertahan, karena kunci_kain tidak pernah dilepas'],
-          ['n', `Dari ${semua('beda').length} urutan, yang berakhir buntu`, ['0', '1', '2', '4'], String(H.buntu)],
-          ['u', 'Urutan buntu dimulai dengan', ['A1, B1 atau B1, A1', 'A1, A2', 'B1, B2', 'A5, B5'], semua('beda').filter((x) => x.hasil === 'buntu').map((x) => x.urutan.join(', ')).join(' atau ')],
-        ], done: next });
-      }
-      else if (r === 8) {
-        const n = semua('sama').length; const H = hitung('sama');
-        rowsChoose(wrap, ctx, { prompt: 'Mencegah kebuntuan, dan program Tantangan', cls: 'dk-isi', rows: [
-          ['c', 'Ubah Kasir B supaya tidak mungkin buntu', ['ambil(kunci_kain) dulu, lalu ambil(kunci_tas), sama dengan A, seperti "ambil sendok dulu"', 'lepas(kunci_tas) lebih dulu', 'tunggu satu detik sebelum mengambil kunci', 'hapus kunci_kain'], 'ambil(kunci_kain) dulu, lalu ambil(kunci_tas), sama dengan A, seperti "ambil sendok dulu"'],
-          ['n', 'Banyak urutan setelah diperbaiki · yang buntu', uniq([`${n} · ${H.buntu || 0}`, '6 · 2', '4 · 0', '2 · 1']), `${n} · ${H.buntu || 0}`],
-          ['r', 'Usul Rina: satu kunci untuk seluruh stok', ['tidak mungkin buntu dan lebih sederhana, tetapi pesanan kain dan pesanan tas harus saling menunggu', 'lebih cepat dan tetap aman', 'bisa buntu', 'stok bisa menjadi -1'], 'tidak mungkin buntu dan lebih sederhana, tetapi pesanan kain dan pesanan tas harus saling menunggu'],
-          ['t', 'Tantangan (threading, time.sleep(0.01), tanpa kunci): keluaran', [TANTANGAN.tanpa, "-1 ['A', 'B']", TANTANGAN.dengan, '1 []'], TANTANGAN.tanpa],
-          ['k', 'Setelah memakai with kunci:', [TANTANGAN.dengan, TANTANGAN.tanpa, "-1 ['A']", "1 ['A']"], TANTANGAN.dengan],
-        ], done: next, info: `Keluaran tanpa kunci sama dengan urutan Y. Dengan kunci, keluarannya ${TANTANGAN.dengan}, atau 0 ['B'] bila B lebih dulu mendapat kunci.` });
-      }
-      else {
-        const S = acak('v1', ctx.rand); const h = hasil(S);
-        const jenis = { benar: 'benar: satu terkirim, satu ditolak', minus: 'stok -1: terjual dua kali', hilang: 'pembaruan hilang: stok 0, terjual dua kali' };
-        wrap.append(kodeKecil('v1'), el('p', { class: 'dk-urutan' }, `Penjadwal memilih: ${S.jejak.join(', ')}`));
-        rowsChoose(wrap, ctx, { prompt: 'Babak penjadwal. Mula-mula stok = 1.', cls: 'dk-isi', rows: [
-          ['s', 'Stok akhir', ['-1', '0', '1'], String(S.stok)],
-          ['k', 'Yang dikirimi barang', ['A saja', 'B saja', 'A dan B', 'tidak ada'], S.dikirim.length > 1 ? 'A dan B' : `${S.dikirim[0]} saja`],
-          ['h', 'Hasil babak', Object.values(jenis), jenis[h]],
-        ], done: next });
-      }
+      wrap.replaceChildren(); const r = ctx.round; let solved = false;
+      const next = (wait = 5200) => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, wait); } };
+      const area = el('div', { class: 'pm53-area' }); let foe = null;
+      const go = (k, no) => { const [judul, tujuan, ulah] = HEAD53[k]; foe = el('div', { class: 'pm53-musuh' }, el('b', null, '😈 Si Penjadwal Jahil'), el('span', null, ulah)); wrap.append(el('div', { class: 'pm53-kepala-misi' }, misiHead(no, judul, tujuan, '🛒'), foe), area); };
+      const fin = (ms) => ({ oops: () => ctx.mistake(), done: () => { foe.classList.add('beres'); foe.lastChild.textContent = 'Stok jujur ✓'; next(ms); } });
+      if (r === 0) { go('pertama', 1); pertamaRound(area, ctx, fin(5500)); }
+      else if (r === 1) { go('x', 2); urutRound(area, ctx, fin(5500), URUT_X, 'X'); }
+      else if (r === 2) { go('y', 2); urutRound(area, ctx, fin(6000), URUT_Y, 'Y'); }
+      else if (r === 3) { go('buru', 3); buruRound(area, ctx, fin(6000)); }
+      else if (r === 4) { go('kunci', 4); kunciRound(area, ctx, fin(6000)); }
+      else if (r === 5) { go('dodi', 4); dodiRound(area, ctx, fin(6000)); }
+      else if (r === 6) { go('buntu', 5); buntuRound(area, ctx, fin(6000)); }
+      else if (r === 7) { go('sama', 5); samaRound(area, ctx, fin(6000)); }
+      else if (r === 8) { go('adu', 6); aduRound(area, ctx, fin(5500)); }
+      else { go('bos', 'Bos'); bosRound(area, ctx, fin(7000)); }
     }
     render();
   },
 };
 
-function tabelRows(U) {
-  let S = awal('v1'); const out = [];
-  U.forEach((x, i) => {
-    S = langkah(S, x[0]);
-    const t = [S.stok, nilai(S.s.A), nilai(S.s.B)];
-    const right = t.join(' · ');
-    if (i === 0) return;
-    if (i === U.length - 1) { out.push([x, `Setelah ${x}: yang dikirimi`, ['A', 'B', 'A, B', 'belum ada'], S.dikirim.length ? S.dikirim.join(', ') : 'belum ada']); return; }
-    if (i === U.length - 2) return;
-    const salah = uniq([right, [t[0] - 1, t[1], t[2]].join(' · '), [t[0], t[2], t[1]].join(' · '), [t[0] === 1 ? 0 : 1, t[1], t[2]].join(' · '), [t[0], t[1], t[2] === '-' ? '1' : '-'].join(' · ')]).slice(0, 4);
-    out.push([x, `Setelah ${x}`, salah, right]);
-  });
-  return out;
-}
-// Dodi with three cashiers served A, then B, then C.
-function tertahanC() {
-  let S = awal('dodi');
-  while (!S.selesai.A) S = langkah(S, 'A');
-  while (!S.selesai.B) S = langkah(S, 'B');
-  return menunggu(S, 'C') && S.pc.C === 0 && buntu(S) ? 'menunggu di baris 0 selamanya, padahal tidak ada yang memakai stok' : '?';
-}
 
 // ---- views ----
 function kodeKecil(v, warn = []) { return pyCode(kodeOf(v, 'A'), { labels: labelOf(v), cls: 'dk-kode', warn }); }
