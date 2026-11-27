@@ -1,11 +1,13 @@
 // Aplikasi Bank Sampah — SMA/SMK (16–18 tahun), design thinking.
-// Personas, an empathy map, "Bagaimana kita…" statements, an impact–effort
-// matrix, an AI camera with a confidence threshold, a paper-prototype builder,
-// scenario testing and functional vs nonfunctional requirements.
+// Sayembara Aplikasi Bank Sampah: visit the users, an empathy map, judge
+// "Bagaimana kita…" statements, an impact–effort matrix with vote stickers,
+// audit an AI camera, a confidence threshold with a human in the loop, a
+// paper-prototype builder, cross testing, F/N requirements and a pitch.
 
 import { el, onTap, button, shake } from '../core/util.js';
-import { choice, dnd } from '../core/kit.js';
+import { dnd } from '../core/kit.js';
 import { say, pickTeams, scoreBar, finishBoard } from './sma-kit.js';
+import { misiHead, fill } from './misi-kit.js';
 
 export const PRICE = { botol: 3000, gelas: 2000, kardus: 1500, kaleng: 6000 };
 export const KIND = { botol: ['🧴', 'Botol plastik'], gelas: ['🥤', 'Gelas plastik'], kardus: ['📦', 'Kardus'], kaleng: ['🥫', 'Kaleng'] };
@@ -106,49 +108,7 @@ export const SCENARIOS = [
   { who: 'Bu Darmi', task: 'ingin tahu berapa kilogram kaleng yang sudah terkumpul dua minggu ini.', start: 'beranda', goal: 'rekap', min: 2, find: [['Rekap tersembunyi di balik menu ikon ☰ tanpa tulisan', true], ['Angka kilogramnya terlalu besar'], ['Bu Darmi seharusnya datang ke balai'], ['Tidak ada yang membingungkan']] },
 ];
 
-// --- pieces ---
-// Sort cards into bins by drag or tap. right(item, bin) → true, or a hint string.
-function sortBoard(wrap, ctx, { prompt, items, bins, right, why, cls = '', done, info = 'Seret kartu ke kotak yang tepat, atau ketuk kartu lalu ketuk kotaknya.' }) {
-  const msg = el('p', { class: 'reveal info' }, info);
-  const tray = el('div', { class: 'bs-baki' }, ctx.rand.shuffle(items.slice()).map((it) => el('div', { class: 'bs-kartu', 'data-drag': it.id }, it.tag ? el('b', null, it.tag) : null, el('span', null, it.label))));
-  const boxes = bins.map(([id, name]) => el('div', { class: 'bs-kotak', 'data-drop': id }, el('b', null, name), el('div', { class: 'bs-isi' })));
-  const area = el('div', { class: `bs-sortir ${cls}` }, el('div', { class: 'bs-kotak-kotak' }, boxes), tray);
-  let left = items.length;
-  dnd(area, (card, box) => {
-    const it = items.find((x) => String(x.id) === card.dataset.drag);
-    const res = right(it, box.dataset.drop);
-    if (res !== true) { ctx.mistake(); shake(card); say(msg, 'bad', typeof res === 'string' ? res : 'Belum tepat. Baca lagi kartunya.'); return; }
-    card.removeAttribute('data-drag'); card.classList.add('locked'); box.querySelector('.bs-isi').append(card); ctx.sound.tap();
-    say(msg, '', why ? why(it) : 'Tepat.');
-    if (--left === 0) setTimeout(done, 1600);
-  });
-  wrap.append(el('p', { class: 'prompt' }, prompt), area, msg);
-}
-
-function personaCard(p) {
-  return el('div', { class: 'bs-persona' }, el('div', { class: 'bs-p-kepala' }, el('span', { class: 'bs-p-ikon' }, p.icon), el('div', null, el('b', null, p.name), el('small', null, p.role))), el('ul', null, p.rows.map((r) => el('li', null, r))));
-}
-
-function rateRound(wrap, ctx, { done }) {
-  const res = {};
-  const msg = el('p', { class: 'reveal info' }, 'Rumusan yang baik menyebut siapa, apa yang ingin dilakukan, dan tujuannya, tanpa menyebut solusinya.');
-  const rows = el('div', { class: 'bs-rumusan' });
-  const draw = () => rows.replaceChildren(...STATEMENTS.map(([k, t, ans]) => el('div', { class: `bs-r-baris ${k in res ? 'beres' : ''}` }, el('span', null, `${k}. ${t}`),
-    k in res ? el('b', null, RATING.find((x) => x[0] === ans)[1]) : el('div', { class: 'seg' }, RATING.map(([v, l]) => onTap(el('button', { class: 'seg-btn', type: 'button' }, l), () => {
-      if (v !== ans) { ctx.mistake(); say(msg, 'bad', k === 'a' ? 'Rumusan ini menyebut solusi (aplikasi) dan tidak menyebut siapa yang dibantu.' : k === 'b' ? 'Rumusan ini sudah menentukan solusi yang sangat rinci.' : 'Rumusan ini menyebut siapa, apa, dan tujuannya tanpa menyebut solusi.'); return; }
-      res[k] = v; ctx.sound.tap(); draw();
-      if (Object.keys(res).length === STATEMENTS.length) { say(msg, '', 'a terlalu luas dan b terlalu sempit; keduanya sudah menyebut solusi. c membuka banyak kemungkinan solusi.'); done(); }
-    }))))));
-  draw();
-  wrap.append(el('p', { class: 'prompt' }, 'Merumuskan masalah: nilai setiap rumusan.'), rows, msg);
-}
-
-function cameraTable() {
-  const kinds = Object.keys(KIND);
-  return el('table', { class: 'bs-tabel' }, el('tr', null, el('th', null, 'Sebenarnya ↓ · ditebak →'), ...kinds.map((k) => el('th', null, KIND[k][0])), el('th', null, 'Foto')),
-    ...kinds.map((a) => el('tr', null, el('th', null, `${KIND[a][0]} ${KIND[a][1]}`), ...kinds.map((g) => { const n = PHOTOS.filter((p) => p[0] === a && p[1] === g).length; return el('td', { class: a === g ? 'benar' : n ? 'salah' : '' }, n); }), el('td', null, PHOTOS.filter((p) => p[0] === a).length))));
-}
-
+// --- shared pieces (also used by the extra modes) ---
 function photoStrip(limit) {
   return el('div', { class: 'bs-foto-foto' }, PHOTOS.map(([a, g, c]) => {
     const ask = c < limit; const wrong = a !== g;
@@ -161,43 +121,8 @@ function cameraPanel(limit) {
     el('span', null, `Diminta konfirmasi: ${r.asked} foto`), el('span', { class: r.wrong ? 'buruk' : 'baik' }, `Salah tercatat: ${r.wrong} foto`),
     el('span', null, r.wrong ? `Bank rugi ${rp(r.bank)} · nasabah rugi ${rp(r.nasabah)}` : 'Tidak ada uang yang salah hitung')));
 }
-function thresholdRound(wrap, ctx, { done }) {
-  let limit = 50; let fin = false;
-  const host = el('div');
-  const msg = el('p', { class: 'reveal info' }, 'Foto dengan keyakinan di bawah batas meminta konfirmasi pengelola. Cari batas terkecil (kelipatan 5) yang membuat tidak ada tebakan salah yang tercatat.');
-  const draw = () => host.replaceChildren(el('div', { class: 'bs-batas' }, onTap(el('button', { class: 'seg-btn', type: 'button' }, '− 5'), () => { if (fin) return; limit = Math.max(50, limit - 5); draw(); }), el('b', null, `Batas keyakinan: ${limit}%`), onTap(el('button', { class: 'seg-btn', type: 'button' }, '+ 5'), () => { if (fin) return; limit = Math.min(100, limit + 5); draw(); }),
-    button('Pakai batas ini', () => {
-      if (fin) return;
-      const r = camera(limit);
-      if (r.wrong) { ctx.mistake(); say(msg, 'bad', `Masih ada ${r.wrong} tebakan salah yang langsung tercatat. Naikkan batasnya.`); return; }
-      if (limit > 75) { ctx.mistake(); say(msg, 'bad', `Aman, tetapi ${r.asked} foto harus dikonfirmasi. Coba batas yang lebih kecil.`); return; }
-      fin = true; say(msg, '', `Batas 75%: semua tebakan salah meminta konfirmasi, dan pengelola hanya memeriksa ${r.asked} dari 20 foto.`); done();
-    }, 'primary')), cameraPanel(limit));
-  draw();
-  wrap.append(el('p', { class: 'prompt' }, 'Simulasi kamera KA: kapan aplikasi harus bertanya?'), host, msg);
-}
 
 function phone(title, children, cls = '') { return el('div', { class: `bs-hp ${cls}` }, el('div', { class: 'bs-hp-atas' }, title), el('div', { class: 'bs-hp-layar' }, children)); }
-
-function buildRound(wrap, ctx, { scr = 'saldo', done }) {
-  const ids = [];
-  const msg = el('p', { class: 'reveal info' }, 'Ketuk komponen untuk menaruhnya di layar; ketuk lagi di layar untuk membuangnya. Lalu periksa dengan daftar prinsip.');
-  const host = el('div', { class: 'bs-rakit' });
-  const P = PARTS[scr];
-  const draw = () => host.replaceChildren(
-    el('div', { class: 'bs-palet' }, P.map(([id, l]) => onTap(el('button', { class: `bs-komp ${ids.includes(id) ? 'pakai' : ''}`, type: 'button' }, l), () => { if (!ids.includes(id)) { ids.push(id); ctx.sound.tap(); draw(); } }))),
-    phone(SCREENS.find((s) => s[0] === scr)[1], ids.length ? ids.map((id) => onTap(el('div', { class: `bs-hp-komp ${P.find((p) => p[0] === id)[2].btn ? 'tombol' : ''}` }, P.find((p) => p[0] === id)[1]), () => { ids.splice(ids.indexOf(id), 1); draw(); })) : el('small', { class: 'bs-kosong' }, 'Layar masih kosong')),
-    el('div', { class: 'bs-cek' }, PRINCIPLES.map((t, i) => { const v = checkScreen(scr, ids)[i]; return el('div', { class: v === null ? 'na' : v ? 'ya' : 'tidak' }, el('b', null, v === null ? '–' : v ? '✓' : '✗'), t); })));
-  draw();
-  wrap.append(el('p', { class: 'prompt' }, 'Prototipe kertas: susun layar saldo untuk Mbah Sumi.'), host, msg,
-    el('div', { class: 'kode-baris' }, button('Periksa rancangan', () => {
-      const bad = ids.map((id) => P.find((p) => p[0] === id)[2].bad).filter(Boolean);
-      const miss = P.filter((p) => p[2].good && !ids.includes(p[0]));
-      if (bad.length) { ctx.mistake(); shake(host); say(msg, 'bad', bad[0]); return; }
-      if (miss.length) { ctx.mistake(); say(msg, 'bad', `Masih ada yang kurang untuk Mbah Sumi, misalnya: ${miss[0][1].replace(/^\S+ /, '')}.`); return; }
-      say(msg, '', 'Semua prinsip terpenuhi: angka besar, tombol bergambar dan bertulisan, riwayat singkat, dan cara kembali.'); done();
-    }, 'primary')));
-}
 
 // Run a scenario on the draft prototype; onEnd(taps, reached) when the goal screen opens or the user gives up.
 function draftRun(host, ctx, sc, onEnd, { header = null } = {}) {
@@ -215,6 +140,445 @@ function draftRun(host, ctx, sc, onEnd, { header = null } = {}) {
   draw();
 }
 
+// --- game data (Sayembara Aplikasi Bank Sampah) ---
+const HOUSE = {
+  sumi: ['🏡', 'Rumah Mbah Sumi', 'Penglihatan kurang, tidak suka mengetik', 'Saldo tanpa membaca tulisan kecil dan tanpa mengetik'],
+  arif: ['🏛️', 'Balai dusun', 'Merekap 60 nasabah; sinyal sering hilang', 'Catat cepat, rekap otomatis, juga tanpa sinyal'],
+  darmi: ['🚚', 'Gudang pengepul', 'Harus menebak berat sebelum mengirim mobil bak', 'Berat setiap jenis sampah yang terkumpul'],
+};
+const NOTE_SHORT = { 1: 'Tulisan terlalu kecil', 2: 'Datang paling pagi, sampah dicuci', 3: 'Menduga saldonya pernah keliru', 4: 'Bangga: tabungan sekolah cucu', 5: 'Ingin tahu saldo dari rumah', 6: 'Minta cucu membacakan pesan', 7: 'Cemas salah menekan tombol', 8: 'Mengira aplikasi untuk anak muda' };
+const QUAD_HINT = { katakan: 'Katakan hanya untuk kutipan langsung.', pikirkan: 'Pikirkan: tidak diucapkan, tetapi tersirat.', lakukan: 'Lakukan: tindakan yang terlihat.', rasakan: 'Rasakan: perasaan seperti bangga atau cemas.' };
+const INSIGHTS = [['yakin', '💡 Ingin yakin setorannya tercatat benar', [3]], ['tenang', '💡 Ingin tampilan yang tidak menakutkan dan bisa dibatalkan', [7, 8]]];
+
+export const STATEMENTS2 = [...STATEMENTS,
+  ['d', 'Bagaimana kita membantu Bu Darmi mengetahui berat setiap jenis sampah yang terkumpul, supaya ia mengirim mobil bak pada waktu yang tepat?', 'tepat'],
+  ['e', 'Bagaimana kita membuat bank sampah lebih modern?', 'luas'],
+  ['f', 'Bagaimana kita menambah tombol "Rekap" berwarna biru di pojok kanan atas?', 'sempit']];
+const TRAYS = [['luas', '🔭', 'Terlalu luas'], ['tepat', '🎯', 'Tepat'], ['sempit', '🔬', 'Terlalu sempit']];
+const RATE_HINT = { luas: 'Siapa yang dibantu, dan masalah apa? Rumusan ini tidak menyebutnya.', sempit: 'Rumusan ini sudah menentukan solusi yang sangat rinci (tombol, warna, letak).', tepat: 'Rumusan ini menyebut siapa, apa yang ingin dilakukan, dan tujuannya, tanpa menyebut solusi.' };
+const SENTENCE = [['siapa', 'Bagaimana kita membantu'], ['apa', ''], ['tujuan', 'supaya']];
+export const CHIPS = [['Mas Arif', 'siapa'], ['semua warga dusun', null, 'Terlalu luas: sebut satu pengguna yang jelas.'], ['mencatat 60 setoran setiap Sabtu', 'apa'], ['memakai aplikasi Excel', null, 'Itu sudah solusi. Rumusan belum boleh menyebut solusi.'], ['menekan tombol rekap biru', null, 'Terlalu sempit: sudah menentukan tombol dan warnanya.'], ['rekapnya tepat tanpa menghabiskan malam', 'tujuan'], ['aplikasinya terlihat modern', null, 'Tujuan itu untuk aplikasinya, bukan untuk Mas Arif.'], ['bank sampah juara lomba', null, 'Itu bukan kebutuhan Mas Arif.']];
+const SLOT_NAME = { siapa: 'siapa yang dibantu', apa: 'apa yang ingin ia lakukan', tujuan: 'tujuannya' };
+
+const IDEA_SHORT = { A: 'Saldo lewat pesan suara dan huruf besar', B: 'Kamera KA menebak jenis sampah', C: 'Rekap otomatis berat setiap jenis', D: 'Timbangan digital tersambung ke aplikasi', E: 'Tetap mencatat tanpa sinyal', F: 'Papan peringkat nasabah untuk semua warga' };
+const GRID = [['besar-mudah', '⬆ Dampak besar', '👍 mudah dibuat'], ['besar-sulit', '⬆ Dampak besar', '🧗 sulit dibuat'], ['kecil-mudah', '⬇ Dampak kecil', '👍 mudah dibuat'], ['kecil-sulit', '⬇ Dampak kecil', '🧗 sulit dibuat']];
+export const VOTE = ['A', 'C', 'E'];
+const VOTE_WHY = { B: 'B butuh ribuan foto latihan dan pengujian: terlalu sulit untuk prototipe pertama.', D: 'D butuh perangkat keras khusus: sulit dan mahal untuk prototipe pertama.', F: 'F dampaknya kecil dan tidak menjawab kebutuhan siapa pun.' };
+
+const N_SHORT = { 3: 'Tetap bisa dipakai saat sinyal hilang', 5: 'Huruf besar; tombol berikon dan bertulisan', 6: 'Saldo hanya dilihat nasabah dan pengelola', 7: 'Mencatat satu setoran ≤ 30 detik' };
+const QUALITY = [['keandalan', '🛡️ Keandalan'], ['kemudahan penggunaan', '🙂 Kemudahan penggunaan'], ['keamanan dan privasi', '🔒 Keamanan dan privasi'], ['kecepatan', '⚡ Kecepatan']];
+
+export const SLIDES = [
+  ['masalah', '👵', 'Masalah: Mbah Sumi tidak bisa membaca saldonya, dan rumusan "Bagaimana kita membantu Mbah Sumi…"'],
+  ['prototipe', '📱', 'Prototipe: layar saldo bersuara, layar catat setoran, layar rekap pengepul'],
+  ['uji', '🧪', 'Hasil uji: saldo dari 2 ketukan menjadi 1; tombol "Ubah setoran" ditambah'],
+  ['ka', '📷', 'Kamera KA hanya mengusulkan; di bawah 75% pengelola yang memutuskan'],
+  [null, '✨', 'Daftar 20 fitur canggih yang mungkin dibuat', 'Juri menilai masalah dan hasil uji, bukan banyaknya fitur.'],
+  [null, '📲', 'Harga ponsel terbaru', 'Tidak menjawab satu pun kriteria juri.'],
+  [null, '💻', 'Kode program aplikasinya', 'Karang Taruna perlu tahu manfaat dan hasil uji, bukan kodenya.'],
+];
+const KRITERIA = [['masalah', 'Masalah jelas'], ['prototipe', 'Prototipe menjawab rumusan'], ['uji', 'Hasil uji dan perbaikan'], ['ka', 'Peran manusia pada KA']];
+
+// The improved prototype after the cross test.
+export const BETTER = {
+  ...DRAFT,
+  beranda: { title: 'Bank Sampah Sukamakmur', body: [], go: [['📒 Saldo saya', 'saldo'], ['＋ Catat setoran', 'catat'], ['📊 Rekap', 'rekap']] },
+  saldo: { title: 'Saldo Mbah Sumi', body: ['Rp48.500', '🔊 Dengarkan saldo'], big: true, go: [['↩ Kembali', 'beranda']] },
+  tersimpan: { ...DRAFT.tersimpan, go: [['✏️ Ubah setoran', 'ubah'], ['Selesai', 'beranda']] },
+  ubah: { title: 'Ubah setoran', body: ['Pak Wiryo · kardus 2,5 kg'], go: [] },
+};
+
+const HEAD24 = {
+  dusun: ['Kunjungan ke Dusun', 'Antar kartu kebutuhan ke rumah pemiliknya, lalu cari kebutuhan yang bisa bentrok.'],
+  teras: ['Wawancara di Teras', 'Taruh catatan wawancara Mbah Sumi di peta empati, lalu temukan kebutuhan tersembunyi.'],
+  juri: ['Meja Juri Rumusan', 'Nilai rumusan masalah, lalu rakit rumusan untuk Mas Arif.'],
+  ide: ['Papan Ide', 'Taruh ide di matriks, tempel 3 stiker suara, lalu tandai risikonya.'],
+  audit: ['Audit Kamera KA', 'Temukan tebakan yang salah dan hitung siapa yang rugi.'],
+  batas: ['Batas Keyakinan', 'Atur kapan KA harus bertanya, lalu jadilah pengelola.'],
+  rakit: ['Prototipe Kertas', 'Susun layar saldo Mbah Sumi yang memenuhi semua prinsip.'],
+  uji: ['Uji Silang', 'Jalankan kartu skenario pada rancangan awal, tandai masalahnya, lalu coba perbaikannya.'],
+  fn: ['Mesin Pemilah Kebutuhan', 'Pilah kartu kebutuhan: fungsional atau nonfungsional.'],
+  bos: ['Presentasi Sayembara', 'Susun presentasi dua menit untuk juri Karang Taruna.'],
+};
+
+// --- game pieces ---
+const msgLine = (t) => el('p', { class: 'reveal info' }, t);
+const lock = (card) => { card.removeAttribute('data-drag'); card.classList.add('locked'); card.classList.remove('selected'); };
+
+function dusunRound(area, ctx, { done }) {
+  const msg = msgLine('Seret kartu kebutuhan ke rumah pemiliknya, atau ketuk kartu lalu ketuk rumahnya.');
+  const houses = PERSONAS.map((p) => el('div', { class: 'bs24-rumah', 'data-drop': p.id, 'data-p': p.id },
+    el('span', { class: 'bs24-atap' }, HOUSE[p.id][0]), el('b', null, `${p.icon} ${p.name}`), el('small', null, p.role), el('em', null, HOUSE[p.id][2]), el('span', { class: 'bs24-pin' })));
+  const tray = el('div', { class: 'bs24-baki' }, ctx.rand.shuffle(PERSONAS.slice()).map((p) => el('div', { class: 'bs24-kartu', 'data-drag': p.id }, `📝 ${p.need}`)));
+  const board = el('div', { class: 'bs24-papan' }, el('div', { class: 'bs24-jalan' }, houses), tray);
+  let left = PERSONAS.length;
+  const clash = () => {
+    tray.remove();
+    const pick = new Set(); let fin = false;
+    say(msg, 'info', 'Kebutuhan dua pengguna bisa saling bertentangan. Ketuk dua rumah yang kebutuhannya paling mungkin bentrok.');
+    houses.forEach((h) => { h.removeAttribute('data-drop'); h.classList.add('pilihan'); onTap(h, () => {
+      if (fin) return;
+      const id = h.dataset.p;
+      if (pick.has(id)) { pick.delete(id); h.classList.remove('pilih'); return; }
+      pick.add(id); h.classList.add('pilih'); ctx.sound.tap();
+      if (pick.size < 2) return;
+      if (pick.has('sumi') && pick.has('arif')) {
+        fin = true; houses.forEach((x) => x.classList.toggle('bentrok', pick.has(x.dataset.p)));
+        say(msg, '', 'Mas Arif butuh layar padat untuk mencatat 60 setoran dengan cepat; Mbah Sumi butuh layar sangat sederhana berhuruf besar. Jalan keluarnya: layar yang berbeda untuk setiap pengguna.');
+        done(); return;
+      }
+      ctx.mistake(); shake(board);
+      say(msg, 'bad', 'Bu Darmi hanya perlu rekap berat setiap jenis sampah; kebutuhannya tidak bertentangan dengan yang lain. Bandingkan dua pengguna yang memakai layar yang sama setiap Sabtu.');
+      pick.clear(); houses.forEach((x) => x.classList.remove('pilih'));
+    }); });
+  };
+  dnd(board, (card, box) => {
+    const id = box.dataset.drop;
+    if (card.dataset.drag !== id) { ctx.mistake(); shake(card); say(msg, 'bad', `Baca lagi petunjuk di ${HOUSE[id][1]}: ${HOUSE[id][2].toLowerCase()}.`); return; }
+    card.remove(); box.classList.add('beres'); box.querySelector('.bs24-pin').textContent = `📌 ${HOUSE[id][3]}`; ctx.sound.tap();
+    say(msg, '', `Tepat: itu kebutuhan ${PERSONAS.find((p) => p.id === id).name}.`);
+    if (--left === 0) setTimeout(clash, 1500);
+  });
+  area.append(board, msg);
+}
+
+function terasRound(area, ctx, { done }) {
+  const msg = msgLine('Catatan wawancara datang satu per satu. Seret ke kotak peta empati yang tepat.');
+  const quads = QUAD.map(([k, l]) => el('div', { class: `bs24-kuadran q-${k}`, 'data-drop': k }, el('b', null, l), el('div', { class: 'bs24-isi' })));
+  const slot = el('div', { class: 'bs24-rekam' });
+  const board = el('div', { class: 'bs24-papan' }, slot, el('div', { class: 'bs24-empati' }, quads));
+  const order = ctx.rand.shuffle(EMPATHY.map((e) => e[0]));
+  let i = 0; let phase = 1; let found = 0;
+  const show = () => fill(slot, el('small', null, `👵 Mbah Sumi · 🎙 catatan ${i + 1} dari ${order.length}`),
+    el('div', { class: 'bs24-kartu besar', 'data-drag': order[i] }, el('b', null, order[i]), EMPATHY[order[i] - 1][1]));
+  const insights = () => {
+    phase = 2;
+    quads.forEach((q) => q.removeAttribute('data-drop'));
+    board.querySelectorAll('.bs24-chip').forEach((c) => c.setAttribute('data-drop', c.dataset.n));
+    fill(slot, el('small', null, '💡 Kebutuhan yang tidak tertulis di kartu persona'), INSIGHTS.map(([k, t]) => el('div', { class: 'bs24-kartu ide', 'data-drag': k }, t)));
+    say(msg, 'info', 'Seret setiap kebutuhan tersembunyi ke catatan wawancara yang mengungkapkannya.');
+  };
+  dnd(board, (card, box) => {
+    if (phase === 1) {
+      const n = +card.dataset.drag; const k = box.dataset.drop;
+      if (EMPATHY[n - 1][2] !== k) { ctx.mistake(); shake(card); say(msg, 'bad', QUAD_HINT[k]); return; }
+      box.querySelector('.bs24-isi').append(el('span', { class: 'bs24-chip', 'data-n': n }, el('b', null, n), NOTE_SHORT[n]));
+      ctx.sound.tap(); say(msg, '', EMPATHY_WHY[k]);
+      if (++i < order.length) show(); else { fill(slot); setTimeout(insights, 1400); }
+      return;
+    }
+    const ins = INSIGHTS.find((x) => x[0] === card.dataset.drag); const n = +box.dataset.drop;
+    if (!ins[2].includes(n)) { ctx.mistake(); shake(card); say(msg, 'bad', 'Cari catatan yang menunjukkan rasa ragu atau takut: tidak ia ucapkan, tetapi tersirat atau terasa.'); return; }
+    lock(card); card.remove(); box.classList.add('kunci'); box.removeAttribute('data-drop'); box.append(' 💡'); ctx.sound.tap();
+    if (++found === INSIGHTS.length) { board.querySelectorAll('.bs24-chip[data-drop]').forEach((c) => c.removeAttribute('data-drop')); say(msg, '', 'Kebutuhan tersembunyi Mbah Sumi: nota untuk setiap setoran supaya ia yakin, dan tombol yang tidak menakutkan serta bisa dibatalkan.'); done(); }
+    else say(msg, '', 'Tepat. Satu lagi.');
+  });
+  show();
+  area.append(board, msg);
+}
+
+function juriRound(area, ctx, { done }) {
+  const msg = msgLine('Kalian juri sayembara. Seret setiap kartu rumusan ke baki penilaiannya.');
+  const trays = TRAYS.map(([k, ic, l]) => el('div', { class: `bs24-nampan t-${k}`, 'data-drop': k }, el('b', null, `${ic} ${l}`), el('div', { class: 'bs24-isi' })));
+  const slot = el('div', { class: 'bs24-rekam' });
+  const board = el('div', { class: 'bs24-papan' }, slot, el('div', { class: 'bs24-nampan-nampan' }, trays));
+  const order = ctx.rand.shuffle(STATEMENTS2.slice()); let i = 0;
+  const show = () => fill(slot, el('small', null, `📄 Kartu rumusan ${i + 1} dari ${order.length}`), el('div', { class: 'bs24-kartu besar', 'data-drag': order[i][0] }, order[i][1]));
+  const build = () => {
+    const filled = [];
+    const spans = SENTENCE.map(([k]) => el('span', { class: 'bs24-rumpang', 'data-s': k }, '…'));
+    const line = el('p', { class: 'bs24-kalimat' }, SENTENCE.map(([, w], j) => [w ? `${w} ` : '', spans[j], ' ']).flat(), '?');
+    const chips = ctx.rand.shuffle(CHIPS.slice()).map(([t, s, why]) => onTap(el('button', { class: 'bs24-keping', type: 'button' }, t), (e) => {
+      const b = e.currentTarget; if (b.disabled || filled.length === SENTENCE.length) return;
+      const want = SENTENCE[filled.length][0];
+      if (s !== want) { ctx.mistake(); shake(b); say(msg, 'bad', s ? `Isi dulu bagian ${SLOT_NAME[want]}.` : why); return; }
+      b.disabled = true; b.classList.add('pakai'); spans[filled.length].textContent = t; spans[filled.length].classList.add('isi'); filled.push(t); ctx.sound.tap();
+      if (filled.length < SENTENCE.length) { say(msg, '', `Bagus. Sekarang ${SLOT_NAME[SENTENCE[filled.length][0]]}.`); return; }
+      say(msg, '', 'Rumusan tepat: siapa (Mas Arif), apa (mencatat 60 setoran), dan tujuan (rekap tepat), tanpa menyebut solusinya.'); done();
+    }));
+    fill(area, el('p', { class: 'bs24-sub' }, '🧩 Rakit rumusan untuk Mas Arif: ketuk keping sesuai urutan kalimat.'), line, el('div', { class: 'bs24-keping-keping' }, chips), msg);
+    say(msg, 'info', `Mulai dari ${SLOT_NAME.siapa}.`);
+  };
+  dnd(board, (card, box) => {
+    const st = STATEMENTS2.find((x) => x[0] === card.dataset.drag);
+    if (st[2] !== box.dataset.drop) { ctx.mistake(); shake(card); say(msg, 'bad', RATE_HINT[st[2]]); return; }
+    box.querySelector('.bs24-isi').append(el('span', { class: 'bs24-huruf' }, st[0])); ctx.sound.tap();
+    say(msg, '', RATE_HINT[st[2]]);
+    if (++i < order.length) show(); else { fill(slot); setTimeout(build, 2200); }
+  });
+  show();
+  area.append(board, msg);
+}
+
+function ideRound(area, ctx, { done }) {
+  const msg = msgLine('Seret setiap kartu ide ke kotak matriks dampak–kemudahan.');
+  const bins = GRID.map(([k, a, b]) => el('div', { class: `bs24-sel s-${k}`, 'data-drop': k }, el('b', null, a, el('br'), b), el('div', { class: 'bs24-isi' })));
+  const tray = el('div', { class: 'bs24-baki' }, ctx.rand.shuffle(IDEAS.slice()).map(([k]) => el('div', { class: 'bs24-kartu', 'data-drag': k }, el('b', null, k), IDEA_SHORT[k])));
+  const board = el('div', { class: 'bs24-papan' }, el('div', { class: 'bs24-matriks' }, bins), tray);
+  const chips = {}; let left = IDEAS.length;
+  const flag = () => {
+    let fin = false;
+    say(msg, 'info', 'Ide mana yang berisiko bagi privasi nasabah? Ketuk untuk menempel 🚩.');
+    Object.entries(chips).forEach(([k, c]) => onTap(c, () => {
+      if (fin) return;
+      if (k !== 'F') { ctx.mistake(); shake(c); say(msg, 'bad', 'Ide ini tidak membuka data nasabah lain.'); return; }
+      fin = true; c.classList.add('risiko'); c.append(' 🚩'); ctx.sound.good();
+      say(msg, '', 'F membuka data setoran semua nasabah: yang sedikit menyetor bisa malu, dan orang bisa tergoda menyetor sampah yang bukan miliknya.'); done();
+    }));
+  };
+  const vote = () => {
+    tray.remove();
+    say(msg, 'info', 'Tempel 3 stiker suara 🟢: ketuk ide yang dibuat lebih dulu untuk prototipe pertama.');
+    let phase = 'vote';
+    Object.entries(chips).forEach(([k, c]) => onTap(c, () => {
+      if (phase !== 'vote' || c.classList.contains('suara-ok')) return;
+      c.classList.toggle('suara'); ctx.sound.tap();
+      const on = Object.keys(chips).filter((x) => chips[x].classList.contains('suara'));
+      if (on.length < 3) return;
+      const bad = on.filter((x) => !VOTE.includes(x));
+      on.filter((x) => VOTE.includes(x)).forEach((x) => chips[x].classList.add('suara-ok'));
+      if (bad.length) { ctx.mistake(); bad.forEach((x) => { chips[x].classList.remove('suara'); shake(chips[x]); }); say(msg, 'bad', VOTE_WHY[bad[0]]); return; }
+      phase = 'flag'; say(msg, '', 'A, C, dan E: dampaknya besar, dan bisa dibuat lebih dulu. E penting karena sinyal di balai sering hilang.');
+      setTimeout(flag, 2600);
+    }));
+  };
+  dnd(board, (card, box) => {
+    const k = card.dataset.drag; const idea = IDEAS.find((x) => x[0] === k);
+    if (!idea[2].includes(box.dataset.drop)) { ctx.mistake(); shake(card); say(msg, 'bad', IDEA_WHY[k]); return; }
+    card.remove();
+    const c = el('button', { class: 'bs24-ide', type: 'button' }, el('b', null, k), IDEA_SHORT[k]); chips[k] = c;
+    box.querySelector('.bs24-isi').append(c); ctx.sound.tap(); say(msg, '', IDEA_WHY[k]);
+    if (--left === 0) setTimeout(vote, 2200);
+  });
+  area.append(board, msg);
+}
+
+function auditRound(area, ctx, { done }) {
+  const msg = msgLine('Kamera KA sudah menebak 20 foto. Ketuk foto yang tebakannya salah.');
+  let found = 0; const kinds = Object.keys(KIND);
+  const order = ctx.rand.shuffle(PHOTOS.map((_, i) => i));
+  const money = () => {
+    const tot = { bank: 0, nasabah: 0 };
+    const pockets = [['bank', '🏦 Bank sampah rugi'], ['nasabah', '👵 Nasabah rugi']].map(([k, l]) => el('div', { class: 'bs24-saku', 'data-drop': k }, el('b', null, l), el('span', { class: 'bs24-uang' }, rp(0)), el('div', { class: 'bs24-isi' })));
+    const wrong = PHOTOS.map((p, i) => [p, i]).filter(([p]) => p[0] !== p[1]);
+    const tray = el('div', { class: 'bs24-baki' }, ctx.rand.shuffle(wrong).map(([[a, g], i]) => el('div', { class: 'bs24-kartu', 'data-drag': i }, `${KIND[a][0]} ${KIND[a][1]} 1 kg dicatat ${KIND[g][0]} ${KIND[g][1]}`)));
+    const board = el('div', { class: 'bs24-papan' }, el('p', { class: 'bs24-sub' }, 'Harga per kg: 🧴 Rp3.000 · 🥤 Rp2.000 · 📦 Rp1.500 · 🥫 Rp6.000'), el('div', { class: 'bs24-saku-saku' }, pockets), tray);
+    let left = wrong.length;
+    dnd(board, (card, box) => {
+      const [a, g] = PHOTOS[+card.dataset.drag]; const d = PRICE[g] - PRICE[a]; const who = d > 0 ? 'bank' : 'nasabah';
+      if (box.dataset.drop !== who) { ctx.mistake(); shake(card); say(msg, 'bad', `Dicatat ${KIND[g][1].toLowerCase()} (${rp(PRICE[g])}/kg) padahal ${KIND[a][1].toLowerCase()} (${rp(PRICE[a])}/kg): nasabah dibayar ${rp(d)} ${d > 0 ? 'lebih' : 'kurang'}. Siapa yang menanggung selisihnya?`); return; }
+      tot[who] += Math.abs(d); card.remove(); box.querySelector('.bs24-uang').textContent = rp(tot[who]); box.querySelector('.bs24-isi').append(el('span', { class: 'bs24-chip' }, `${KIND[a][0]}→${KIND[g][0]}`)); ctx.sound.tap();
+      if (--left) { say(msg, '', `Tepat: selisih ${rp(Math.abs(d))}.`); return; }
+      say(msg, '', 'Dua gelas tercatat botol: nasabah dibayar Rp2.000 lebih, bank sampah rugi. Satu botol tercatat gelas: nasabah dibayar Rp1.000 kurang, nasabah yang rugi.'); done();
+    });
+    fill(area, board, msg);
+    say(msg, 'info', 'Setiap foto mewakili 1 kg. Seret setiap tebakan salah ke pihak yang rugi.');
+  };
+  const bars = () => {
+    let fin = false;
+    const rows = kinds.map((k) => { const all = PHOTOS.filter((p) => p[0] === k); const ok = all.filter((p) => p[1] === k).length;
+      return onTap(el('button', { class: 'bs24-batang', type: 'button', 'data-k': k }, el('span', null, `${KIND[k][0]} ${KIND[k][1]}`), el('i', { style: { '--p': `${(ok / all.length) * 100}%` } }), el('b', null, `${ok}/${all.length}`)), (e) => {
+        if (fin) return;
+        if (k !== 'gelas') { ctx.mistake(); shake(e.currentTarget); say(msg, 'bad', `${KIND[k][1]}: ${ok} dari ${all.length} benar. Cari batang yang paling pendek.`); return; }
+        fin = true; e.currentTarget.classList.add('kena'); ctx.sound.good();
+        say(msg, '', 'Gelas plastik hanya 2 dari 4 benar (50%), padahal ketepatan keseluruhan 85%. Angka rata-rata bisa menyembunyikan jenis yang sering salah.');
+        setTimeout(money, 3600);
+      }); });
+    fill(area, el('p', { class: 'bs24-sub' }, '📷 Benar 17 dari 20 foto = 85%. Ketuk jenis yang paling sering salah ditebak.'), el('div', { class: 'bs24-batang-batang' }, rows), msg);
+    say(msg, 'info', 'Ketepatan per jenis sampah.');
+  };
+  const grid = el('div', { class: 'bs24-foto-foto' }, order.map((i) => { const [a, g, c] = PHOTOS[i];
+    return onTap(el('button', { class: 'bs24-foto', type: 'button', 'data-i': i }, el('span', { class: 'bs24-f-ikon' }, KIND[a][0]), el('small', null, `KA: ${KIND[g][0]} ${c}%`)), (e) => {
+      const b = e.currentTarget; if (b.classList.contains('salah') || found === 3) return;
+      if (a === g) { ctx.mistake(); shake(b); say(msg, 'bad', `Foto ini ${KIND[a][1].toLowerCase()} dan KA menebak ${KIND[g][1].toLowerCase()}: benar.`); return; }
+      b.classList.add('salah'); ctx.sound.tap(); found++;
+      if (found < 3) { say(msg, '', `Ketemu ${found} dari 3: ${KIND[a][1].toLowerCase()} ditebak ${KIND[g][1].toLowerCase()}.`); return; }
+      say(msg, '', 'Tiga tebakan salah. 17 dari 20 benar = 85%.'); setTimeout(bars, 2200);
+    }); }));
+  area.append(el('div', { class: 'bs24-papan' }, el('p', { class: 'bs24-sub' }, '🔍 Foto asli di atas, tebakan KA di bawah.'), grid), msg);
+}
+
+function batasRound(area, ctx, { done }) {
+  let limit = 50; let fin = false;
+  const msg = msgLine('Foto yang keyakinannya di bawah batas akan ditanyakan ke pengelola. Cari batas terkecil (kelipatan 5) yang membuat tidak ada tebakan salah yang langsung tercatat.');
+  const host = el('div', { class: 'bs24-papan' });
+  const tile = ([a, g, c]) => el('span', { class: `bs24-mini ${a !== g ? 'keliru' : ''}` }, KIND[a][0], el('small', null, `${c}%`));
+  const human = () => {
+    const ask = ctx.rand.shuffle(PHOTOS.filter((p) => p[2] < 75)); let j = 0;
+    const step = () => {
+      const [a, g, c] = ask[j]; let doneStep = false;
+      const pickKind = (k, b) => {
+        if (doneStep) return;
+        if (k !== a) { ctx.mistake(); shake(b); say(msg, 'bad', `Lihat fotonya: ini ${KIND[a][1].toLowerCase()}.`); return; }
+        doneStep = true; ctx.sound.tap(); b.classList.add('kena');
+        if (++j < ask.length) { say(msg, '', a === g ? 'Dikonfirmasi.' : `Diganti menjadi ${KIND[a][1].toLowerCase()}.`); setTimeout(step, 900); return; }
+        say(msg, '', `Pengelola memeriksa ${ask.length} dari 20 foto, dan semuanya tercatat benar, termasuk 3 tebakan KA yang salah. KA mengusulkan, manusia yang memutuskan.`); done();
+      };
+      fill(host, el('p', { class: 'bs24-sub' }, `🧑 Kamu pengelola · foto ${j + 1} dari ${ask.length}`),
+        phone('Catat setoran', [el('span', { class: 'bs24-f-ikon besar' }, KIND[a][0]), el('p', null, `📷 Tebakan: ${KIND[g][0]} ${KIND[g][1].toLowerCase()}`), el('p', null, `yakin ${c}%. Benar?`),
+          onTap(el('button', { class: 'bs-hp-btn', type: 'button', 'data-ya': '' }, '✓ Ya'), (e) => pickKind(g, e.currentTarget)),
+          el('div', { class: 'bs24-ganti' }, el('small', null, '🔁 Ganti jenis:'), Object.keys(KIND).filter((k) => k !== g).map((k) => onTap(el('button', { class: 'bs-hp-btn', type: 'button', 'data-k': k }, KIND[k][0]), (e) => pickKind(k, e.currentTarget))))], 'bs24-hp'));
+    };
+    say(msg, 'info', 'Setiap foto di bawah 75% sekarang bertanya. Tekan Ya bila tebakannya benar, atau ganti jenisnya.');
+    step();
+  };
+  const draw = () => {
+    const direct = PHOTOS.filter((p) => p[2] >= limit).sort((x, y) => y[2] - x[2]); const asked = PHOTOS.filter((p) => p[2] < limit).sort((x, y) => y[2] - x[2]);
+    const bad = direct.filter((p) => p[0] !== p[1]).length;
+    fill(host, el('div', { class: 'bs24-tuas' }, onTap(el('button', { class: 'seg-btn', type: 'button', 'data-d': '-' }, '− 5'), () => { if (fin) return; limit = Math.max(50, limit - 5); ctx.sound.tap(); draw(); }),
+      el('b', null, `Batas keyakinan: ${limit}%`), onTap(el('button', { class: 'seg-btn', type: 'button', 'data-d': '+' }, '+ 5'), () => { if (fin) return; limit = Math.min(100, limit + 5); ctx.sound.tap(); draw(); }),
+      button('Pakai batas ini', () => {
+        if (fin) return;
+        if (bad) { ctx.mistake(); shake(host); say(msg, 'bad', `Masih ada ${bad} tebakan salah yang langsung tercatat (merah). Naikkan batasnya.`); return; }
+        if (limit > 75) { ctx.mistake(); say(msg, 'bad', `Aman, tetapi pengelola harus memeriksa ${asked.length} foto. Coba batas yang lebih kecil.`); return; }
+        fin = true; say(msg, '', `Batas 75%: semua tebakan salah bertanya dulu, dan pengelola hanya memeriksa ${asked.length} dari 20 foto.`); setTimeout(human, 3200);
+      }, 'primary')),
+    el('div', { class: 'bs24-lajur-lajur' },
+      el('div', { class: `bs24-lajur ${bad ? 'bahaya' : ''}` }, el('b', null, `✅ Langsung dicatat (${direct.length})${bad ? ` · ${bad} salah!` : ''}`), el('div', { class: 'bs24-mini-mini' }, direct.map(tile))),
+      el('div', { class: 'bs24-lajur tanya' }, el('b', null, `❓ Tanya pengelola (${asked.length})`), el('div', { class: 'bs24-mini-mini' }, asked.map(tile)))));
+  };
+  draw();
+  area.append(host, msg);
+}
+
+function rakitRound(area, ctx, { scr = 'saldo', done }) {
+  const ids = []; let fin = false;
+  const msg = msgLine('Ketuk komponen untuk menaruhnya di layar; ketuk lagi di layar untuk membuangnya. Daftar prinsip ikut menyala.');
+  const host = el('div', { class: 'bs24-rakit' });
+  const P = PARTS[scr];
+  const draw = () => fill(host,
+    el('div', { class: 'bs24-palet' }, P.map(([id, l]) => onTap(el('button', { class: `bs24-komp ${ids.includes(id) ? 'pakai' : ''}`, type: 'button', 'data-id': id }, l), () => { if (!fin && !ids.includes(id)) { ids.push(id); ctx.sound.tap(); draw(); } }))),
+    phone(SCREENS.find((s) => s[0] === scr)[1], ids.length ? ids.map((id) => onTap(el('div', { class: `bs-hp-komp ${P.find((p) => p[0] === id)[2].btn ? 'tombol' : ''}`, 'data-id': id }, P.find((p) => p[0] === id)[1]), () => { if (fin) return; ids.splice(ids.indexOf(id), 1); draw(); })) : el('small', { class: 'bs-kosong' }, 'Layar masih kosong'), 'bs24-hp'),
+    el('div', { class: 'bs24-cek' }, PRINCIPLES.map((t, i) => { const v = checkScreen(scr, ids)[i]; return el('div', { class: v === null ? 'na' : v ? 'ya' : 'tidak' }, el('b', null, v === null ? '–' : v ? '✓' : '✗'), t); })));
+  draw();
+  area.append(host, msg, el('div', { class: 'kode-baris' }, button('Periksa rancangan', () => {
+    if (fin) return;
+    const bad = ids.map((id) => P.find((p) => p[0] === id)[2].bad).filter(Boolean);
+    const miss = P.filter((p) => p[2].good && !ids.includes(p[0]));
+    if (bad.length) { ctx.mistake(); shake(host); say(msg, 'bad', bad[0]); return; }
+    if (miss.length) { ctx.mistake(); say(msg, 'bad', `Masih ada yang kurang untuk Mbah Sumi, misalnya: ${miss[0][1].replace(/^\S+ /, '')}.`); return; }
+    fin = true; say(msg, '', 'Semua prinsip terpenuhi: angka besar, tombol bergambar dan bertulisan, riwayat singkat, dan cara kembali.'); done();
+  }, 'primary')));
+}
+
+// Run a scenario on a paper prototype (a map of screens); onEnd(taps, reached, ms).
+function protoRun(host, ctx, screens, sc, onEnd) {
+  let at = sc.start; let taps = 0; let over = false; const t0 = performance.now();
+  const draw = () => {
+    const S = screens[at];
+    fill(host, el('div', { class: 'bs24-uji' },
+      phone(S.title, [...S.body.map((b, j) => el('p', { class: S.small && j ? 'kecil' : S.big && !j ? 'besar' : '' }, b)), ...S.go.map(([l, to, k]) => onTap(el('button', { class: `bs-hp-btn ${k || ''}`, type: 'button', 'data-to': to }, l), () => {
+        if (over) return; taps++; at = to; ctx.sound.tap(); draw();
+        if (sc.goal && at === sc.goal) { over = true; setTimeout(() => onEnd(taps, true, performance.now() - t0), 1100); }
+      }))], 'bs24-hp uji'),
+      el('div', { class: 'bs24-skenario' }, el('b', null, `🎭 ${sc.who}`), el('span', null, sc.task), el('div', { class: 'bs24-hitung' }, `👆 Ketukan: ${taps}`),
+        sc.goal ? null : onTap(el('button', { class: 'seg-btn bs24-nyerah', type: 'button' }, '🙅 Tidak bisa diselesaikan'), (e) => {
+          if (over) return;
+          if (taps < (sc.minTry || 0)) { shake(e.currentTarget); sc.nudge?.(); return; }
+          over = true; onEnd(taps, false, performance.now() - t0);
+        }))));
+  };
+  draw();
+}
+
+function ujiRound(area, ctx, { done }) {
+  const msg = msgLine('Kamu memerankan Mbah Sumi pada rancangan awal tim lain. Ketuk tombol di layar ponsel; penguji tidak boleh membantu.');
+  const host = el('div', { class: 'bs24-papan' });
+  area.append(host, msg);
+  let first = 0;
+  const fixArif = () => {
+    let kg = 25; let fin = false;
+    const draw = () => fill(host, el('div', { class: 'bs24-uji' }, phone('Ubah setoran', [el('p', null, 'Pak Wiryo · kardus'),
+      el('div', { class: 'bs24-stepper' }, onTap(el('button', { class: 'bs-hp-btn', type: 'button', 'data-d': '-' }, '−'), () => { if (!fin && kg > 5) { kg -= 5; ctx.sound.tap(); draw(); } }), el('b', null, `${(kg / 10).toLocaleString('id-ID')} kg`), onTap(el('button', { class: 'bs-hp-btn', type: 'button', 'data-d': '+' }, '+'), () => { if (!fin && kg < 60) { kg += 5; ctx.sound.tap(); draw(); } })),
+      el('p', { class: 'kecil' }, 'Alasan: salah timbang'),
+      onTap(el('button', { class: 'bs-hp-btn', type: 'button', 'data-simpan': '' }, '✅ Simpan perubahan'), (e) => {
+        if (fin) return;
+        if (kg !== 35) { ctx.mistake(); shake(e.currentTarget); say(msg, 'bad', `Beratnya seharusnya 3,5 kg, bukan ${(kg / 10).toLocaleString('id-ID')} kg.`); return; }
+        fin = true; ctx.sound.good(); say(msg, '', 'Perbaikan berhasil: setoran Pak Wiryo menjadi 3,5 kg (Rp5.250), dan perubahan beserta alasannya tercatat.'); done();
+      })], 'bs24-hp uji'), el('div', { class: 'bs24-skenario' }, el('b', null, '🎭 Mas Arif'), el('span', null, 'Rancangan baru punya tombol "Ubah setoran". Ubah beratnya menjadi 3,5 kg.'))));
+    say(msg, 'info', 'Coba rancangan yang sudah diperbaiki.'); draw();
+  };
+  const arif = () => {
+    say(msg, 'info', 'Sekarang kamu Mas Arif. Catat setoran Pak Wiryo, lalu perbaiki beratnya. Bila tidak bisa, tekan "Tidak bisa diselesaikan".');
+    const nudge = () => say(msg, 'info', 'Coba dulu: catat setoran Pak Wiryo dan simpan, lalu cari cara mengubah beratnya.');
+    protoRun(host, ctx, DRAFT, { ...SCENARIOS[1], minTry: 2, nudge }, (taps) => {
+      say(msg, 'info', `📝 Kartu masalah (setelah ${taps} ketukan): rancangan awal tidak punya cara mengubah setoran yang sudah tersimpan.`);
+      setTimeout(() => protoRun(host, ctx, BETTER, { who: 'Mas Arif', task: 'Rancangan baru: buka tombol "Ubah setoran".', start: 'tersimpan', goal: 'ubah' }, fixArif), 3200);
+    });
+  };
+  const retry = () => {
+    say(msg, 'info', 'Tim pembuat memasang tombol "📒 Saldo saya" di beranda dan memperbesar angkanya. Uji lagi sebagai Mbah Sumi.');
+    protoRun(host, ctx, BETTER, SCENARIOS[0], (taps) => { say(msg, '', `Sekarang ${taps} ketukan (tadi ${first}), dan angkanya besar.`); setTimeout(arif, 2800); });
+  };
+  const stickers = () => {
+    let hit = 0;
+    const part = (t, bad, extra = '') => onTap(el('button', { class: `bs24-tempel ${extra}`, type: 'button', 'data-bad': bad ? '1' : '' }, t), (e) => {
+      const b = e.currentTarget; if (b.classList.contains('stiker')) return;
+      if (!bad) { ctx.mistake(); shake(b); say(msg, 'bad', 'Bagian ini jelas bagi Mbah Sumi. Ingat: ia sempat bingung di mana?'); return; }
+      b.classList.add('stiker'); ctx.sound.tap();
+      if (++hit < 2) { say(msg, '', 'Ditandai 🔴. Satu lagi.'); return; }
+      say(msg, '', 'Temuan: tombol ☰ tanpa tulisan menyembunyikan saldo, dan riwayatnya berhuruf kecil.'); setTimeout(retry, 2600);
+    });
+    fill(host, el('p', { class: 'bs24-sub' }, '🔴 Tempel stiker merah pada dua bagian yang membuat Mbah Sumi bingung.'),
+      el('div', { class: 'bs24-uji' },
+        phone(DRAFT.beranda.title, [part('Selamat datang', false), part('☰', true, 'ikon'), part('＋ Catat setoran', false)], 'bs24-hp'),
+        phone(DRAFT.saldo.title, [part(DRAFT.saldo.body[0], false), part(DRAFT.saldo.body[1], true, 'kecil'), part('← Kembali', false)], 'bs24-hp')));
+  };
+  protoRun(host, ctx, DRAFT, SCENARIOS[0], (taps) => { first = taps; say(msg, '', `Selesai dalam ${taps} ketukan, tetapi Mbah Sumi sempat bingung.`); setTimeout(stickers, 2400); });
+}
+
+function fnRound(area, ctx, { done }) {
+  const msg = msgLine('Kartu kebutuhan datang di ban berjalan. Ketuk gerbang yang tepat.');
+  const host = el('div', { class: 'bs24-papan' });
+  const order = ctx.rand.shuffle(NEEDS.map((x) => x[0])); let i = 0; const cnt = { F: 0, N: 0 };
+  const label = () => {
+    const ns = NEEDS.filter((x) => x[2] === 'N'); let left = ns.length;
+    const cards = ns.map(([n]) => el('div', { class: 'bs24-butuh', 'data-drop': n }, el('b', null, n), el('span', null, N_SHORT[n]), el('span', { class: 'bs24-label' })));
+    const chips = el('div', { class: 'bs24-baki' }, ctx.rand.shuffle(QUALITY.slice()).map(([k, l]) => el('div', { class: 'bs24-kartu', 'data-drag': k }, l)));
+    const board = el('div', { class: 'bs24-papan' }, el('div', { class: 'bs24-butuh-butuh' }, cards), chips);
+    dnd(board, (card, box) => {
+      const need = NEEDS[+box.dataset.drop - 1];
+      if (need[3] !== card.dataset.drag) { ctx.mistake(); shake(card); say(msg, 'bad', 'Belum cocok. Tanyakan: mutu apa yang dijaga kartu ini?'); return; }
+      card.remove(); box.removeAttribute('data-drop'); box.classList.add('beres'); box.querySelector('.bs24-label').textContent = QUALITY.find((q) => q[0] === need[3])[1]; ctx.sound.tap();
+      if (--left) { say(msg, '', 'Tepat.'); return; }
+      say(msg, '', 'Kebutuhan nonfungsional menyebut mutu: keandalan, kemudahan, keamanan, dan kecepatan. Semuanya bisa diuji, misalnya "≤ 30 detik".'); done();
+    });
+    fill(area, board, msg); say(msg, 'info', 'Beri setiap kebutuhan nonfungsional label mutunya.');
+  };
+  const draw = () => {
+    const [n, t, k] = NEEDS[order[i] - 1];
+    const gate = (g, ic, l) => onTap(el('button', { class: `bs24-gerbang g-${g}`, type: 'button', 'data-g': g }, el('b', null, `${ic} ${g}`), el('span', null, l), el('em', null, `${cnt[g]} kartu`)), (e) => {
+      if (g !== k) { ctx.mistake(); shake(e.currentTarget); say(msg, 'bad', k === 'F' ? 'Kartu ini menyebut sesuatu yang dapat dilakukan sistem (fungsi).' : 'Kartu ini menyebut seberapa baik sistem bekerja (mutu), bukan fungsi baru.'); return; }
+      cnt[g]++; ctx.sound.tap(); say(msg, '', k === 'F' ? 'Fungsional: sesuatu yang dapat dilakukan sistem.' : `Nonfungsional: ${NEEDS[n - 1][3]}.`);
+      if (++i < order.length) draw(); else { fill(host, el('p', { class: 'bs24-sub' }, `⚙️ F: ${cnt.F} kartu · 📏 N: ${cnt.N} kartu`)); setTimeout(label, 1800); }
+    });
+    fill(host, el('p', { class: 'bs24-sub' }, `📦 Kartu ${i + 1} dari ${order.length}`), el('div', { class: 'bs24-ban' }, gate('F', '⚙️', 'Fungsional: apa yang dapat dilakukan sistem'), el('div', { class: 'bs24-kartu besar' }, el('b', null, n), t), gate('N', '📏', 'Nonfungsional: seberapa baik sistem bekerja')));
+  };
+  draw();
+  area.append(host, msg);
+}
+
+function bosRound(area, ctx, { done }) {
+  const msg = msgLine('Seret empat kartu slide ke garis waktu dua menit. Juri menyala saat kriterianya terpenuhi.');
+  const judges = KRITERIA.map(([k, l]) => el('div', { class: 'bs24-juri', 'data-k': k }, el('span', null, '🧑‍⚖️'), el('small', null, l)));
+  const slots = ['0:00', '0:30', '1:00', '1:30'].map((t, j) => el('div', { class: 'bs24-slot', 'data-drop': j }, el('b', null, t)));
+  const tray = el('div', { class: 'bs24-baki' }, ctx.rand.shuffle(SLIDES.map((s, i) => i)).map((i) => el('div', { class: 'bs24-kartu slide', 'data-drag': i }, el('b', null, SLIDES[i][1]), SLIDES[i][2])));
+  const bar = el('div', { class: 'bs24-waktu' }, el('i'));
+  const board = el('div', { class: 'bs24-papan' }, el('div', { class: 'bs24-juri-juri' }, judges), el('div', { class: 'bs24-garis' }, slots), bar, tray);
+  let filled = 0;
+  dnd(board, (card, box) => {
+    const s = SLIDES[+card.dataset.drag]; const j = +box.dataset.drop;
+    if (!s[0]) { ctx.mistake(); shake(card); say(msg, 'bad', s[3]); return; }
+    if (box.querySelector('.bs24-kartu')) { ctx.mistake(); say(msg, 'bad', 'Slot ini sudah terisi.'); return; }
+    if ((j === 0) !== (s[0] === 'masalah')) { ctx.mistake(); shake(card); say(msg, 'bad', j === 0 ? 'Buka dengan masalahnya: juri perlu tahu dulu siapa yang dibantu.' : 'Masalah dibuka paling awal, di 0:00.'); return; }
+    lock(card); box.append(card); judges.find((x) => x.dataset.k === s[0]).classList.add('nyala'); ctx.sound.tap();
+    if (++filled < 4) { say(msg, '', `Juri "${KRITERIA.find((x) => x[0] === s[0])[1]}" mengangkat ✓.`); return; }
+    tray.remove(); bar.classList.add('jalan'); say(msg, 'info', '⏱ Presentasi berjalan…');
+    setTimeout(() => { say(msg, '', '🏆 Empat juri mengangkat ✓: masalah jelas, prototipe menjawab rumusan, hasil uji dan perbaikan, dan pengelola tetap memutuskan pada fitur KA.'); done(); }, 2400);
+  });
+  area.append(board, msg);
+}
+
 export default {
   id: 'sma-24-bank-sampah',
   title: 'Aplikasi Bank Sampah',
@@ -225,55 +589,33 @@ export default {
   source: null,
   rounds: 10,
   maxPlayers: 4,
-  goal: 'Rancang aplikasi bank sampah dusun dari kebutuhan Mbah Sumi, Mas Arif, dan Bu Darmi: peta empati, rumusan masalah, pilih ide, uji fitur kamera KA, susun prototipe, dan uji dengan skenario.',
+  goal: 'Sayembara aplikasi bank sampah dusun: kunjungi pengguna, susun peta empati, nilai rumusan masalah, pilih ide, audit kamera KA, susun prototipe, uji silang, pilah kebutuhan, dan presentasikan di depan juri.',
   extraModes: [
     { id: 'prototipe', icon: '📱', label: 'Pembuat Prototipe', desc: 'Susun tiga layar ponsel dari komponen, periksa dengan daftar prinsip, lalu uji dengan menghitung ketukan', create: createBuilder },
     { id: 'kamera', icon: '📷', label: 'Simulasi Kamera KA', desc: 'Atur batas keyakinan dan lihat foto yang meminta konfirmasi, ketepatan per jenis, dan selisih uang akibat salah tebak', create: createCamera },
-    { id: 'giliran', icon: '🎭', label: 'Uji Skenario', desc: 'Tim bergiliran memerankan pengguna pada prototipe rancangan awal; aplikasi menghitung ketukan dan waktu, lalu tim menemukan bagian yang membingungkan', create: createTeams },
+    { id: 'giliran', icon: '🎭', label: 'Uji Silang', desc: 'Tim bergiliran memerankan pengguna pada prototipe rancangan awal; aplikasi menghitung ketukan dan waktu, lalu tim menemukan bagian yang membingungkan', create: createTeams },
   ],
   create(root, ctx) {
-    const wrap = el('div', { class: 'act bank-sampah' });
+    const wrap = el('div', { class: 'act bs24-main' });
     root.append(wrap);
     function render() {
       wrap.replaceChildren();
       const r = ctx.round;
       let solved = false;
-      const next = () => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, 2400); } };
-      const ask = (prompt, opts, columns = 1, subject = null, onRight = next) => choice(wrap, { prompt, subject, ctx, shuffle: true, onRight, columns, options: opts.map(([l, correct]) => ({ label: String(l), correct })) });
-      const then = (fn) => () => { wrap.replaceChildren(); fn(); };
-      const personas = () => el('div', { class: 'bs-persona-persona' }, PERSONAS.map(personaCard));
-      if (r === 0) sortBoard(wrap, ctx, { prompt: 'Kenali penggunanya: taruh kebutuhan utama di bawah persona yang tepat.', cls: 'persona', bins: PERSONAS.map((p) => [p.id, `${p.icon} ${p.name} · ${p.role}`]),
-        items: PERSONAS.map((p) => ({ id: p.id, label: p.need })),
-        right: (it, b) => it.id === b || `Baca lagi kartu persona ${PERSONAS.find((p) => p.id === b).name}: kesulitan dan harapannya.`,
-        why: (it) => `${PERSONAS.find((p) => p.id === it.id).name}: ${PERSONAS.find((p) => p.id === it.id).rows[3].toLowerCase()}.`,
-        done: then(() => ask('Kebutuhan siapa yang bisa saling bertentangan?', [['Mas Arif ingin mencatat banyak data dengan cepat, sedangkan Mbah Sumi butuh tampilan sangat sederhana; layar keduanya sebaiknya berbeda', true], ['Mbah Sumi dan Bu Darmi sama-sama ingin menelepon'], ['Tidak ada; ketiganya ingin hal yang sama'], ['Bu Darmi ingin harga murah, jadi aplikasi harus gratis']], 1, personas())) });
-      else if (r === 1) sortBoard(wrap, ctx, { prompt: 'Peta empati Mbah Sumi: taruh setiap catatan wawancara di kotaknya.', cls: 'empati', bins: QUAD,
-        items: EMPATHY.map(([n, t]) => ({ id: n, tag: n, label: t })),
-        right: (it, b) => EMPATHY[it.id - 1][2] === b || (b === 'katakan' ? 'Katakan hanya untuk kutipan langsung.' : b === 'pikirkan' ? 'Pikirkan: tidak diucapkan, tetapi tersirat.' : b === 'lakukan' ? 'Lakukan: tindakan yang terlihat.' : 'Rasakan: perasaan seperti bangga atau cemas.'),
-        why: (it) => EMPATHY_WHY[EMPATHY[it.id - 1][2]], done: next });
-      else if (r === 2) ask('Kebutuhan Mbah Sumi apa yang tidak terlihat di kartu persona, tetapi muncul di peta empati?', [['Rasa yakin bahwa catatannya benar, misalnya nota setiap setoran, dan tampilan yang tidak menakutkan serta bisa dibatalkan', true], ['Ponsel yang lebih mahal'], ['Aplikasi berbahasa Inggris'], ['Papan peringkat supaya ia bersemangat']], 1,
-        el('div', { class: 'bs-peta kecil' }, QUAD.map(([k, l]) => el('div', null, el('b', null, l), ...EMPATHY.filter((e) => e[2] === k).map((e) => el('small', null, `${e[0]}. ${e[1]}`))))));
-      else if (r === 3) rateRound(wrap, ctx, { done: then(() => ask('Rumusan mana yang tepat untuk Mas Arif?', [['Bagaimana kita membantu Mas Arif mencatat 60 setoran setiap Sabtu supaya rekapnya tepat tanpa menghabiskan malam?', true], ['Bagaimana kita membuat Excel untuk Mas Arif?'], ['Bagaimana kita membuat tombol rekap berwarna biru?'], ['Bagaimana kita membuat bank sampah lebih modern?']])) });
-      else if (r === 4) sortBoard(wrap, ctx, { prompt: 'Memilih ide: taruh setiap ide di matriks dampak–kemudahan.', cls: 'matriks', bins: MATRIX,
-        items: IDEAS.map(([k, t]) => ({ id: k, tag: k, label: t })),
-        right: (it, b) => IDEAS.find((x) => x[0] === it.id)[2].includes(b) || IDEA_WHY[it.id], why: (it) => IDEA_WHY[it.id],
-        done: then(() => ask('Tiga ide mana yang paling masuk akal untuk prototipe pertama?', [['A, C, dan E: dampaknya besar dan bisa dibuat lebih dulu', true], ['B, D, dan F: paling canggih'], ['A, B, dan D'], ['C, D, dan F']], 1, null,
-          then(() => ask('Apa risiko ide F (papan peringkat untuk semua warga)?', [['Data setoran nasabah terbuka untuk semua, yang sedikit menyetor bisa malu, dan orang bisa tergoda menyetor sampah yang bukan miliknya', true], ['Tidak ada risiko; semua orang suka peringkat'], ['Ponsel menjadi lambat'], ['Harga sampah naik']])))) });
-      else if (r === 5) ask('Kamera KA diuji pada 20 foto. Berapa persen yang ditebak benar?', [80, 85, 90, 75].sort((a, b) => a - b).map((x) => [`${x}%`, x === 85]), 4, cameraTable(),
-        then(() => ask('Jenis mana yang paling sering salah ditebak?', Object.keys(KIND).map((k) => [`${KIND[k][0]} ${KIND[k][1]}`, k === 'gelas']), 4, cameraTable(),
-          then(() => ask('Setiap foto mewakili 1 kg. Apa akibat tebakan yang salah?', [['2 gelas tercatat botol: nasabah dibayar Rp2.000 lebih, bank sampah rugi. 1 botol tercatat gelas: nasabah dibayar Rp1.000 kurang, nasabah rugi', true], ['Tidak ada selisih uang, karena beratnya sama'], ['Nasabah selalu untung Rp3.000'], ['Bank sampah rugi Rp6.000']], 1, el('div', { class: 'bs-dua' }, cameraTable(), el('p', { class: 'bs-harga' }, 'Harga: 🧴 Rp3.000 · 🥤 Rp2.000 · 📦 Rp1.500 · 🥫 Rp6.000 per kg')))))));
-      else if (r === 6) thresholdRound(wrap, ctx, { done: then(() => ask('Siapa yang sebaiknya memutuskan jenis sampah yang dicatat?', [['Pengelola. KA hanya mengusulkan, misalnya "Tebakan: botol plastik (yakin 80%). Benar?" dengan tombol Ya dan Ganti jenis', true], ['KA, karena 85% sudah cukup'], ['Nasabah, tanpa pemeriksaan'], ['Pengepul, dua minggu kemudian']], 1, phone('Catat setoran', [el('p', null, '📷 Tebakan: 🧴 botol plastik'), el('p', null, 'yakin 80%. Benar?'), el('div', { class: 'bs-hp-btn' }, '✓ Ya'), el('div', { class: 'bs-hp-btn' }, '🔁 Ganti jenis')]))) });
-      else if (r === 7) buildRound(wrap, ctx, { done: next });
-      else if (r === 8) {
-        wrap.append(el('p', { class: 'prompt' }, 'Uji dengan skenario: jadilah Mbah Sumi pada rancangan awal kelompok lain.'));
-        const host = el('div'); wrap.append(host, el('p', { class: 'reveal info' }, 'Ketuk tombol pada layar ponsel. Penguji tidak boleh membantu.'));
-        draftRun(host, ctx, SCENARIOS[0], (taps) => { wrap.replaceChildren(); ask(`Selesai dalam ${taps} ketukan. Apa temuan pengujian ini?`, SCENARIOS[0].find, 1, null,
-          then(() => ask('Mas Arif salah mencatat 2,5 kg; seharusnya 3,5 kg. Pada rancangan ini, apa yang bisa ia lakukan?', [['Tidak ada; rancangan tidak punya cara mengubah setoran. Perbaikan: tombol "Ubah setoran" yang mencatat perubahan dan alasannya', true], ['Mencatat setoran baru 1 kg kardus atas nama Pak Wiryo, tanpa catatan'], ['Menghapus aplikasi dan memasangnya lagi'], ['Membiarkannya; selisih 1 kg tidak penting']], 1, phone(DRAFT.tersimpan.title, [...DRAFT.tersimpan.body.map((b) => el('p', null, b)), el('div', { class: 'bs-hp-btn' }, 'Selesai')])))); });
-      } else sortBoard(wrap, ctx, { prompt: 'Daftar kebutuhan sistem: fungsional atau nonfungsional?', cls: 'fn', bins: [['F', 'F · Fungsional: apa yang dapat dilakukan sistem'], ['N', 'N · Nonfungsional: seberapa baik sistem bekerja']],
-        items: NEEDS.map(([n, t]) => ({ id: n, tag: n, label: t })),
-        right: (it, b) => NEEDS[it.id - 1][2] === b || (b === 'F' ? 'Ini menyebut seberapa baik sistem bekerja.' : 'Ini menyebut sesuatu yang dapat dilakukan sistem.'),
-        why: (it) => (NEEDS[it.id - 1][3] ? `Nonfungsional: ${NEEDS[it.id - 1][3]}.` : 'Fungsional: sesuatu yang dapat dilakukan sistem.'),
-        done: then(() => ask('Tantangan: dalam presentasi dua menit untuk Karang Taruna, bagian mana yang wajib ada?', [['Masalah siapa yang diselesaikan, tiga layar prototipe, hasil uji dan perbaikannya, serta cara fitur KA tetap melibatkan pengelola', true], ['Daftar semua fitur canggih yang mungkin dibuat'], ['Harga ponsel terbaru'], ['Kode program aplikasinya']])) });
+      const next = (wait = 5200) => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, wait); } };
+      const area = el('div', { class: 'bs24-area' });
+      const go = (k, no) => { wrap.append(misiHead(no, ...HEAD24[k], '♻️'), area); };
+      const fin = (ms) => ({ done: () => next(ms) });
+      if (r === 0) { go('dusun', 1); dusunRound(area, ctx, fin(6500)); }
+      else if (r === 1) { go('teras', 1); terasRound(area, ctx, fin(6000)); }
+      else if (r === 2) { go('juri', 2); juriRound(area, ctx, fin(6000)); }
+      else if (r === 3) { go('ide', 3); ideRound(area, ctx, fin(6500)); }
+      else if (r === 4) { go('audit', 4); auditRound(area, ctx, fin(6500)); }
+      else if (r === 5) { go('batas', 4); batasRound(area, ctx, fin(6500)); }
+      else if (r === 6) { go('rakit', 5); rakitRound(area, ctx, fin(6000)); }
+      else if (r === 7) { go('uji', 5); ujiRound(area, ctx, fin(6000)); }
+      else if (r === 8) { go('fn', 6); fnRound(area, ctx, fin(6500)); }
+      else { go('bos', 'Bos'); bosRound(area, ctx, fin(7500)); }
     }
     render();
   },
