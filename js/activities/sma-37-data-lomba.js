@@ -2,10 +2,13 @@
 // reading values, totals and a ranking via tuples, the tie broken by name,
 // best team per event, counting with a dict (Rudi's KeyError and .get), the
 // alias bug b = a with arrows to one list, copying, and a nested design.
+// The main mode is the game Sekretariat Lomba: envelopes, boxes, tuple cards
+// and labels are tapped and dragged; nothing is typed.
 
-import { el, onTap, button } from '../core/util.js';
-import { choice } from '../core/kit.js';
-import { say, pickTeams, scoreBar, finishBoard, rowsChoose, pyTracer, pyCode, stepper } from './smp-kit.js';
+import { el, onTap, button, shake } from '../core/util.js';
+import { dnd } from '../core/kit.js';
+import { say, pickTeams, scoreBar, finishBoard, pyTracer, pyCode, stepper } from './smp-kit.js';
+import { misiHead, fill, codeView, rowsView, fillBoard, tileSlots, layar, play } from './misi-kit.js';
 import { runPy, pyRepr, PyDict } from './mini-py.js';
 
 export const REGU = ['Elang', 'Rajawali', 'Melati', 'Anggrek'];
@@ -85,6 +88,270 @@ export const aliasView = (vars, hide = []) => el('div', { class: 'dg-alias' }, a
 const tracer = (lines, o = {}) => { const sv = structView(lines, o.show ? { show: o.show } : {}); return pyTracer(lines, { cls: 'dg-jejak', speed: 380, opts: { limit: 20000, loopLimit: 200 }, hideVars: o.hide ?? Object.entries(run(lines).vars).filter(([, v]) => isObj(v)).map(([n]) => n), onStep: sv.onStep, extra: sv.extra, ...o }); };
 const aliasTracer = (lines, labels, o = {}) => pyTracer(lines, { cls: 'dg-jejak', speed: 450, labels, opts: { limit: 2000 }, hideVars: Object.keys(run(lines).vars), extra: (st) => aliasView(st.vars, ['regu']), ...o });
 
+// ---------- Permainan: Sekretariat Lomba ----------
+// The players run the contest office; the Panitia Ceroboh calls missing keys and makes aliases.
+const HEAD37 = {
+  amplop: ['Buka Amplop', 'Buka amplop kunci yang tepat, lalu ketuk kotak nilainya.', 'Ada yang memanggil amplop "Garuda"!'],
+  isi: ['Kunci dan Isi', 'Lengkapi hasil setiap ekspresi dari kartu nilai.', 'Kunci dan isi dicampur aduk!'],
+  peringkat: ['Papan Peringkat', 'Hitung total, lalu urutkan kartu tuple dari yang terbesar.', 'Papan peringkat masih kosong!'],
+  seri: ['Nilai Seri', 'Urutkan tuple terbalik, lalu perbaiki nilai P3K Melati.', 'Tuple ditulis terbalik!'],
+  juara: ['Juara Setiap Pos', 'Ketuk regu yang menjadi terbaik setelah setiap pemeriksaan.', 'Kartu terbaik tertukar!'],
+  frek: ['Hitung Juara Umum', 'Masukkan setiap nama ke amplopnya, atau buat amplop baru.', 'Sepuluh nama datang sekaligus!'],
+  rudi: ['Bug Rudi', 'Temukan galatnya, lalu ganti baris Rudi dengan get.', 'Rudi menghapus pemeriksaan in!'],
+  alias: ['Jebakan Alias', 'Tempelkan label pada list yang tepat, lalu tambahkan regu putri.', 'Satu list diberi dua label!'],
+  salin: ['Pakai .copy()', 'Pisahkan list dengan .copy(), lalu bandingkan dengan bilangan.', 'Lapangan putra kemasukan regu putri!'],
+  bos: ['Lomba Kemah dan Penentu Seri', 'Ambil nilai dari struktur bersarang, lalu jadikan P3K penentu seri.', 'Nilai seri lagi di upacara penutupan!'],
+};
+const msg37 = (t) => el('p', { class: 'reveal info' }, t);
+export const AMPLOP_Q = [['nilai["Melati"][2]', 'Melati-2'], ['mata_lomba[2]', 'ml-2'], ['nilai["Rajawali"][-1]', 'Rajawali-3'], ['mata_lomba.index("P3K")', 'ml-3'], ['max(nilai["Anggrek"])', 'Anggrek-3'], ['nilai["Garuda"]', 'KeyError']];
+const KEYS = "['Elang', 'Rajawali', 'Melati', 'Anggrek']";
+export const ISI_CHIPS = ['4', '16', KEYS, '[323, 338, 325, 328]', 'True', 'False'];
+export const ISI_WANT = ['4', KEYS, 'True', 'False'];
+export const TOTAL_CHIPS = ['323', '338', '325', '328', '330', '318'];
+export const TOTAL_WANT = ['323', '338', '325', '328'];
+const TOT = { Elang: 323, Rajawali: 338, Melati: 325, Anggrek: 328 };
+export const RANK = ['Rajawali', 'Anggrek', 'Melati', 'Elang'];
+export const RANK_BALIK = ['Rajawali', 'Melati', 'Elang', 'Anggrek'];
+export const RANK_83 = ['Rajawali', 'Melati', 'Anggrek', 'Elang'];
+export const JUARA_LAIN = [[1, 'Rajawali'], [2, 'Elang'], [3, 'Rajawali']];
+export const JU = ['Anggrek', 'Elang', 'Anggrek', 'Rajawali', 'Anggrek', 'Melati', 'Elang', 'Anggrek', 'Rajawali', 'Elang'];
+export const GET_TILES = [['get', 'frekuensi[regu] = frekuensi.get(regu, 0) + 1'], ['x1', 'frekuensi[regu] = frekuensi.get(regu) + 1', 'Tanpa nilai bawaan, get memberi None, dan None + 1 galat.'], ['x2', 'frekuensi[regu] = frekuensi[regu] + 1', 'Itu baris Rudi: KeyError lagi.'], ['x3', 'frekuensi.get(regu, 0) + 1', 'Hasilnya tidak disimpan ke dictionary.']];
+export const COPY_TILES = [['copy', 'semua_regu = regu_putra.copy()'], ['x1', 'semua_regu = regu_putra', 'Itu alias lagi: label kedua pada list yang sama.'], ['x2', 'semua_regu == regu_putra', '== membandingkan, tidak membuat variabel.'], ['x3', 'semua_regu = regu_putra.append()', 'append menambah anggota dan memberi None, bukan list baru.']];
+export const KEMAH_TILES = [['e', '["Elang"]'], ['n', '["nilai"]'], ['h', '[1]'], ['p', '["pionering"]'], ['x1', '[2]', 'Hari kedua berindeks 1, karena indeks list mulai dari 0.'], ['x2', '["anggota"]', 'Nilai lomba disimpan di kunci "nilai".'], ['x3', '["Melati"]', 'Yang ditanya regu Elang.']];
+export const SERI_TILES = [['app', 'pasangan.append((total[regu],\n    nilai[regu][3], regu))'], ['prt', 'print(posisi + 1, pasangan[posisi][2],\n      pasangan[posisi][0])'], ['x1', 'pasangan.append((total[regu],\n    nilai[regu][0], regu))', 'Indeks 0 adalah semafor. Penentu seri lomba ini P3K, indeks 3.'], ['x2', 'print(posisi + 1, pasangan[posisi][1],\n      pasangan[posisi][0])', 'Tuple kini berisi tiga anggota: nama regu ada di indeks 2.']];
+const tup = (a, b) => `(${typeof a === 'number' ? a : `'${a}'`}, ${typeof b === 'number' ? b : `'${b}'`})`;
+
+// Envelopes (dict keys) holding indexed boxes, plus the mata_lomba list.
+function envelopes({ open = null, all = false, onEnv = null, onBox = null, p3k = 80 } = {}) {
+  const boxBtn = (v, key, i) => { const b = el('button', { class: 'pr37-kotak', type: 'button', 'data-v': `${key}-${i}` }, el('small', null, String(i)), el('b', null, typeof v === 'string' ? `"${v}"` : String(v))); return onBox ? onTap(b, () => onBox(`${key}-${i}`)) : b; };
+  return el('div', { class: 'pr37-meja' },
+    el('div', { class: 'pr37-ml' }, el('span', { class: 'pr37-nama' }, 'mata_lomba'), el('div', { class: 'pr37-kotak-kotak' }, LOMBA.map((v, i) => boxBtn(v, 'ml', i)))),
+    el('div', { class: 'pr37-amplop-amplop' }, REGU.map((r) => {
+      const isOpen = all || open === r; const vals = r === 'Melati' ? [...NILAI[r].slice(0, 3), p3k] : NILAI[r];
+      const head = el('button', { class: 'pr37-amplop-kepala', type: 'button', 'data-k': r }, isOpen ? '📂' : '✉️', ` "${r}"`);
+      if (onEnv) onTap(head, () => onEnv(r));
+      return el('div', { class: `pr37-amplop ${isOpen ? 'buka' : ''}` }, head, isOpen ? el('div', { class: 'pr37-kotak-kotak' }, vals.map((v, i) => boxBtn(v, r, i))) : null);
+    })));
+}
+
+// Misi 1a: open the right envelope and tap the right box, or call KeyError.
+function amplopRound(area, ctx, { oops, done }) {
+  const msg = msg37('Ketuk amplop untuk membukanya, lalu ketuk kotak hasil ekspresi.');
+  let qi = 0; let open = null; const log = [];
+  const view = el('div'); const expr = el('code', { class: 'pr37-ekspr' });
+  const ke = onTap(el('button', { class: 'pr37-keyerror', type: 'button', 'data-v': 'KeyError' }, '💥 KeyError'), () => answer('KeyError'));
+  const logBox = el('div', { class: 'pr37-log' });
+  const draw = () => { expr.textContent = AMPLOP_Q[qi]?.[0] ?? ''; fill(view, envelopes({ open, onEnv: (r) => { open = open === r ? null : r; ctx.sound.tap(); draw(); }, onBox: answer })); fill(logBox, log.map((t) => el('span', null, t))); };
+  function answer(v) {
+    if (qi >= AMPLOP_Q.length) return; const [src, want] = AMPLOP_Q[qi];
+    if (v !== want) {
+      oops();
+      const [wk] = want.split('-'); const [vk] = v.split('-');
+      say(msg, 'bad', want === 'KeyError' ? 'Tidak ada amplop "Garuda". Panggil penjaga: KeyError.' : v === 'KeyError' ? 'Kunci itu ada, jadi tidak galat.' : wk !== vk ? (wk === 'ml' ? 'Ekspresi ini membaca list mata_lomba.' : `Buka amplop berkunci "${wk}".`) : src.includes('-1') ? 'Indeks −1 adalah kotak terakhir.' : src.includes('index') ? 'index mencari kotak berisi "P3K"; hasilnya nomor kotak itu.' : src.includes('max') ? 'max mengambil kotak dengan nilai terbesar.' : 'Indeks mulai dari 0: kotak ke-2 adalah kotak ketiga.');
+      return;
+    }
+    ctx.sound.good(); const val = evalExpr(src); log.push(`${src} → ${val}`); qi++; open = null; draw();
+    if (qi < AMPLOP_Q.length) { say(msg, 'info', `${val}. Ekspresi berikutnya.`); return; }
+    say(msg, '', 'List dibaca dengan indeks (0, 1, 2, … atau −1 dari belakang); dictionary dibaca dengan kunci. Kunci yang tidak ada: KeyError.'); done();
+  }
+  draw();
+  area.append(el('div', { class: 'pr37-soal' }, expr, ke), view, logBox, msg);
+}
+
+// Misi 1b: results of len, list, in.
+function isiRound(area, ctx, { oops, done }) {
+  const msg = msg37('Seret kartu hasil ke setiap ekspresi.');
+  area.append(envelopes({ all: true }), fillBoard(ctx, { oops, msg, chips: ISI_CHIPS, want: ISI_WANT,
+    view: rowsView([['len(nilai) → ', '_'], ['list(nilai) → ', '_'], ['"Elang" in nilai → ', '_'], ['85 in nilai → ', '_']]),
+    hints: ['len dictionary menghitung banyak kuncinya.', 'list(dict) berisi kunci-kuncinya, sesuai urutan penulisan.', '"Elang" adalah salah satu kunci.', 'in pada dictionary hanya memeriksa kunci, dan 85 bukan kunci.'],
+    done: () => { say(msg, '', 'Dictionary dilihat lewat kuncinya: len, list, dan in semuanya bekerja pada kunci.'); done(); } }), msg);
+}
+
+const rankBuild = (head, ids) => [head, ...ids.map((id) => [id, 0])];
+const tupTiles = (f) => REGU.map((r) => [r, f(r)]);
+
+// Misi 2a: totals, then the ranking from tuple cards.
+function peringkatRound(area, ctx, { oops, done }) {
+  const msg = msg37('total[regu] = sum(nilai[regu]). Hitung total setiap regu.');
+  area.append(fillBoard(ctx, { oops, msg, chips: TOTAL_CHIPS, want: TOTAL_WANT,
+    view: rowsView(REGU.map((r) => [`sum(${pyRepr(NILAI[r])}) = `, '_'])),
+    hints: ['85 + 78 + 90 + 70.', '80 + 92 + 75 + 91.', '90 + 70 + 85 + 80.', '75 + 85 + 80 + 88.'],
+    done: () => { say(msg, 'info', 'Setiap regu menjadi tuple (total, regu). Urutkan seperti pasangan.sort(reverse=True).'); setTimeout(rank, 2200); } }), msg);
+  function rank() {
+    const out = layar();
+    fill(area, el('div', { class: 'pr37-dua' }, tileSlots(ctx, { oops, msg, build: rankBuild('pasangan.sort(reverse=True)', RANK), tiles: tupTiles((r) => tup(TOT[r], r)), order: 'reverse=True: tuple dengan total terbesar di depan.',
+      onFull: () => play(out, run(PROG()).out, { end: () => { say(msg, '', 'Tuple diurutkan menurut anggota pertama, yaitu total. Rajawali juara.'); done(); } }) }), out), msg);
+  }
+}
+
+// Misi 2b: reversed tuples, then fix Melati's P3K and rank the tie.
+function seriRound(area, ctx, { oops, done }) {
+  const msg = msg37('Panitia menulis tuple terbalik: (regu, total). Urutkan dengan sort(reverse=True).');
+  area.append(tileSlots(ctx, { oops, msg, build: rankBuild('pasangan.sort(reverse=True)', RANK_BALIK), tiles: tupTiles((r) => tup(r, TOT[r])), order: 'Anggota pertama sekarang nama, jadi tuple diurutkan menurut abjad, dari belakang.',
+    onFull: () => { say(msg, 'info', 'Urut abjad terbalik, bukan peringkat! Sekarang perbaiki nilai P3K Melati: seharusnya 83.'); setTimeout(fix, 2600); } }), msg);
+  function fix() {
+    let v = 80; let over = false;
+    const num = el('b', { class: 'pr37-angka' }, String(v));
+    const set = (d) => { if (over) return; v = Math.max(70, Math.min(90, v + d)); num.textContent = String(v); ctx.sound.tap(); fill(env, envelopes({ open: 'Melati', p3k: v })); if (v === 83) { over = true; say(msg, 'info', 'Total Melati 328, sama dengan Anggrek. Urutkan lagi.'); setTimeout(rank2, 1600); } };
+    const env = el('div'); fill(env, envelopes({ open: 'Melati', p3k: v }));
+    fill(area, env, el('div', { class: 'pr37-setel' }, el('code', null, 'nilai["Melati"][3] ='), onTap(el('button', { class: 'pr37-pm', type: 'button', 'data-d': '-1' }, '−'), () => set(-1)), num, onTap(el('button', { class: 'pr37-pm', type: 'button', 'data-d': '1' }, '+'), () => set(1))), msg);
+  }
+  function rank2() {
+    const out = layar(); const T = { ...TOT, Melati: 328 };
+    fill(area, el('div', { class: 'pr37-dua' }, tileSlots(ctx, { oops, msg, build: rankBuild('pasangan.sort(reverse=True)', RANK_83), tiles: tupTiles((r) => tup(T[r], r)), order: 'Total sama 328: Python membandingkan anggota kedua, yaitu nama. "Melati" > "Anggrek", jadi dengan reverse=True Melati di depan.',
+      onFull: () => play(out, run(PROG({ p3k: 83 })).out, { end: () => { say(msg, '', 'Melati peringkat 2 hanya karena namanya. Tidak adil! Penentu seri yang sungguhan menunggu di Misi Bos.'); done(); } }) }), out), msg);
+  }
+}
+
+// Misi 3: the terbaik card, step by step for semafor, then the other events.
+function juaraRound(area, ctx, { oops, done }) {
+  const msg = msg37('Semafor (i = 0): terbaik mulai "Elang". Setelah memeriksa setiap regu, ketuk regu yang menjadi terbaik.');
+  const steps = jejakTerbaik(0); let j = 0; let phase = 0; const champ = {};
+  const board = el('div'); const dict = el('div', { class: 'pr37-dict' });
+  const draw = () => {
+    const i = phase === 0 ? 0 : JUARA_LAIN[Math.min(phase, JUARA_LAIN.length) - 1][0];
+    fill(board, el('div', { class: 'pr37-pos' }, el('b', null, `🏁 ${LOMBA[i]} (i = ${i})`), phase === 0 && j < 4 ? el('small', null, `periksa ${REGU[j]}: ${NILAI[REGU[j]][0]} > ${NILAI[j ? steps[j - 1] : 'Elang'][0]} (terbaik)?`) : el('small', null, 'Siapa juaranya?')),
+      el('div', { class: 'pr37-regu-regu' }, REGU.map((r, k) => onTap(el('button', { class: `pr37-regu ${phase === 0 && k === j ? 'periksa' : ''}`, type: 'button', 'data-r': r }, el('span', null, r), el('b', null, String(NILAI[r][i]))), () => tap(r)))));
+    fill(dict, el('code', null, 'juara_lomba = {'), Object.entries(champ).map(([k, v]) => el('code', null, `  "${k}": "${v}",`)), el('code', null, '}'));
+  };
+  function tap(r) {
+    if (phase === 0) {
+      if (r !== steps[j]) { oops(); say(msg, 'bad', steps[j] === (j ? steps[j - 1] : 'Elang') ? `${NILAI[REGU[j]][0]} tidak lebih besar, jadi terbaik tetap ${steps[j]}.` : `${NILAI[REGU[j]][0]} lebih besar: terbaik = ${REGU[j]}.`); return; }
+      ctx.sound.tap(); j++;
+      if (j < 4) { say(msg, 'info', `terbaik = ${r}.`); draw(); return; }
+      champ.semafor = r; phase = 1; say(msg, 'info', 'Juara semafor: Melati. Sekarang mata lomba lain: ketuk juaranya.'); draw(); return;
+    }
+    if (phase > JUARA_LAIN.length) return;
+    const [i, w] = JUARA_LAIN[phase - 1];
+    if (r !== w) { oops(); say(msg, 'bad', `Cari nilai ${LOMBA[i]} terbesar.`); return; }
+    ctx.sound.tap(); champ[LOMBA[i]] = r; phase++; draw();
+    if (phase <= JUARA_LAIN.length) { say(msg, 'info', `Juara ${LOMBA[i]}: ${r}.`); return; }
+    say(msg, '', 'Rajawali juara dua mata lomba. Anggrek tidak juara satu pun, tetapi nilainya merata sehingga peringkat 2.'); done();
+  }
+  draw();
+  area.append(el('div', { class: 'pr37-dua' }, board, dict), msg);
+}
+
+// Misi 4a: ten names into envelopes.
+function frekRound(area, ctx, { oops, done }) {
+  const msg = msg37('frekuensi = {}. Seret setiap nama ke amplopnya, atau ke amplop baru bila belum ada.');
+  const freq = new Map(); let k = 0;
+  const board = el('div'); const out = layar();
+  const draw = () => fill(board,
+    el('div', { class: 'pr37-antre' }, el('small', null, k < 10 ? `nama ke-${k + 1} dari 10` : 'semua nama sudah masuk'), k < 10 ? el('div', { class: 'pr37-tag', 'data-drag': JU[k] }, JU[k]) : null, el('small', { class: 'pr37-sisa' }, JU.slice(k + 1).join(' · '))),
+    el('div', { class: 'pr37-amplop-amplop' }, [...freq].map(([r, n]) => el('div', { class: 'pr37-amplop buka', 'data-drop': r }, el('span', { class: 'pr37-amplop-kepala' }, `📂 "${r}"`), el('b', { class: 'pr37-angka' }, String(n)))),
+      el('div', { class: 'pr37-amplop baru', 'data-drop': 'baru' }, '➕ amplop baru')));
+  const host = el('div', { class: 'pr37-tumpuk' }, board, out);
+  dnd(host, (card, t) => {
+    if (k >= 10) return; const name = card.dataset.drag; const d = t.closest('[data-drop]')?.dataset.drop;
+    if (d === 'baru') { if (freq.has(name)) { oops(); shake(card); say(msg, 'bad', `Amplop "${name}" sudah ada; satu kunci hanya sekali.`); return; } freq.set(name, 1); }
+    else if (d !== name) { oops(); shake(card); say(msg, 'bad', freq.has(name) ? `Itu amplop "${d}". Cari amplop "${name}".` : `Belum ada amplop "${name}": buat amplop baru.`); return; }
+    else freq.set(name, freq.get(name) + 1);
+    ctx.sound.tap(); k++; draw();
+    if (k < 10) { say(msg, 'info', `${name}: ${freq.get(name)}.`); return; }
+    play(out, run(FREK()).out, { end: () => { say(msg, '', 'Anggrek juara umum 4 kali. Kunci baru dibuat dengan nilai 1, kunci lama ditambah 1.'); done(); } });
+  });
+  draw();
+  area.append(host, msg);
+}
+
+// Misi 4b: Rudi's KeyError, then the get line.
+function rudiRound(area, ctx, { oops, done }) {
+  const msg = msg37('Rudi menulis satu baris saja. Nama pertama "Anggrek" datang, frekuensi masih kosong. Apa yang terjadi?');
+  const lines = ['frekuensi = {}', 'for regu in juara_umum:', '    frekuensi[regu] = frekuensi[regu] + 1', 'print(frekuensi)'];
+  let over = false;
+  const opts = [['baru', '➕ Amplop baru berisi 1'], ['tambah', '+1 di amplop "Anggrek"'], ['err', "💥 KeyError: 'Anggrek'"]];
+  const pick = (k) => {
+    if (over) return;
+    if (k !== 'err') { oops(); say(msg, 'bad', k === 'baru' ? 'Baris Rudi tidak membuat kunci baru: ia membaca frekuensi["Anggrek"] dulu.' : 'Belum ada amplop "Anggrek" untuk ditambah.'); return; }
+    over = true; ctx.sound.good(); say(msg, 'info', 'frekuensi["Anggrek"] dibaca sebelum kuncinya ada. Ganti baris Rudi dengan get.'); setTimeout(fix, 2200);
+  };
+  area.append(el('div', { class: 'pr37-dua' }, codeView(lines, { warn: [2] }), el('div', { class: 'pr37-tumpuk' }, el('div', { class: 'pr37-tag diam' }, 'Anggrek'), el('div', { class: 'pr37-pilih' }, opts.map(([k, t]) => onTap(el('button', { class: 'pr37-opsi', type: 'button', 'data-k': k }, t), () => pick(k)))))), msg);
+  function fix() {
+    const out = layar();
+    fill(area, el('div', { class: 'pr37-dua' }, tileSlots(ctx, { oops, msg, build: ['frekuensi = {}', 'for regu in juara_umum:', ['get', 1], 'print(frekuensi)'], tiles: GET_TILES,
+      onFull: () => play(out, run(FREK('get')).out, { end: () => { say(msg, '', 'get(regu, 0) memberi 0 bila kunci belum ada. Satu baris menggantikan if–else.'); done(); } }) }), out), msg);
+  }
+}
+
+// Labels with arrows: drag a label onto a list (or a new list), then append names.
+function aliasBoard(ctx, { oops, msg, copy, done }) {
+  const objs = [{ id: 'L1', items: ['Elang', 'Rajawali'], labels: ['regu_putra'] }, { id: 'L2', items: ['Melati', 'Anggrek'], labels: ['regu_putri'] }];
+  let phase = 'label'; let k = 0;
+  const board = el('div', { class: 'pr37-alias' });
+  const codeBox = el('div');
+  const lines = ['regu_putra = ["Elang", "Rajawali"]', 'regu_putri = ["Melati", "Anggrek"]', `semua_regu = regu_putra${copy ? '.copy()' : ''}`, 'for regu in regu_putri:', '    semua_regu.append(regu)'];
+  const draw = () => {
+    fill(codeBox, codeView(lines, { hl: phase === 'label' ? [2] : phase === 'append' ? [4] : [] }));
+    fill(board, el('div', { class: 'pr37-antre' }, phase === 'label' ? el('div', { class: 'pr37-tag label', 'data-drag': 'semua_regu' }, '🏷️ semua_regu') : phase === 'append' ? el('div', { class: 'pr37-tag', 'data-drag': objs[1].items[k] }, objs[1].items[k]) : null),
+      el('div', { class: 'pr37-objek-objek' }, objs.map((o) => el('div', { class: 'pr37-objek', 'data-drop': o.id }, el('div', { class: 'pr37-label-label' }, o.labels.map((l) => el('span', { class: 'pr37-label' }, `🏷️ ${l}`))), el('span', { class: 'pr37-panah' }, '↓'), el('div', { class: 'pr37-kotak-kotak' }, o.items.map((x, i) => el('span', { class: 'pr37-kotak' }, el('small', null, String(i)), el('b', null, `"${x}"`)))))),
+        phase === 'label' ? el('div', { class: 'pr37-objek baru', 'data-drop': 'baru' }, '📦 list baru') : null));
+  };
+  const host = el('div', { class: 'pr37-dua' }, codeBox, board);
+  dnd(host, (card, t) => {
+    const d = t.closest('[data-drop]')?.dataset.drop;
+    if (phase === 'label') {
+      const want = copy ? 'baru' : 'L1';
+      if (d !== want) { oops(); shake(card); say(msg, 'bad', copy ? '.copy() membuat list baru berisi anggota yang sama.' : d === 'baru' ? '= tidak menyalin list; ia menempelkan label kedua pada list yang sama.' : 'semua_regu = regu_putra: label ditempel pada list milik regu_putra.'); return; }
+      if (copy) objs.push({ id: 'L3', items: [...objs[0].items], labels: ['semua_regu'] }); else objs[0].labels.push('semua_regu');
+      phase = 'append'; ctx.sound.tap(); say(msg, 'info', 'A4–A5: semua_regu.append(regu). Seret setiap regu putri ke list yang ditunjuk semua_regu.'); draw(); return;
+    }
+    if (phase !== 'append') return;
+    const o = objs.find((x) => x.id === d);
+    if (!o || !o.labels.includes('semua_regu')) { oops(); shake(card); say(msg, 'bad', 'Ikuti panah label semua_regu.'); return; }
+    o.items.push(card.dataset.drag); k++; ctx.sound.tap();
+    if (k < 2) { say(msg, 'info', 'Tepat.'); draw(); return; }
+    phase = 'end'; draw(); done(objs);
+  });
+  draw();
+  return host;
+}
+
+// Misi 5a: the alias trap and its surprising print.
+function aliasRound(area, ctx, { oops, done }) {
+  const msg = msg37('A3: semua_regu = regu_putra. Seret label semua_regu ke tempat panahnya menunjuk.');
+  area.append(aliasBoard(ctx, { oops, msg, copy: false, done: () => {
+    say(msg, 'info', 'Tebak keluaran print("Lapangan A (putra):", regu_putra).');
+    area.append(fillBoard(ctx, { oops, msg, chips: ["['Elang', 'Rajawali']", "['Elang', 'Rajawali', 'Melati', 'Anggrek']", "['Melati', 'Anggrek']"], want: ["['Elang', 'Rajawali', 'Melati', 'Anggrek']"],
+      view: rowsView([['Lapangan A (putra): ', '_']]), hints: ['regu_putra menunjuk list yang sama dengan semua_regu, dan list itu sudah ditambah.'],
+      done: () => { say(msg, '', 'Regu putri ikut masuk lapangan putra! Dua label, satu list: mengubah lewat satu label terlihat dari label lain.'); done(); } }));
+    msg.remove(); area.append(msg);
+  } }), msg);
+}
+
+// Misi 5b: fix with .copy(), replay, then the number example.
+function salinRound(area, ctx, { oops, done }) {
+  const msg = msg37('Ganti baris A3 supaya semua_regu mendapat list sendiri.');
+  area.append(tileSlots(ctx, { oops, msg, build: ['regu_putra = ["Elang", "Rajawali"]', 'regu_putri = ["Melati", "Anggrek"]', ['copy', 0], 'for regu in regu_putri:', '    semua_regu.append(regu)'], tiles: COPY_TILES,
+    onFull: () => { say(msg, 'info', 'Jalankan lagi: seret label semua_regu.'); setTimeout(replay, 1600); } }), msg);
+  function replay() {
+    fill(area, aliasBoard(ctx, { oops, msg, copy: true, done: () => { say(msg, 'info', 'regu_putra tetap [\'Elang\', \'Rajawali\']. Bagaimana dengan bilangan?'); setTimeout(angka, 2400); } }), msg);
+  }
+  function angka() {
+    fill(area, el('div', { class: 'pr37-dua' }, codeView(ANGKA), fillBoard(ctx, { oops, msg, chips: ['5', '6', '0', '1'], want: ['5', '6'], view: rowsView([['print(a, b) → ', '_', ' ', '_']]),
+      hints: ['b = b + 1 membuat bilangan baru untuk b; a tetap 5.', 'b = 5 + 1.'],
+      done: () => { say(msg, '', 'Bilangan tidak bisa diubah isinya, jadi b = b + 1 membuat bilangan baru. Alias hanya terasa pada data yang bisa diubah, seperti list.'); done(); } })), msg);
+  }
+}
+
+// Misi 6 and Bos: a nested lookup, then the P3K tiebreak.
+function bosRound(area, ctx, { oops, done }) {
+  const msg = msg37('Ambil nilai pionering Elang pada hari kedua. Rakit ekspresinya dari kartu.');
+  const hari = [{ semafor: 80, pionering: 75, sandi: 88 }, { semafor: 82, pionering: 79, sandi: 85 }, { semafor: 85, pionering: 81, sandi: 90 }];
+  const tree = el('div', { class: 'pr37-pohon' }, el('b', null, 'kemah'), el('div', { class: 'pr37-cabang' }, el('span', { class: 'pr37-kunci' }, '"Elang"'), el('div', { class: 'pr37-cabang' },
+    el('div', null, el('span', { class: 'pr37-kunci' }, '"anggota"'), ' [Adi, Bima, … 8 nama]'),
+    el('div', null, el('span', { class: 'pr37-kunci' }, '"nilai"'), el('div', { class: 'pr37-kotak-kotak' }, hari.map((h, i) => el('span', { class: 'pr37-kotak lebar' }, el('small', null, `${i} · hari ${i + 1}`), el('b', null, Object.entries(h).map(([k, v]) => `${k} ${v}`).join(' · ')))))),
+    el('div', null, el('span', { class: 'pr37-kunci' }, '"pelanggaran"'), ' 2'))));
+  area.append(el('div', { class: 'pr37-dua' }, tree, tileSlots(ctx, { oops, msg, build: ['kemah', ['e', 1], ['n', 1], ['h', 1], ['p', 1]], tiles: KEMAH_TILES,
+    onFull: () => { say(msg, 'info', 'kemah["Elang"]["nilai"][1]["pionering"] → 79. Misi Bos: penentu seri!'); setTimeout(seri, 2600); } })), msg);
+  function seri() {
+    say(msg, 'info', 'P3K Melati 83: Melati dan Anggrek sama 328. Jadikan nilai P3K anggota kedua tuple.');
+    const out = layar();
+    fill(area, el('div', { class: 'pr37-dua' }, tileSlots(ctx, { oops, msg, build: ['pasangan = []', 'for regu in total:', ['app', 1], 'pasangan.sort(reverse=True)', 'for posisi in range(len(pasangan)):', ['prt', 1]], tiles: SERI_TILES,
+      onFull: () => play(out, run(PROG({ p3k: 83, rule: true })).out, { end: () => { say(msg, '', 'Total sama, lalu P3K dibandingkan: Anggrek 88 > Melati 83. Anggrek peringkat 2 karena nilainya, bukan namanya.'); done(); } }) }), out), msg);
+  }
+}
+
 export default {
   id: 'sma-37-data-lomba',
   title: 'Data Lomba Pramuka',
@@ -103,78 +370,31 @@ export default {
     { id: 'giliran', icon: '🧑‍🤝‍🧑', label: 'Perintah dan Tebakan', desc: 'Satu tim memilih perintah, tim berikutnya menebak isi struktur data sesudahnya', create: createTeams },
   ],
   create(root, ctx) {
-    const wrap = el('div', { class: 'act data-lomba' });
+    const wrap = el('div', { class: 'act pr37-main' });
     root.append(wrap);
-    const R = run(PROG()); const J = run(JUARA); const F = run(FREK());
     function render() {
       wrap.replaceChildren();
       const r = ctx.round;
       let solved = false;
-      const next = () => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, 2400); } };
-      const ask = (prompt, opts, columns = 1, subject = null, onRight = next) => choice(wrap, { prompt, subject, ctx, shuffle: true, onRight, columns, options: opts.map(([l, correct]) => ({ label: String(l), correct })) });
-      const then = (fn) => () => { wrap.replaceChildren(); fn(); };
-      const ex = (src, wrong, why) => { const v = evalExpr(src); return [src, src, [...new Set([v, ...wrong])].sort(), v, why]; };
-      const dataCode = () => pyCode(DATA(), { cls: 'dg-kecil' });
-      if (r === 0) { wrap.append(dataCode()); rowsChoose(wrap, ctx, { prompt: 'Mengambil data: hasil setiap ekspresi', cls: 'dg-isi', info: 'nilai["Melati"] → [90, 70, 85, 80] sudah diisi.', done: next, rows: [
-        ex('nilai["Melati"][2]', ['90', '70', '80'], 'Indeks mulai dari 0: anggota ketiga.'), ex('mata_lomba[2]', ["'pionering'", "'P3K'", 'IndexError: list index out of range']), ex('nilai["Rajawali"][-1]', ['80', '75', 'IndexError: list index out of range'], 'Indeks −1 adalah anggota terakhir.'),
-        ex('mata_lomba.index("P3K")', ['4', "'P3K'", '-1']), ex('len(nilai)', ['16', '5', '20'], 'Banyak kunci dictionary.')] }); }
-      else if (r === 1) { wrap.append(dataCode()); rowsChoose(wrap, ctx, { prompt: 'Mengambil data: lanjutan', cls: 'dg-isi', rows: [
-        ex('list(nilai)', ['[[85, 78, 90, 70], [80, 92, 75, 91], [90, 70, 85, 80], [75, 85, 80, 88]]', '[323, 338, 325, 328]'], 'list(dict) berisi kuncinya, sesuai urutan penulisan.'), ex('"Elang" in nilai', ['False', "KeyError: 'Elang'"]), ex('85 in nilai', ['True', 'KeyError: 85']),
-        ex('max(nilai["Anggrek"])', ['85', '75', "'Anggrek'"]), ex('nilai["Garuda"]', ['None', '0', 'IndexError: list index out of range'], 'Kunci "Garuda" tidak ada.'),
-        ['w', 'Mengapa 85 in nilai tidak True?', ['in pada dictionary hanya memeriksa kunci, dan 85 bukan kunci', 'karena 85 ada di dua regu', 'karena in hanya untuk list', 'karena 85 harus ditulis "85"'], 'in pada dictionary hanya memeriksa kunci, dan 85 bukan kunci']], done: next }); }
-      else if (r === 2) { const tr = tracer(PROG(), { onEnd: () => setTimeout(then(() => rowsChoose(wrap, ctx, { prompt: 'Total dan pasangan', cls: 'dg-isi', rows: [
-        ['a', 'Isi total setelah baris 10', [pyRepr(R.vars.total), "{'Elang': 70, 'Rajawali': 91, 'Melati': 80, 'Anggrek': 88}", "{'Elang': 323}", '[323, 338, 325, 328]'], pyRepr(R.vars.total)],
-        ['b', 'pasangan sebelum baris 14', [pyRepr(pasanganSebelum()), "[('Elang', 323), ('Rajawali', 338), ('Melati', 325), ('Anggrek', 328)]", pyRepr(R.vars.pasangan)].sort(), pyRepr(pasanganSebelum())],
-        ['c', 'pasangan sesudah baris 14', [pyRepr(R.vars.pasangan), pyRepr(pasanganSebelum()), "[(323, 'Elang'), (325, 'Melati'), (328, 'Anggrek'), (338, 'Rajawali')]"].sort(), pyRepr(R.vars.pasangan), 'reverse=True: dari total terbesar.']], done: next })), 1600) });
-        wrap.append(el('p', { class: 'prompt' }, 'Program nilai lomba: lihat kotak struktur datanya'), tr); }
-      else if (r === 3) { const B = run(PROG({ balik: true })); wrap.append(pyCode(PROG().slice(11), { cls: 'dg-kecil' }));
-        rowsChoose(wrap, ctx, { prompt: 'Peringkat', cls: 'dg-isi', rows: [
-          ['c', 'Keluaran baris 15–16', [R.out.join(' / '), B.out.join(' / '), '1 Rajawali 338 / 2 Melati 325 / 3 Anggrek 328 / 4 Elang 323', '0 Rajawali 338 / 1 Anggrek 328 / 2 Melati 325 / 3 Elang 323'], R.out.join(' / ')],
-          ['d', 'Mengapa (total[regu], regu), bukan (regu, total[regu])?', ['tuple diurutkan menurut anggota pertama, jadi total harus di depan', 'tuple tidak bisa berisi teks di depan', 'agar print lebih pendek'], 'tuple diurutkan menurut anggota pertama, jadi total harus di depan'],
-          ['e', 'Bila ditulis terbalik, keluarannya', [B.out.join(' / '), R.out.join(' / '), '1 Anggrek 328 / 2 Elang 323 / 3 Melati 325 / 4 Rajawali 338'], B.out.join(' / '), 'Urut menurut nama secara terbalik, jelas bukan peringkat.']], done: next }); }
-      else if (r === 4) { const E = run(PROG({ p3k: 83 })); const second = E.out[1].split(' ')[1];
-        wrap.append(el('p', { class: 'dg-ket' }, 'Nilai P3K Melati menjadi 83, jadi total Melati = total Anggrek = 328'));
-        rowsChoose(wrap, ctx, { prompt: 'Total sama: siapa di peringkat 2?', cls: 'dg-isi', rows: [
-          ['p', 'Peringkat 2 menurut program', ['Melati', 'Anggrek', 'Rajawali', 'keduanya'], second],
-          ['m', 'Mengapa?', ['tuple (328, …) sama, lalu nama dibandingkan; dengan reverse=True "Melati" di depan "Anggrek"', 'Melati ditulis lebih dulu di nilai', 'nilai P3K Melati lebih tinggi'], 'tuple (328, …) sama, lalu nama dibandingkan; dengan reverse=True "Melati" di depan "Anggrek"'],
-          ['a', 'Apakah adil?', ['tidak: peringkat ditentukan abjad nama regu', 'ya: abjad selalu adil', 'ya: Melati memang lebih baik'], 'tidak: peringkat ditentukan abjad nama regu']], done: next }); }
-      else if (r === 5) { const tr = tracer(JUARA, { labels: JL, show: ['nilai', 'juara_lomba'], onEnd: () => setTimeout(then(() => { const t0 = jejakTerbaik(0).join(' · ');
-        rowsChoose(wrap, ctx, { prompt: 'Juara setiap mata lomba', cls: 'dg-isi', rows: [
-          ['a', 'i = 0: terbaik setelah Elang · Rajawali · Melati · Anggrek', [t0, 'Elang · Rajawali · Melati · Anggrek', 'Elang · Elang · Melati · Anggrek', 'Elang · Rajawali · Rajawali · Rajawali'], t0, '80 < 85, 90 > 85, 75 < 90.'],
-          ['b', 'Keluaran baris 24', [J.out[0], "{'semafor': 'Melati', 'pionering': 'Rajawali', 'sandi': 'Elang', 'P3K': 'Anggrek'}", "{'semafor': 'Elang', 'pionering': 'Rajawali', 'sandi': 'Elang', 'P3K': 'Rajawali'}", "{'Melati': 'semafor', 'Rajawali': 'P3K', 'Elang': 'sandi'}"].sort(), J.out[0]],
-          ['c', 'Juara di dua mata lomba', ['Rajawali', 'Melati', 'Elang', 'Anggrek'], 'Rajawali'],
-          ['d', 'Tidak juara satu pun tetapi masuk dua besar', ['Anggrek, karena nilainya merata', 'Elang', 'Melati', 'tidak ada'], 'Anggrek, karena nilainya merata']], done: next }); }), 1600) });
-        wrap.append(el('p', { class: 'prompt' }, 'Juara setiap mata lomba (baris 17–24)'), tr); }
-      else if (r === 6) { const tr = tracer(FREK(), { labels: FL(), show: ['frekuensi'], onEnd: () => setTimeout(then(() => { const four = [1, 2, 3, 4].map((k) => pyRepr(run([...FREK().slice(0, 3), `for regu in juara_umum[:${k}]:`, ...FREK().slice(4, 8)]).vars.frekuensi)); const four2 = four.join(' → ');
-        rowsChoose(wrap, ctx, { prompt: 'Menghitung frekuensi', cls: 'dg-isi', rows: [
-          ['a', 'Isi frekuensi setelah 1, 2, 3, 4 putaran', [four2, "{'Anggrek': 1} → {'Elang': 1} → {'Anggrek': 2} → {'Rajawali': 1}", "{'Anggrek': 1} → {'Anggrek': 1, 'Elang': 1} → {'Anggrek': 1, 'Elang': 1, 'Anggrek': 2} → {'Anggrek': 2, 'Elang': 1, 'Rajawali': 1}", "{'Anggrek': 0} → {'Anggrek': 0, 'Elang': 0} → {'Anggrek': 1, 'Elang': 0} → {'Anggrek': 1, 'Elang': 0, 'Rajawali': 0}"].sort(), four2, 'Satu kunci hanya ada sekali; nilainya bertambah.'],
-          ['b', 'Keluaran baris F9', [F.out[0], "{'Anggrek': 4, 'Elang': 3, 'Melati': 1, 'Rajawali': 2}", "{'Anggrek': 4, 'Rajawali': 2, 'Elang': 3, 'Melati': 1}", "{'Anggrek': 3, 'Elang': 3, 'Rajawali': 2, 'Melati': 1}"].sort(), F.out[0], 'Urutan kunci mengikuti kemunculan pertama.']], done: next }); }), 1600) });
-        wrap.append(el('p', { class: 'prompt' }, 'Juara umum sepuluh tahun terakhir'), tr); }
-      else if (r === 7) { const U = run(FREK('rudi')); const G = run(FREK('get'));
-        wrap.append(pyCode(FREK('rudi'), { labels: FL('rudi'), warn: [4], cls: 'dg-kecil' }));
-        rowsChoose(wrap, ctx, { prompt: 'Rudi menghapus F5, F7, F8', cls: 'dg-isi', rows: [
-          ['c', 'Putaran pertama', [`berhenti: ${U.error.text}`, "frekuensi menjadi {'Anggrek': 1}", "frekuensi menjadi {'Anggrek': 0}", 'berhenti: IndexError: list index out of range'], `berhenti: ${U.error.text}`, 'frekuensi["Anggrek"] dibaca sebelum kunci itu ada.'],
-          ['d', 'Satu baris pengganti F5–F8', ['frekuensi[regu] = frekuensi.get(regu, 0) + 1', 'frekuensi[regu] = frekuensi.get(regu) + 1', 'frekuensi.get(regu, 0) = frekuensi[regu] + 1', 'frekuensi[regu] = frekuensi[regu].get(0) + 1'], 'frekuensi[regu] = frekuensi.get(regu, 0) + 1', `get memberi 0 bila kunci belum ada. Hasilnya sama: ${G.out[0]}`]], done: next }); }
-      else if (r === 8) { const A = run(ALIAS()); const tr = aliasTracer(ALIAS(), AL(), { onEnd: () => setTimeout(then(() => { const out = A.out.join(' / ');
-        wrap.append(aliasView(A.vars, ['regu']));
-        rowsChoose(wrap, ctx, { prompt: 'Bug alias', cls: 'dg-isi', rows: [
-          ['a', 'Keluaran A6 dan A7', [out, run(ALIAS('copy')).out.join(' / '), "Lapangan A (putra): ['Elang', 'Rajawali'] / Semua regu: ['Melati', 'Anggrek']"], out, 'Regu putri ikut masuk ke lapangan putra.'],
-          ['b', 'Panah setelah A5', ['regu_putra dan semua_regu menunjuk satu list; regu_putri list sendiri', 'setiap variabel menunjuk list sendiri', 'semua_regu menunjuk regu_putri', 'ketiganya menunjuk satu list'], 'regu_putra dan semua_regu menunjuk satu list; regu_putri list sendiri', 'A3 hanya menempelkan nama kedua pada list yang sama.']], done: next }); }), 1600) });
-        wrap.append(el('p', { class: 'prompt' }, 'Pembagian lapangan: perhatikan panahnya'), tr); }
-      else { const C = run(ALIAS('copy')); const N = run(ANGKA);
-        wrap.append(pyCode(ALIAS(), { labels: AL(), warn: [2], cls: 'dg-kecil' }));
-        rowsChoose(wrap, ctx, { prompt: 'Perbaiki baris A3', cls: 'dg-isi', rows: [
-          ['c1', 'Cara 1 (method)', ['semua_regu = regu_putra.copy()', 'semua_regu = regu_putra.append()', 'semua_regu == regu_putra', 'semua_regu = regu_putra[0]'], 'semua_regu = regu_putra.copy()', `Keluaran A6 menjadi ${C.out[0]}`],
-          ['c2', 'Cara 2 (fungsi bawaan)', ['semua_regu = list(regu_putra)', 'semua_regu = len(regu_putra)', 'semua_regu = str(regu_putra)', 'semua_regu = regu_putra()'], 'semua_regu = list(regu_putra)', 'list() membuat list baru berisi anggota yang sama.'],
-          ['d', 'a = 5, b = a, b = b + 1. Nilai a', [String(N.vars.a), String(N.vars.b), '0', 'galat'], String(N.vars.a)],
-          ['w', 'Mengapa tidak terjadi alias?', ['b = b + 1 membuat bilangan baru 6; bilangan tidak bisa diubah isinya', 'Python menyalin semua bilangan', 'karena a ditulis lebih dulu'], 'b = b + 1 membuat bilangan baru 6; bilangan tidak bisa diubah isinya', 'Alias hanya terasa pada data yang bisa diubah, seperti list.']],
-          done: then(() => { const K = run([...KEMAH, 'x = kemah["Elang"]["nilai"][1]["pionering"]']); const T = run(PROG({ p3k: 83, rule: true }));
-            wrap.append(pyCode(KEMAH, { cls: 'dg-kecil' }));
-            rowsChoose(wrap, ctx, { prompt: 'Rancangan lomba kemah dan Tantangan', cls: 'dg-isi', rows: [
-              ['1', 'Nilai pionering Elang hari kedua', ['kemah["Elang"]["nilai"][1]["pionering"]', 'kemah["Elang"]["nilai"][2]["pionering"]', 'kemah["nilai"]["Elang"][1]["pionering"]', 'kemah["Elang"]["pionering"][1]'], 'kemah["Elang"]["nilai"][1]["pionering"]', `Hasilnya ${K.vars.x}. Hari kedua berindeks 1.`],
-              ['2', 'Banyak anggota Melati', ['len(kemah["Melati"]["anggota"])', 'len(kemah["Melati"])', 'kemah["Melati"]["anggota"].len()', 'len(kemah)'], 'len(kemah["Melati"]["anggota"])'],
-              ['13', 'Tantangan: baris 13', ['pasangan.append((total[regu], nilai[regu][3], regu))', 'pasangan.append((nilai[regu][3], total[regu], regu))', 'pasangan.append((total[regu], regu, nilai[regu][3]))'], 'pasangan.append((total[regu], nilai[regu][3], regu))', 'Urut menurut total, lalu P3K, lalu nama.'],
-              ['16', 'Tantangan: baris 16 dan keluarannya (P3K Melati 83)', [`pasangan[posisi][2] · ${T.out.join(' / ')}`, `pasangan[posisi][1] · ${T.out.join(' / ')}`, `pasangan[posisi][2] · ${run(PROG({ p3k: 83 })).out.join(' / ')}`], `pasangan[posisi][2] · ${T.out.join(' / ')}`, 'Anggrek kini di peringkat 2 karena P3K-nya 88.']], done: next }); }) }); }
+      const next = (wait = 5200) => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, wait); } };
+      const area = el('div', { class: 'pr37-area' });
+      let foe = null;
+      const go = (k, no) => {
+        const [judul, tujuan, ulah] = HEAD37[k];
+        foe = el('div', { class: 'pr37-ceroboh' }, el('b', null, '📋 Panitia Ceroboh'), el('span', null, ulah));
+        wrap.append(el('div', { class: 'pr37-kepala' }, misiHead(no, judul, tujuan, '⚜️'), foe, el('span', { class: 'pr37-jam' }, `⏰ upacara: ${10 - r} misi lagi`)), area);
+      };
+      const fin = (ms) => ({ oops: () => ctx.mistake(), done: () => { foe.classList.add('beres'); foe.lastChild.textContent = 'Kekacauan dibereskan ✓'; next(ms); } });
+      if (r === 0) { go('amplop', 1); amplopRound(area, ctx, fin(5000)); }
+      else if (r === 1) { go('isi', 1); isiRound(area, ctx, fin(5000)); }
+      else if (r === 2) { go('peringkat', 2); peringkatRound(area, ctx, fin(5500)); }
+      else if (r === 3) { go('seri', 2); seriRound(area, ctx, fin(6000)); }
+      else if (r === 4) { go('juara', 3); juaraRound(area, ctx, fin(5500)); }
+      else if (r === 5) { go('frek', 4); frekRound(area, ctx, fin(5500)); }
+      else if (r === 6) { go('rudi', 4); rudiRound(area, ctx, fin(5500)); }
+      else if (r === 7) { go('alias', 5); aliasRound(area, ctx, fin(6000)); }
+      else if (r === 8) { go('salin', 5); salinRound(area, ctx, fin(6000)); }
+      else { go('bos', 'Bos'); bosRound(area, ctx, fin(7000)); }
     }
     render();
   },
