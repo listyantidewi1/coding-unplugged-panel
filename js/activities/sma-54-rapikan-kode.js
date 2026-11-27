@@ -6,9 +6,9 @@
 // as real Python in mini-py; the random tester uses fast copies checked
 // against mini-py.
 
-import { el, onTap, button, shake } from '../core/util.js';
-import { choice } from '../core/kit.js';
-import { say, pickTeams, scoreBar, finishBoard, rowsChoose, pairRound, pickSet, pyCode } from './smp-kit.js';
+import { el, onTap, button } from '../core/util.js';
+import { say, pickTeams, scoreBar, finishBoard, pyCode } from './smp-kit.js';
+import { misiHead, fill, codeView, codeFill, rowsView, fillBoard, tileSlots, layar, play } from './misi-kit.js';
 import { runPy, pyRepr } from './mini-py.js';
 
 export const BAYU = [
@@ -199,103 +199,354 @@ export function aturanBaru(cat) {
 
 // ---------- main rounds (worksheet order) ----------
 const OUT_T7 = "[('Melati', 35), ('Kenanga', 30), ('Mawar', 0)]";
-const opts = (right, wrongs) => [right, ...wrongs].map((t, i) => ({ label: t, correct: i === 0 }));
-
-function cariPembeda(wrap, ctx, { a, b, prompt, info, done }) {
-  const msg = el('p', { class: 'reveal info' }, info);
-  const hasil = el('div', { class: 'rk-hasil' });
-  let cat = []; let fin = false;
-  const ed = penyusun((c) => { cat = c; hasil.replaceChildren(); });
-  wrap.append(el('p', { class: 'prompt' }, prompt), ed, el('div', { class: 'kode-baris' }, button('Bandingkan ▶', () => {
-    if (fin) return;
-    hasil.replaceChildren(bandingView(a, b, cat));
-    if (jalankan(a, cat) === jalankan(b, cat)) { ctx.mistake(); shake(hasil); say(msg, 'bad', 'Keluarannya masih sama. Coba catatan lain.'); return; }
-    fin = true; ctx.sound.good(); say(msg, 'good', `Catatan pembeda sah: ${cat.length} catatan.`); setTimeout(done, 2600);
-  }, 'primary')), hasil, msg);
-}
-
-function round(wrap, ctx, r, done) {
-  if (r === 0) {
-    const L = langkahBayu(CONTOH); const v = (i, n) => (n in L[i].skor ? String(L[i].skor[n]) : '-');
-    wrap.append(kodeBayu());
-    rowsChoose(wrap, ctx, { prompt: 'Soal 1a. Telusuri hitung(contoh). Berapa skornya setelah catatan ini?', cls: 'rk-isi', rows: [
-      ['a', 'Setelah ("Mawar", 1, "S"): skor Mawar', ['-', '0', '-5', '10'], v(1, 'Mawar'), 'Baris 6 memasukkan Mawar dengan 0, lalu babak 1 tidak punya baris untuk jawaban salah.'],
-      ['b', 'Setelah ("Mawar", 2, "S"): skor Mawar', ['0', '-5', '-10', '20'], v(3, 'Mawar'), 'Baris 14: Mawar −5. Kode Kak Bayu tidak membatasi skor di babak 2.'],
-      ['c', 'Setelah ("Melati", 2, "L"): skor Melati', ['10', '5', '0', '-5'], v(4, 'Melati'), 'Baris 13–14: lewat diperlakukan seperti salah, jadi Melati −5.'],
-      ['d', 'Setelah ("Mawar", 3, "S"): skor Mawar', ['-15', '-5', '0', '-10'], v(6, 'Mawar'), 'Baris 19 membuat −15, lalu baris 20–21 mengembalikannya ke 0.'],
-      ['e', 'Setelah ("Melati", 3, "B"): skor Melati', ['30', '35', '40', '45'], v(7, 'Melati')],
-    ], done });
-  } else if (r === 1) {
-    choice(wrap, { prompt: 'Soal 1b. Apa keluaran hitung(contoh)?', subject: kodeBayu([21]), ctx, onRight: done, columns: 1, options: ctx.rand.shuffle(opts(OUT_T7, ["[('Melati', 40), ('Kenanga', 30), ('Mawar', 0)]", "[('Melati', 35), ('Kenanga', 30), ('Mawar', -15)]", "[('Kenanga', 30), ('Melati', 35), ('Mawar', 0)]"])) });
-  } else if (r === 2) {
-    pickSet(wrap, ctx, { prompt: 'Soal 1c. Mana yang membuat kode ini sulit dirawat? Pilih semua yang tepat.', subject: kodeBayu(), right: ['nama', 'angka', 'ulang', 'satu'],
-      items: ctx.rand.shuffle([['nama', 'Nama satu huruf: d, t, r, n, h, x (baris 1–6, 22)'], ['angka', 'Angka poin tersebar di baris 9, 12, 14, 17, 19'], ['ulang', 'Blok yang mirip ditulis berulang untuk setiap babak (baris 7–21)'], ['satu', 'Satu fungsi menghitung, membatasi skor, dan mengurutkan sekaligus'], ['py', 'Ditulis dengan Python, bukan bahasa lain'], ['pendek', 'Panjangnya 23 baris']]),
-      why: 'Tepat. Panjang kode dan bahasa pemrogramannya bukan masalah; nama, angka yang tersebar, dan blok berulanglah yang membuatnya sulit diubah.', done });
-  } else if (r === 3) {
-    wrap.append(kodeBayu());
-    rowsChoose(wrap, ctx, { prompt: 'Soal 2a. Uji karakterisasi: keluaran hitung saat ini', cls: 'rk-isi rk-mono', rows: [
-      ['t1', 'T1 hitung([])', ['[]', "[('', 0)]", 'None'], '[]'],
-      ['t2', 'T2 [("Melati", 1, "S")]', ['[]', "[('Melati', 0)]", "[('Melati', -5)]"], jalankan('bayu', UJI[1][1])],
-      ['t3', 'T3 [("Mawar", 2, "S")]', ["[('Mawar', 0)]", "[('Mawar', -5)]", '[]'], jalankan('bayu', UJI[2][1])],
-      ['t4', 'T4 [("Mawar", 3, "S")]', ["[('Mawar', 0)]", "[('Mawar', -10)]", '[]'], jalankan('bayu', UJI[3][1])],
-      ['t5', 'T5 [("Melati", 2, "L")]', ["[('Melati', 0)]", "[('Melati', -5)]", '[]'], jalankan('bayu', UJI[4][1])],
-      ['t6', 'T6 [("Melati", 1, "B"), ("Kenanga", 1, "B")]', ["[('Melati', 10), ('Kenanga', 10)]", "[('Kenanga', 10), ('Melati', 10)]"], jalankan('bayu', UJI[5][1]), 'Skor sama: Melati tetap di depan karena lebih dulu muncul. sorted di Python stabil.'],
-    ], done });
-  } else if (r === 4) {
-    pickSet(wrap, ctx, { prompt: 'Soal 2c. Keluaran uji mana yang melanggar aturan lomba?', subject: el('div', null, aturanTabel(), ujiTabel('bayu')), right: ['T3', 'T5', 'T7'],
-      items: UJI.map(([k]) => [k, k]), why: 'T3 negatif, T5 mengurangi regu yang lewat, T7 memberi Melati 35 (seharusnya 40). Uji karakterisasi tetap mencatatnya apa adanya, supaya kita tahu bila perilaku berubah.', done });
-  } else if (r === 5) {
-    pairRound(wrap, ctx, { prompt: 'Soal 3a. Ganti nama: pasangkan nama lama dengan nama baru.', left: [['a', 'hitung', 'hs'], ['b', 'd', 'cat'], ['c', 't', 'sk'], ['d', 'n, r[1], r[2]', 'rbj'], ['e', 'h', 'per']],
-      texts: { hs: 'hitung_skor', cat: 'catatan', sk: 'skor', rbj: 'regu, babak, jawaban', per: 'peringkat' }, finalMsg: 'Tepat. Nama yang jelas sudah menjelaskan isinya.', done });
-  } else if (r === 6) {
-    choice(wrap, { prompt: 'Soal 3b. Isi tabel ATURAN supaya perilakunya tetap sama dengan kode Kak Bayu. # babak: (poin bila benar, poin bila tidak benar)', subject: kodeBayu([8, 11, 13, 16, 18]), ctx, onRight: done, columns: 1,
-      options: ctx.rand.shuffle(opts('ATURAN = {1: (10, 0), 2: (20, -5), 3: (30, -10)}', ['ATURAN = {1: (10, 0, 0), 2: (20, -5, 0), 3: (30, -10, 0)}', 'ATURAN = {1: (10, 0), 2: (20, 5), 3: (30, 10)}', 'ATURAN = {1: (10, -5), 2: (20, -5), 3: (30, -10)}'])) });
-  } else if (r === 7) {
-    wrap.append(kodeVersi('rapi', [12, 14, 16, 17]));
-    rowsChoose(wrap, ctx, { prompt: 'Soal 3c. Lengkapi versi rapi supaya lulus T1–T7', cls: 'rk-isi rk-mono', rows: [
-      ['p', 'poin(): bila jawaban == "B"', ['return benar', 'return lainnya', 'return 0'], 'return benar'],
-      ['q', 'poin(): selain itu', ['return lainnya', 'return benar', 'return 0'], 'return lainnya'],
-      ['s', 'skor[regu] = …', ['skor[regu] + poin(babak, jawaban)', 'poin(babak, jawaban)', 'max(0, skor[regu] + poin(babak, jawaban))'], 'skor[regu] + poin(babak, jawaban)'],
-      ['c', 'if … : skor[regu] = 0', ['babak == 3 and jawaban != "B" and skor[regu] < 0', 'skor[regu] < 0', 'babak == 3 and skor[regu] < 0'], 'babak == 3 and jawaban != "B" and skor[regu] < 0', 'Syaratnya harus sama persis dengan baris 15–21 kode Kak Bayu.'],
-    ], done });
-  } else if (r === 8) {
-    choice(wrap, { prompt: 'Soal 3d. Rudi menulis if babak == 3 and skor[regu] < 0: dan T1–T7 tetap lulus. Apakah perilakunya pasti sama?', subject: el('div', { class: 'rk-dua' }, kodeVersi('rudi', [16]), ujiTabel('rudi')), ctx, onRight: done, columns: 1,
-      options: ctx.rand.shuffle(opts('Tidak pasti. Regu dengan skor −31 atau kurang yang lalu benar di babak 3 berbeda hasilnya.', ['Pasti sama, karena T1–T7 lulus.', 'Tidak pasti. Hasilnya berbeda untuk setiap catatan babak 3.', 'Pasti sama, karena babak 3 tetap dibatasi.'])) });
-  } else if (r === 9) {
-    cariPembeda(wrap, ctx, { a: 'bayu', b: 'rudi', prompt: 'Cari catatan pembeda: Kak Bayu dan versi Rudi', info: 'Petunjuk: skor harus turun sampai −35 di babak 2 dulu. "Salin terakhir" mempercepat.', done });
-  } else if (r === 10) {
-    wrap.append(el('div', { class: 'rk-dua' }, kodeVersi('rina', [14]), kodeVersi('dodi', [17])));
-    rowsChoose(wrap, ctx, { prompt: 'Soal 4a–b. Versi rapi buatan teman', cls: 'rk-isi', rows: [
-      ['rina', 'Uji yang gagal pada versi Rina', ['T3 dan T5', 'T3 saja', 'T5 dan T7', 'tidak ada'], 'T3 dan T5', 'Keduanya memberi 0, bukan −5.'],
-      ['dodi', 'Uji yang gagal pada versi Dodi', ['T6', 'T7', 'T6 dan T7', 'tidak ada'], 'T6', "[('Kenanga', 10), ('Melati', 10)]: skor sama diurutkan menurut abjad."],
-      ['jenis', 'Perubahan Rina termasuk', ['perbaikan bug, bukan perapian', 'perapian kode', 'uji karakterisasi'], 'perbaikan bug, bukan perapian', 'Rapikan dulu tanpa mengubah perilaku, lalu perbaiki bug sebagai langkah terpisah dengan harapan uji yang diperbarui.'],
-    ], done });
-  } else if (r === 11) {
-    const cat = [['Melati', 4, 'B']];
-    rowsChoose(wrap, ctx, { prompt: 'Soal 4c. Panitia salah mengetik babak 4: [("Melati", 4, "B")]', cls: 'rk-isi rk-mono', rows: [
-      ['b', 'Kode Kak Bayu', [jalankan('bayu', cat), jalankan('rapi', cat), "[('Melati', 50)]"], jalankan('bayu', cat), 'Diam-diam diabaikan: Melati tercatat 0 tanpa pesan apa pun.'],
-      ['r', 'Versi rapi', [jalankan('rapi', cat), jalankan('bayu', cat), "[('Melati', 50)]"], jalankan('rapi', cat), 'ATURAN tidak punya babak 4. Galat yang jelas biasanya lebih baik, tetapi tetap perubahan perilaku yang harus diputuskan dengan sengaja.'],
-    ], done });
-  } else if (r === 12) {
-    wrap.append(kodeVersi('fix', [0, 7, 8, 16]));
-    rowsChoose(wrap, ctx, { prompt: 'Soal 5. Setelah perbaikan bug, harapan uji yang berubah', cls: 'rk-isi rk-mono', rows: [
-      ['t3', 'T3', ["[('Mawar', 0)]", "[('Mawar', -5)]"], aturanBaru(UJI[2][1])],
-      ['t5', 'T5', ["[('Melati', 0)]", "[('Melati', -5)]"], aturanBaru(UJI[4][1])],
-      ['t7', 'T7', ["[('Melati', 40), ('Kenanga', 30), ('Mawar', 0)]", OUT_T7], aturanBaru(CONTOH)],
-      ['b4', 'Babak 4 (+50, −25, 0): baris yang diubah di versi baru', ['1', '3', '7'], '1', 'Cukup 4: (50, -25, 0) di ATURAN. Di kode Kak Bayu perlu blok baru 7 baris, dan bug lewat ikut tersalin.'],
-    ], done });
-  } else if (r === 13) {
-    rowsChoose(wrap, ctx, { prompt: 'Soal 6. Sama atau Beda? (pasti sama untuk semua catatan, atau ada catatan yang berubah)', cls: 'rk-isi rk-kartu', rows: Object.entries(KARTU).map(([k, c]) => [k, `${k}. ${c.t}`, ['Sama', 'Beda'], c.beda ? 'Beda' : 'Sama', c.why]), done });
-  } else if (r === 14) {
-    cariPembeda(wrap, ctx, { a: 'bayu', b: 'K5', prompt: 'Cari catatan pembeda: Kak Bayu dan kartu K5', info: 'K5 menghapus baris 5–6 dan memakai t.get(n, 0).', done });
-  } else {
-    const R = { rapi: bandingkan('rapi'), rudi: bandingkan('rudi'), rina: bandingkan('rina'), dodi: bandingkan('dodi') };
-    choice(wrap, { prompt: `Tantangan. Pengacak layar ini: rapi ${R.rapi.beda}, Rudi ${R.rudi.beda}, Rina ${R.rina.beda}, Dodi ${R.dodi.beda} beda dari 1.000 daftar. Mengapa versi Rudi hampir tidak pernah tertangkap?`, ctx, onRight: done, columns: 1,
-      options: ctx.rand.shuffle(opts('Satu regu harus salah paling sedikit 7 kali di babak 2 sebelum benar di babak 3; daftar acak 12 catatan hampir tidak pernah begitu.', ['Karena versi Rudi sebenarnya sama dengan kode Kak Bayu.', 'Karena pengacak hanya membuat catatan babak 1.', 'Karena 1.000 daftar terlalu banyak.'])) });
-  }
-}
-const RONDE = 16;
 const aturanTabel = () => el('table', { class: 'rk-aturan' }, el('tr', null, ['Babak', 'Benar', 'Salah', 'Lewat'].map((h) => el('th', null, h))), [[1, '+10', '0', '0'], [2, '+20', '−5', '0'], [3, '+30', '−10', '0']].map((r) => el('tr', null, r.map((x) => el('td', null, String(x))))));
+
+// ---------- Pemugar Kode Warisan: the hands-on missions ----------
+// Kak Bayu's code shown with 2-space indent; line 22 breaks inside the bracket.
+const BARIS54 = BAYU.flatMap((s, i) => {
+  const t = s.replace(/^( +)/, (m) => ' '.repeat(m.length / 2));
+  return i === 21 ? [{ no: 22, t: '  h = sorted(t.items(),' }, { no: 22, t: '    key=lambda x: x[1], reverse=True)', lanjut: true }] : [{ no: i + 1, t }];
+});
+const HEAD54 = {
+  telusur: ['Telusuri Papan Skor Lama', 'Geser token regu ke skor barunya, catatan demi catatan.', 'Kodenya jalan, kan? Buat apa dipahami?'],
+  ciri: ['Ciri Kode Warisan', 'Tempel stiker 🔢 di setiap baris angka poin, lalu namai cirinya.', 'Angka poinku tersebar. Temukan semuanya!'],
+  foto: ['Abadikan Perilaku Lama', 'Potret keluaran T1–T7 apa adanya, lalu tandai yang melanggar aturan.', 'Langsung perbaiki saja, tak perlu foto!'],
+  pugar: ['Pugar Langkah demi Langkah', 'Pasang nama baru dan tabel ATURAN. T1–T7 harus tetap hijau.', 'Satu langkah besar saja, lebih cepat!'],
+  rudi: ['Kembar Palsu Rudi', 'Susun catatan yang membuat kode Kak Bayu dan versi Rudi berbeda.', 'Aku lulus T1–T7. Kita kembar, kan?'],
+  bongkar: ['Bongkar Si Kembar Palsu', 'Tandai uji yang akan gagal, lalu jalankan T1–T7.', 'Versi Rina dan Dodi lebih baik, kok.'],
+  babak4: ['Babak 4 Salah Ketik', 'Ramalkan keluaran kedua versi untuk ("Melati", 4, "B").', 'Diam-diam saja, tak ada yang tahu.'],
+  perbaiki: ['Perbaiki Bug dengan Sengaja', 'Tambah poin lewat, perbarui harapan uji, lalu siapkan babak 4.', 'Bug lewat itu sudah tradisi!'],
+  kartu: ['Sama atau Beda?', 'Cap setiap kartu perubahan. Cap Beda harus disertai catatan pembeda.', 'Semua kartu ini kelihatan sama.'],
+  bos: ['Pengacak yang Rabun', 'Ramalkan versi yang lolos pengacak, lalu jadikan kasus langka uji T8.', 'Pengacakmu tak akan menemukanku!'],
+};
+const msg54 = (t) => el('p', { class: 'reveal info' }, t);
+const dua54 = (...k) => el('div', { class: 'pk54-dua' }, ...k);
+const kol54 = (...k) => el('div', { class: 'pk54-kolom' }, ...k);
+const rec54 = ([r, b, j]) => `("${r}", ${b}, "${j}")`;
+// Consecutive equal records are grouped: ("Mawar", 2, "S") ×7.
+function ringkas54(list) {
+  const g = [];
+  for (const x of list) { const k = rec54(x); if (g.length && g[g.length - 1][0] === k) g[g.length - 1][1]++; else g.push([k, 1]); }
+  return g.length ? g.map(([k, n]) => (n > 1 ? `${k} ×${n}` : k)).join(', ') : '(kosong)';
+}
+const awalBlok = (b) => ({ 1: 3, 2: 7, 3: 14 }[b] || 1);
+
+// Code ribbon: 8 rows of Kak Bayu's code, scrolled with ▲ ▼; hl/warn/stiker use line numbers.
+function pita54({ onLine = null } = {}) {
+  const N = 8; const maxS = BARIS54.length - N;
+  const P = { start: 0, hl: [], warn: [], stiker: new Map() };
+  const node = el('div', { class: 'pk54-pita' });
+  const geser = (d) => { P.start = Math.max(0, Math.min(maxS, P.start + d)); draw(); };
+  function draw() {
+    const rows = BARIS54.slice(P.start, P.start + N);
+    const idx = (nos) => rows.flatMap((r, i) => (nos.includes(r.no) ? [i] : []));
+    fill(node,
+      onTap(el('button', { class: 'pk54-gulir', type: 'button', 'data-arah': 'naik', disabled: P.start === 0 }, '▲'), () => geser(-4)),
+      codeView(rows.map((r) => r.t), { labels: rows.map((r) => (r.lanjut ? '' : String(r.no))), hl: idx(P.hl), warn: idx(P.warn), cls: onLine ? 'ketuk' : '',
+        onLine: onLine ? (i) => onLine(rows[i].no) : null, after: (i) => (P.stiker.has(rows[i].no) && !rows[i].lanjut ? el('span', { class: 'pk54-stiker' }, P.stiker.get(rows[i].no)) : null) }),
+      onTap(el('button', { class: 'pk54-gulir', type: 'button', 'data-arah': 'turun', disabled: P.start >= maxS }, '▼'), () => geser(4)));
+  }
+  node.ke = (no) => { const k = BARIS54.findIndex((r) => r.no === no); P.start = Math.max(0, Math.min(maxS, k)); draw(); return node; };
+  node.set = (o) => { Object.assign(P, o); draw(); return node; };
+  node.P = P; draw();
+  return node;
+}
+
+// Test lights T1–T7 (Penjaga Uji); run() lights them one by one.
+function lampu54(ctx, keys = UJI.map((u) => u[0])) {
+  const node = el('div', { class: 'pk54-lampu' });
+  const draw = (st = {}) => fill(node, el('small', null, '🛡️ Penjaga Uji'), keys.map((k) => el('span', { class: `pk54-led ${st[k] || ''}`, 'data-k': k }, k)));
+  node.run = (res, then) => {
+    const st = {}; let j = 0;
+    const tick = () => {
+      if (!node.isConnected) return;
+      if (j < keys.length) { st[keys[j]] = res[j] ? 'hijau' : 'merah'; j++; draw(st); setTimeout(tick, 130); return; }
+      node.dataset.selesai = '1'; delete node.dataset.jalan; then?.();
+    };
+    delete node.dataset.selesai; node.dataset.jalan = '1'; ctx.sound.tap(); tick();
+  };
+  draw();
+  return node;
+}
+// true per test when version id gives the expected output (old behaviour, or the rules after the fix).
+const hasilUji = (id, baru = false) => UJI.map(([, cat]) => jalankan(id, cat) === (baru ? aturanBaru(cat) : jalankan('bayu', cat)));
+
+// Record builder with regu, babak and jawaban buttons; Bandingkan runs both versions.
+function pembeda54(ctx, { oops, msg, a, b, max = 12, hints = [], onFound }) {
+  const st = { regu: 'Mawar', babak: 2, jawaban: 'S', list: [] }; let coba = 0; let fin = false;
+  const node = el('div', { class: 'pk54-penyusun' }); const hasil = el('div', { class: 'pk54-banding' });
+  const seg = (key, vals, fmt = String) => el('div', { class: 'pk54-seg' }, vals.map((v) => onTap(el('button', { class: `pk54-pil ${st[key] === v ? 'on' : ''}`, type: 'button', 'data-k': key, 'data-v': String(v) }, fmt(v)), () => { st[key] = v; draw(); })));
+  const aksi = (k, label, fn) => onTap(el('button', { class: 'pk54-aksi', type: 'button', 'data-aksi': k }, label), () => { if (fin) return; fn(); fill(hasil); draw(); });
+  function draw() {
+    fill(node,
+      seg('regu', REGU), seg('babak', [1, 2, 3], (v) => `babak ${v}`), seg('jawaban', ['B', 'S', 'L'], (v) => ({ B: 'B benar', S: 'S salah', L: 'L lewat' }[v])),
+      el('div', { class: 'pk54-seg' },
+        aksi('tambah', '+ Tambah', () => { if (st.list.length < max) st.list.push([st.regu, st.babak, st.jawaban]); else say(msg, 'info', `Paling banyak ${max} catatan.`); }),
+        aksi('salin', '⧉ Salin terakhir', () => { if (st.list.length && st.list.length < max) st.list.push([...st.list[st.list.length - 1]]); }),
+        aksi('hapus', '↶ Hapus', () => { st.list.pop(); }),
+        aksi('kosong', '✕ Kosongkan', () => { st.list = []; })),
+      el('code', { class: 'pk54-daftar', 'data-n': String(st.list.length) }, `catatan = [${ringkas54(st.list)}]`, el('small', null, ` · ${st.list.length} catatan`)),
+      onTap(el('button', { class: 'btn primary pk54-bandingkan', type: 'button' }, 'Bandingkan ▶'), cek), hasil);
+  }
+  function cek() {
+    if (fin) return;
+    if (!st.list.length) { say(msg, 'info', 'Tambah catatan dulu.'); return; }
+    const oa = jalankan(a, st.list); const ob = jalankan(b, st.list); const sama = oa === ob;
+    fill(hasil, el('div', { class: `pk54-hasil ${sama ? 'sama' : 'beda'}` }, el('span', null, el('small', null, VERSI[a].nama), el('code', null, oa)), el('span', null, el('small', null, VERSI[b].nama), el('code', null, ob)), el('b', null, sama ? '= sama' : '≠ BEDA')));
+    if (sama) { oops(); coba++; say(msg, 'bad', hints[Math.min(coba - 1, hints.length - 1)] || 'Keluarannya masih sama. Coba catatan lain.'); return; }
+    fin = true; ctx.sound.good(); onFound(st.list.map((x) => [...x]));
+  }
+  draw();
+  return node;
+}
+
+// Misi 1: the scoreboard. Three lanes, one token per regu; tap the new score for the lit regu.
+function telusurRound(area, ctx, { oops, done }) {
+  const L = langkahBayu(CONTOH); const VALS = [-15, -10, -5, 0, 5, 10, 15, 20, 25, 30, 35]; const skor = {}; let i = 0;
+  const msg = msg54('Catatan 1: ("Melati", 1, "B"). Ketuk skor baru Melati.');
+  const pita = pita54(); const strip = el('div', { class: 'pk54-strip' }); const papan = el('div', { class: 'pk54-papan' }); const kanan = kol54(pita);
+  const HINT = { 1: 'Babak 1: baris 8–9 hanya menambah 10 bila jawabannya "B".', 2: 'Babak 2: bila bukan "B", baris 13–14 mengurangi 5, juga untuk lewat.', 3: 'Babak 3: baris 19 mengurangi 10, lalu baris 20–21 memeriksa apakah skornya di bawah 0.' };
+  const draw = () => {
+    const cur = CONTOH[i];
+    fill(strip, CONTOH.map((rec, k) => el('span', { class: `pk54-cat ${k < i ? 'sudah' : k === i ? 'aktif' : ''}` }, rec54(rec))));
+    fill(papan, REGU.map((r) => {
+      const aktif = cur && cur[0] === r;
+      const sel = (v) => { const c = el('span', { class: `pk54-sel ${skor[r] === v ? 'ada' : ''}`, 'data-v': String(v) }, el('small', null, String(v).replace('-', '−')), skor[r] === v ? el('i', { class: `pk54-token r-${r}` }) : null); return aktif ? onTap(c, () => pilih(v)) : c; };
+      return el('div', { class: `pk54-lajur ${aktif ? 'aktif' : ''}`, ...(aktif ? { 'data-want': String(L[i].skor[r]) } : {}) }, el('b', { class: `pk54-nama r-${r}` }, r),
+        el('span', { class: 'pk54-sel belum' }, el('small', null, '-'), r in skor ? null : el('i', { class: `pk54-token r-${r}` })), VALS.map(sel));
+    }));
+  };
+  function pilih(v) {
+    const cur = CONTOH[i]; const want = L[i].skor[cur[0]];
+    if (v !== want) { oops(); say(msg, 'bad', `${L[i].fresh ? 'Regu baru mulai dari 0 (baris 5–6). ' : ''}${HINT[cur[1]]}`); return; }
+    skor[cur[0]] = v; ctx.sound.tap(); pita.set({ hl: L[i].lines.filter((n) => n >= 3) }).ke(awalBlok(cur[1]));
+    say(msg, 'info', `${cur[0]} ${L[i].note}.`); i++; draw();
+    if (i < CONTOH.length) { const nx = CONTOH[i]; msg.textContent += ` Berikutnya ${rec54(nx)}: ketuk skor ${nx[0]}.`; return; }
+    say(msg, 'info', 'Semua catatan sudah. Baris 22 mengurutkan skor dari besar ke kecil. Susun keluarannya.');
+    fill(kanan, codeView(BARIS54.slice(-3).map((r) => r.t), { labels: ['22', '', '23'], hl: [0, 1] }), fillBoard(ctx, { oops, msg, view: rowsView([['hitung(contoh) →'], ['[', '_', ', ', '_', ', ', '_', ']']]), chips: ["('Melati', 35)", "('Kenanga', 30)", "('Mawar', 0)", "('Mawar', -15)", "('Melati', 40)"], want: ["('Melati', 35)", "('Kenanga', 30)", "('Mawar', 0)"],
+      hints: ['reverse=True: skor terbesar di depan. Lihat token di papan.', 'Skor terbesar kedua.', 'Mawar −15 sudah dikembalikan ke 0 oleh baris 20–21.'], done: () => { say(msg, '', `Keluaran: ${OUT_T7}. Perhatikan: Melati yang lewat di babak 2 malah kehilangan 5 poin.`); done(); } }));
+  }
+  draw(); pita.ke(awalBlok(1));
+  area.append(strip, dua54(kol54(papan), kanan), msg);
+}
+
+// Misi 1c: line hunt for scattered point numbers, then name the smells.
+function ciriRound(area, ctx, { oops, done }) {
+  const ANGKA = [9, 12, 14, 17, 19]; const dapat = new Set();
+  const msg = msg54('Gulir dengan ▲ ▼ dan ketuk setiap baris yang menyimpan angka poin.');
+  const hitung = el('p', { class: 'pk54-tally' }); const kanan = kol54(hitung);
+  const tally = () => { hitung.textContent = `🔢 angka poin: ${dapat.size} dari 5 baris`; };
+  const pita = pita54({ onLine: (no) => {
+    if (dapat.size === ANGKA.length) return;
+    if (dapat.has(no)) return;
+    if (!ANGKA.includes(no)) { if (no === 20 || no === 21) { say(msg, 'info', 'Angka 0 di sini batas skor, bukan poin jawaban.'); return; } oops(); say(msg, 'bad', 'Baris ini tidak memuat angka poin. Cari +10, +20, −5, dan seterusnya.'); return; }
+    dapat.add(no); ctx.sound.tap(); pita.P.stiker.set(no, '🔢'); pita.set({ warn: [...dapat] }); tally();
+    if (dapat.size < ANGKA.length) { say(msg, 'info', `Baris ${no}. Masih ada ${ANGKA.length - dapat.size} lagi.`); return; }
+    say(msg, 'info', 'Lima baris, tersebar dari 9 sampai 19. Untuk babak baru, semuanya harus dicari lagi. Sekarang namai ciri yang lain.');
+    kanan.append(fillBoard(ctx, { oops, msg, view: rowsView([['nama d, t, r, n, h → ', '_'], ['blok babak 1, 2, 3 → ', '_'], ['hitung, batasi, urutkan dalam satu def → ', '_']]),
+      chips: ['nama satu huruf', 'blok berulang', 'satu fungsi untuk semua', 'ditulis dengan Python', 'kodenya terlalu pendek'], want: ['nama satu huruf', 'blok berulang', 'satu fungsi untuk semua'],
+      hints: ['Apa isi d atau t? Namanya tidak memberi tahu.', 'Baris 7–21 berisi tiga blok yang hampir sama.', 'Satu fungsi mengerjakan tiga tugas sekaligus.'],
+      done: () => { say(msg, '', 'Itulah ciri kode warisan: nama satu huruf, angka tersebar, blok berulang, dan satu fungsi untuk semuanya. Bahasanya dan panjangnya bukan masalah.'); done(); } }));
+  } });
+  tally(); pita.ke(1);
+  area.append(dua54(kol54(pita), kanan), msg);
+}
+
+// Misi 2: photograph each test's current output, then stamp the ones that break the rules.
+const FOTO54 = {
+  T1: ['None', '{}'], T2: ['[]', "[('Melati', -5)]"], T3: ["[('Mawar', 0)]", '[]'], T4: ["[('Mawar', -10)]", "[('Mawar', -5)]"], T5: ["[('Melati', 0)]", '[]'],
+  T6: ["[('Kenanga', 10), ('Melati', 10)]", "[('Melati', 20)]"], T7: ["[('Melati', 40), ('Kenanga', 30), ('Mawar', 0)]", "[('Melati', 35), ('Kenanga', 30), ('Mawar', -15)]"],
+};
+const PETUNJUK54 = {
+  T1: 'Tanpa catatan, kamus t tetap kosong, jadi daftar yang diurutkan juga kosong.', T2: 'Baris 5–6 memasukkan Melati dengan 0. Babak 1 tidak punya baris untuk jawaban salah.',
+  T3: 'Baris 14 mengurangi 5. Di babak 2 tidak ada pembatasan skor.', T4: 'Baris 19 membuat −10, lalu baris 20–21 mengembalikannya ke 0.', T5: 'Lewat di babak 2 masuk ke else di baris 13, jadi −5.',
+  T6: 'Skornya sama. sorted stabil, jadi urutan munculnya dipertahankan.', T7: 'Ini keluaran Misi 1.',
+};
+function fotoRound(area, ctx, { oops, done }) {
+  const out = Object.fromEntries(UJI.map(([k, cat]) => [k, jalankan('bayu', cat)])); const foto = {}; let i = 0; const langgar = new Set();
+  const msg = msg54('Uji karakterisasi memotret keluaran kode saat ini, benar atau salah. Seret keluaran T1 ke bingkai.');
+  const pita = pita54(); const rak = el('div', { class: 'pk54-rak' }); const kamera = el('div', { class: 'pk54-kamera' }); const kanan = kol54(rak, kamera);
+  const drawRak = (onPilih = null) => fill(rak, UJI.map(([k]) => { const f = el('div', { class: `pk54-foto ${foto[k] ? 'ada' : ''} ${langgar.has(k) ? 'langgar' : ''}`, 'data-k': k }, el('b', null, k), el('code', null, foto[k] || '?'), langgar.has(k) ? el('span', { class: 'pk54-cap-kecil' }, '⚠ melanggar') : null); return onPilih ? onTap(f, () => onPilih(k)) : f; }));
+  function potret() {
+    const [k, cat] = UJI[i]; const blok = cat.length ? cat[0][1] : 0; pita.set({ hl: [] }).ke(k === 'T7' ? 1 : cat.length ? awalBlok(blok) : 1);
+    fill(kamera, fillBoard(ctx, { oops, msg, view: rowsView([[`📷 ${k}: hitung(${k === 'T7' ? 'contoh' : pyList(cat)})`], ['→ ', '_']]), chips: [out[k], ...FOTO54[k]], want: [out[k]], hints: [PETUNJUK54[k]],
+      done: () => { foto[k] = out[k]; drawRak(); i++; if (i < UJI.length) { say(msg, 'info', `${k} terpotret. Berikutnya ${UJI[i][0]}.`); potret(); return; } cap(); } }));
+  }
+  function cap() {
+    fill(kiri, aturanTabel()); fill(kamera);
+    say(msg, 'info', 'Tujuh foto lengkap. Bandingkan dengan aturan lomba, lalu ketuk foto yang keluarannya melanggar aturan.');
+    const want = ['T3', 'T5', 'T7'];
+    const tekan = (k) => {
+      if (langgar.has(k)) return;
+      if (!want.includes(k)) { oops(); say(msg, 'bad', `${k} sesuai aturan lomba. Cari skor negatif, lewat yang dikurangi, atau total yang keliru.`); return; }
+      langgar.add(k); ctx.sound.tap();
+      if (langgar.size < want.length) { drawRak(tekan); say(msg, 'info', `${k} melanggar aturan. Masih ada ${want.length - langgar.size} lagi.`); return; }
+      drawRak(); say(msg, '', 'T3 negatif, T5 mengurangi regu yang lewat, T7 memberi Melati 35 (seharusnya 40). Foto tetap disimpan apa adanya: tugasnya mencatat perilaku lama.'); done();
+    };
+    drawRak(tekan);
+  }
+  const kiri = kol54(pita); drawRak(); potret();
+  area.append(dua54(kiri, kanan), msg);
+}
+
+// Misi 3: new names and the ATURAN table, each step checked by T1–T7.
+function pugarRound(area, ctx, { oops, done }) {
+  const msg = msg54('Langkah 1: seret kartu nama baru ke nama lama. Isi dari atas.');
+  const pita = pita54(); const lampu = lampu54(ctx); const kerja = el('div', { class: 'pk54-kerja' }); const kanan = kol54(lampu, kerja);
+  fill(kerja, fillBoard(ctx, { oops, msg, view: rowsView([['hitung → ', '_'], ['d → ', '_'], ['t → ', '_'], ['n, r[1], r[2] → ', '_'], ['h → ', '_']]),
+    chips: ['hitung_skor', 'catatan', 'skor', 'regu, babak, jawaban', 'peringkat', 'data_lomba_final'], want: ['hitung_skor', 'catatan', 'skor', 'regu, babak, jawaban', 'peringkat'],
+    hints: ['Fungsi ini menghitung skor.', 'd berisi daftar catatan jawaban.', 't menyimpan skor setiap regu.', 'r[0], r[1], r[2] adalah regu, babak, dan jawaban.', 'h adalah hasil yang sudah diurutkan.'],
+    done: () => { say(msg, 'info', 'Penjaga Uji menjalankan T1–T7…'); lampu.run(hasilUji('rapi'), langkah2); } }));
+  function langkah2() {
+    say(msg, 'info', 'Semua hijau. Langkah 2: kumpulkan angka poin di tabel ATURAN, persis seperti yang dilakukan kode lama.');
+    pita.set({ warn: [9, 12, 14, 17, 19] }).ke(7);
+    fill(kerja, fillBoard(ctx, { oops, msg, view: codeFill(['# babak: (benar, tidak benar)', 'ATURAN = {', ['  1: (', '_', ', ', '_', '),'], ['  2: (', '_', ', ', '_', '),'], ['  3: (', '_', ', ', '_', '),'], '}']),
+      chips: ['10', '0', '20', '-5', '30', '-10', '5', '-15'], want: ['10', '0', '20', '-5', '30', '-10'],
+      hints: ['Baris 9: benar di babak 1.', 'Babak 1 tidak punya baris untuk jawaban tidak benar.', 'Baris 12.', 'Baris 14: semua yang bukan "B", termasuk lewat.', 'Baris 17.', 'Baris 19.'],
+      done: () => { say(msg, 'info', 'Penjaga Uji menjalankan T1–T7 pada versi rapi…'); lampu.run(hasilUji('rapi'), () => {
+        fill(kerja, codeView(['def poin(babak, jawaban):', '  benar, lainnya = ATURAN[babak]', '  if jawaban == "B":', '    return benar', '  return lainnya'], { hl: [1] }));
+        say(msg, '', 'Versi rapi lulus T1–T7 di setiap langkah. Angka poin kini di satu tempat, dan poin() membacanya.'); done(); }); } }));
+  }
+  pita.ke(1);
+  area.append(dua54(kol54(pita), kanan), msg);
+}
+
+// Misi 3d: Rudi's twin passes T1–T7; build the record list that tells them apart.
+function rudiRound(area, ctx, { oops, done }) {
+  const msg = msg54('Versi Rudi membuang syarat jawaban != "B". Susun catatan pembeda, lalu tekan Bandingkan.');
+  const lampu = lampu54(ctx);
+  const kiri = kol54(codeView(['# versi rapi', 'if (babak == 3 and jawaban != "B"', '    and skor[regu] < 0):', '  skor[regu] = 0', '# versi Rudi', 'if babak == 3 and skor[regu] < 0:', '  skor[regu] = 0'], { hl: [1], warn: [5] }), lampu);
+  const kanan = kol54(pembeda54(ctx, { oops, msg, a: 'bayu', b: 'rudi', hints: ['Masih sama. Bedanya hanya muncul bila jawabannya "B" di babak 3 dan skornya masih negatif.', 'Benar di babak 3 memberi +30. Skor sebelumnya harus di bawah −30.', 'Babak 2 salah: −5 setiap kali. Tujuh kali menjadi −35. "Salin terakhir" mempercepat.'],
+    onFound: (list) => { say(msg, '', `Catatan pembeda sah: ${list.length} catatan${list.length === 8 ? ', dan itu yang terpendek' : ''}. Kak Bayu memberi −5, Rudi memberi 0. Lulus semua uji belum berarti sama.`); done(); } }));
+  area.append(dua54(kiri, kanan), msg);
+  lampu.run(hasilUji('rudi'), () => say(msg, 'info', 'Rudi lulus T1–T7. Tetapi apakah pasti sama? Susun catatan pembeda, lalu tekan Bandingkan.'));
+}
+
+// Misi 4: mark the tests that will fail on Rina's and Dodi's versions, then run them.
+const BEDA54 = {
+  rina: ['# versi Rina', 'skor[regu] = max(0,', '  skor[regu] + poin(babak, jawaban))', '# if pembatasan skor dihapus'],
+  dodi: ['# versi Dodi', 'return sorted(skor.items(),', '  key=lambda pasangan:', '    (-pasangan[1], pasangan[0]))'],
+};
+function bongkarRound(area, ctx, { oops, done }) {
+  const msg = msg54(''); const kiri = kol54(); const kanan = kol54();
+  function tahap(v, then) {
+    const gagal = UJI.filter(([, cat]) => jalankan(v, cat) !== jalankan('bayu', cat)).map(([k]) => k); const tanda = new Set();
+    say(msg, 'info', `Ketuk kartu uji yang menurutmu gagal pada ${VERSI[v].nama}, lalu tekan Jalankan.`);
+    const lampu = lampu54(ctx); const kartu = el('div', { class: 'pk54-ujikartu-kartu', 'data-v': v });
+    const draw = () => fill(kartu, UJI.map(([k, cat]) => onTap(el('button', { class: `pk54-ujikartu ${tanda.has(k) ? 'tandai' : ''}`, type: 'button', 'data-k': k }, el('b', null, `${tanda.has(k) ? '✗ ' : ''}${k}`), el('small', null, k === 'T7' ? 'contoh' : ringkas54(cat))), () => { if (tanda.has(k)) tanda.delete(k); else tanda.add(k); ctx.sound.tap(); draw(); })));
+    fill(kiri, codeView(BEDA54[v], { warn: [1, 2, 3] }), lampu);
+    fill(kanan, kartu, onTap(el('button', { class: 'btn primary pk54-jalankan', type: 'button' }, '▶ Jalankan T1–T7'), () => {
+      if (lampu.dataset.jalan) return;
+      const cocok = gagal.length === tanda.size && gagal.every((k) => tanda.has(k));
+      lampu.run(hasilUji(v), () => {
+        if (!cocok) { oops(); say(msg, 'bad', `Lampu merah: ${gagal.join(', ')}. Tandaimu belum cocok. Lihat lampunya, perbaiki tanda, lalu jalankan lagi.`); return; }
+        ctx.sound.good(); then();
+      });
+    }));
+    draw();
+  }
+  tahap('rina', () => {
+    say(msg, 'info', 'T3 dan T5 gagal: Rina memberi 0, bukan −5. "Versiku malah lebih benar," kata Rina. Perubahannya termasuk apa?');
+    fill(kanan, fillBoard(ctx, { oops, msg, view: rowsView([['Perubahan Rina adalah ', '_']]), chips: ['perbaikan bug', 'perapian kode'], want: ['perbaikan bug'], hints: ['Perapian tidak boleh mengubah perilaku, dan T3 serta T5 berubah.'],
+      done: () => { say(msg, 'info', 'Tepat. Rapikan dulu, simpan, lalu perbaiki bug sebagai langkah terpisah. Sekarang versi Dodi.'); setTimeout(() => tahap('dodi', () => { say(msg, '', "T6 gagal: Dodi memberi [('Kenanga', 10), ('Melati', 10)]. Regu dengan skor sama diurutkan menurut abjad. Si Kembar Palsu terbongkar."); done(); }), 1600); } }));
+  });
+  area.append(dua54(kiri, kanan), msg);
+}
+
+// Misi 4c: a mistyped round number. The old code stays silent, the tidy version raises an error.
+function babak4Round(area, ctx, { oops, done }) {
+  const cat = [['Melati', 4, 'B']]; const ob = jalankan('bayu', cat); const or = jalankan('rapi', cat);
+  const msg = msg54('Panitia salah mengetik babak 4. Ramalkan keluaran kode Kak Bayu dan versi rapi.');
+  const pita = pita54().set({ hl: [7, 10, 15] }); const scr = layar();
+  const kanan = kol54(el('div', { class: 'pk54-kartu-besar' }, el('b', null, '📝 catatan'), el('code', null, rec54(cat[0]))),
+    fillBoard(ctx, { oops, msg, view: rowsView([['hitung → ', '_'], ['hitung_skor → ', '_']]), chips: [ob, or, "[('Melati', 50)]", '[]'], want: [ob, or],
+      hints: ['Baris 7, 10, dan 15 semuanya salah untuk babak 4, tetapi baris 5–6 sudah memasukkan Melati.', 'poin() membaca ATURAN[babak], dan ATURAN tidak punya kunci 4.'],
+      done: () => { kanan.append(scr); play(scr, [`>>> hitung(${pyList(cat)})`, ob, `>>> hitung_skor(${pyList(cat)})`], { err: or, end: () => { say(msg, '', 'Kode lama diam-diam memberi 0. Versi rapi berhenti dengan galat yang jelas. Perubahan perilaku seperti ini harus diputuskan dengan sengaja dan dicatat sebagai uji, bukan terjadi tanpa diketahui.'); done(); } }); } }));
+  pita.ke(3);
+  area.append(dua54(kol54(pita), kanan), msg);
+}
+
+// Misi 5: the deliberate fix — a lewat column, new expectations for T3, T5 and T7, then babak 4.
+function perbaikiRound(area, ctx, { oops, done }) {
+  const msg = msg54('Langkah 1: lengkapi poin() supaya lewat memakai kolom baru di ATURAN.');
+  const kiri = kol54(codeView(['ATURAN = {', '  1: (10, 0, 0),', '  2: (20, -5, 0),', '  3: (30, -10, 0),', '}', '# (benar, salah, lewat)', 'skor[regu] = max(0,', '  skor[regu] + poin(babak, jawaban))'], { hl: [1, 2, 3, 6] }));
+  const lampu = lampu54(ctx); const kanan = kol54();
+  fill(kanan, tileSlots(ctx, { oops, msg, build: ['def poin(babak, jawaban):', '  benar, salah, lewat =', '    ATURAN[babak]', '  if jawaban == "B":', '    return benar', ['L1', 1], ['L2', 2], '  return salah'],
+    tiles: [['L1', 'if jawaban == "L":'], ['L2', 'return lewat'], ['x', 'return 0', 'Lewat harus bernilai sesuai tabel, jadi ambil dari ATURAN.'], ['y', 'if jawaban == "S":', 'Salah sudah ditangani baris terakhir. Yang belum ada adalah lewat.']],
+    order: 'Periksa dulu jawabannya, baru kembalikan nilainya.', onFull: harapan }));
+  function harapan() {
+    say(msg, 'info', 'Langkah 2: perilaku berubah dengan sengaja, jadi harapan uji yang melanggar aturan harus diganti. Seret harapan barunya.');
+    fill(kanan, lampu, fillBoard(ctx, { oops, msg, view: rowsView([['T3 → ', '_'], ['T5 → ', '_'], ['T7 → ', '_']]),
+      chips: ["[('Mawar', 0)]", "[('Melati', 0)]", "[('Melati', 40), ('Kenanga', 30), ('Mawar', 0)]", "[('Mawar', -5)]", OUT_T7], want: ["[('Mawar', 0)]", "[('Melati', 0)]", "[('Melati', 40), ('Kenanga', 30), ('Mawar', 0)]"],
+      hints: ['Skor tidak pernah kurang dari 0.', 'Lewat di babak 2 bernilai 0.', 'Melati 10 + 0 + 30 = 40.'],
+      done: () => { say(msg, 'info', 'Penjaga Uji menjalankan T1–T7 dengan harapan baru…'); lampu.run(hasilUji('fix', true), babak4); } }));
+  }
+  function babak4() {
+    say(msg, 'info', 'Semua hijau. Langkah 3: panitia menambah babak 4 (benar +50, salah −25, lewat 0). Tambahkan barisnya.');
+    fill(kiri, tileSlots(ctx, { oops, msg, build: ['ATURAN = {', '  1: (10, 0, 0),', '  2: (20, -5, 0),', '  3: (30, -10, 0),', ['b4', 1], '}'],
+      tiles: [['b4', '4: (50, -25, 0),'], ['x1', '4: (50, -25),', 'ATURAN kini punya tiga kolom: benar, salah, lewat.'], ['x2', '4: (-25, 50, 0),', 'Urutannya benar, salah, lewat.']],
+      onFull: () => { say(msg, '', 'Babak 4 cukup satu baris. Di kode Kak Bayu perlu blok baru tujuh baris, dan bug lewat ikut tersalin. Perapian dan perbaikan disimpan sebagai dua commit terpisah.'); done(); } }));
+  }
+  area.append(dua54(kiri, kanan), msg);
+}
+
+// Misi 6: stamp change cards Sama or Beda; a Beda stamp needs a record list the screen checks.
+const DIFF54 = {
+  K1: [['t = {}', 't[n] = t[n] + 10'], ['skor = {}', 'skor[n] = skor[n] + 10'], 'di semua baris'],
+  K2: [['if r[1] == 2:', 'if r[1] == 3:'], ['elif r[1] == 2:', 'elif r[1] == 3:'], 'baris 10 dan 15'],
+  K3: [['h = sorted(t.items(),', '  key=lambda x: x[1], reverse=True)'], ['h = sorted(t.items(),', '  key=lambda x: -x[1])'], 'baris 22'],
+  K4: [['    else:', '      t[n] = t[n] - 10', '      if t[n] < 0:', '        t[n] = 0'], ['    else:', '      t[n] = t[n] - 10', '  if t[n] < 0:', '    t[n] = 0'], 'baris 20–21 keluar dari blok babak 3'],
+  K5: [['if n not in t:', '  t[n] = 0', 't[n] = t[n] - 5'], ['(baris 5–6 dihapus)', 't[n] = t.get(n, 0) - 5'], 'juga baris 9, 12, 17, 19'],
+  K6: [['t[n] = t[n] + 20'], ['t[n] = t[n] + 10 * r[1]'], 'juga baris 9 dan 17'],
+};
+function kartuRound(area, ctx, { oops, done }) {
+  const beda = ctx.rand.shuffle(['K4', 'K5'])[0]; const deck = ctx.rand.shuffle([beda, ...ctx.rand.shuffle(['K1', 'K2', 'K3', 'K6']).slice(0, 2)]); let t = 0;
+  const msg = msg54(''); const kiri = kol54(); const kanan = kol54();
+  function step() {
+    const k = deck[t]; const c = KARTU[k]; const [lama, baru, ket] = DIFF54[k];
+    say(msg, 'info', `Kartu ${t + 1} dari ${deck.length}. Sama: perilakunya pasti tidak berubah untuk semua catatan. Beda: ada catatan yang hasilnya berubah.`);
+    fill(kiri, el('div', { class: 'pk54-kartu-besar', 'data-kartu': k }, el('b', null, `🃏 ${k}`), el('span', null, c.t)),
+      el('div', { class: 'pk54-diff' }, codeView(lama, { labels: lama.map(() => '−'), cls: 'lama' }), codeView(baru, { labels: baru.map(() => '+'), cls: 'baru' }), el('small', null, ket)));
+    const lanjut = () => { t++; if (t < deck.length) { kanan.append(onTap(el('button', { class: 'btn primary pk54-lanjut', type: 'button' }, 'Kartu berikutnya ➜'), step)); return; } say(msg, '', `${msg.textContent} Tiga kartu tercap dengan benar.`); done(); };
+    fill(kanan, el('div', { class: 'pk54-cap-cap' }, ['Sama', 'Beda'].map((v) => onTap(el('button', { class: `pk54-cap ${v.toLowerCase()}`, type: 'button', 'data-v': v }, v === 'Sama' ? '🟰 Sama' : '≠ Beda'), () => {
+      if ((v === 'Beda') !== c.beda) { oops(); say(msg, 'bad', v === 'Sama' ? 'Ada catatan yang hasilnya berubah. Coba satu catatan saja.' : `Kartu ini Sama. ${c.why}`); return; }
+      ctx.sound.tap();
+      if (!c.beda) { fill(kanan, el('p', { class: 'pk54-cap-hasil sama' }, '🟰 SAMA')); say(msg, 'info', `Sama. ${c.why}`); lanjut(); return; }
+      say(msg, 'info', 'Beda! Susun catatan pembedanya supaya cap ini sah.');
+      fill(kanan, el('p', { class: 'pk54-cap-hasil beda' }, '≠ BEDA'), pembeda54(ctx, { oops, msg, a: 'bayu', b: k, hints: [k === 'K4' ? 'Kartu ini membatasi skor setelah setiap catatan. Kapan kode Kak Bayu membiarkan skor negatif?' : 'Tanpa baris 5–6, kapan sebuah regu tidak pernah masuk ke kamus t?'],
+        onFound: () => { say(msg, 'info', `Cap Beda sah. ${c.why}`); lanjut(); } }));
+    }))));
+  }
+  step();
+  area.append(dua54(kiri, kanan), msg);
+}
+
+// Misi Bos: predict which versions slip past the random tester, run it, then turn the rare case into T8.
+function bosRound(area, ctx, { oops, done }) {
+  const V = ['rapi', 'rudi', 'rina', 'dodi']; const hit = Object.fromEntries(V.map((v) => [v, bandingkan(v).beda])); const nol = new Set();
+  const msg = msg54('Pengacak membandingkan kode Kak Bayu dengan versi lain pada 1.000 daftar acak (0–12 catatan). Ketuk versi yang menurutmu menghasilkan 0 beda.');
+  const kiri = kol54(); const kanan = kol54();
+  const nama = { rapi: 'Versi rapi', rudi: 'Rudi', rina: 'Rina', dodi: 'Dodi' };
+  const drawV = (buka = false) => fill(kiri, el('div', { class: 'pk54-versi-versi' }, V.map((v) => onTap(el('button', { class: `pk54-versi ${nol.has(v) ? 'nol' : ''} ${buka ? (hit[v] ? 'beda' : 'lolos') : ''}`, type: 'button', 'data-v': v }, el('b', null, nama[v]), el('small', null, buka ? `${hit[v]} beda` : nol.has(v) ? 'ramalan: 0' : 'ramalan: ada beda')), () => { if (kiri.dataset.kunci) return; if (nol.has(v)) nol.delete(v); else nol.add(v); ctx.sound.tap(); drawV(); }))),
+    onTap(el('button', { class: 'btn primary pk54-acak', type: 'button' }, '🎲 Jalankan pengacak'), jalan));
+  function jalan() {
+    if (kiri.dataset.kunci) return;
+    const benar = V.every((v) => nol.has(v) === (hit[v] === 0)); drawV(true);
+    if (!benar) { oops(); say(msg, 'bad', `Hasil: ${V.map((v) => `${nama[v]} ${hit[v]}`).join(', ')}. Ramalanmu belum tepat. Ubah ramalan, lalu jalankan lagi.`); return; }
+    kiri.dataset.kunci = '1'; ctx.sound.good(); drawV(true);
+    say(msg, 'info', 'Ramalan tepat. Versi rapi memang sama, tetapi Rudi juga lolos padahal berbeda. Mengapa pengacak rabun?');
+    fill(kanan, fillBoard(ctx, { oops, msg, view: rowsView([['Rudi baru berbeda bila satu regu tidak benar di babak 2'], ['paling sedikit ', '_', ' kali, lalu ', '_', ' di babak 3.']]), chips: ['7', '3', '12', 'benar', 'salah'], want: ['7', 'benar'],
+      hints: ['−5 setiap kali. Skor harus di bawah −30 sebelum +30.', 'Pembatasan Rudi baru berbeda bila jawabannya "B".'], done: t8 }));
+  }
+  function t8() {
+    const cat = [...Array(7).fill(['Mawar', 2, 'S']), ['Mawar', 3, 'B']]; const lampu = lampu54(ctx, ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8']);
+    say(msg, 'info', 'Daftar acak 12 catatan hampir tidak pernah begitu. Kasus langka harus ditemukan dengan menalar, lalu dijadikan uji T8. Penjaga Uji menjalankan T1–T8 pada versi Rudi…');
+    fill(kanan, el('div', { class: 'pk54-kartu-besar' }, el('b', null, '🛡️ T8 baru'), el('code', null, `[${ringkas54(cat)}]`), el('small', null, `harapan ${jalankan('bayu', cat)}, Rudi ${jalankan('rudi', cat)}`)), lampu);
+    lampu.run([...hasilUji('rudi'), jalankan('rudi', cat) === jalankan('bayu', cat)], () => { say(msg, '', 'T8 merah: Si Kembar Palsu Rudi tertangkap. Uji acak membantu, tetapi kasus langka perlu dinalar dan dicatat sebagai uji.'); done(); });
+  }
+  drawV();
+  area.append(dua54(kiri, kanan), msg);
+}
 
 export default {
   id: 'sma-54-rapikan-kode',
@@ -305,7 +556,7 @@ export default {
   age: '16–18 th',
   icon: '🧹',
   source: null,
-  rounds: RONDE,
+  rounds: 10,
   maxPlayers: 4,
   goal: 'Telusuri kode skor lomba Kak Bayu, catat perilakunya dengan uji karakterisasi, rapikan langkah demi langkah, temukan versi teman yang diam-diam mengubah perilaku, lalu perbaiki bugnya sebagai langkah terpisah.',
   extraModes: [
@@ -315,12 +566,23 @@ export default {
     { id: 'giliran', icon: '🃏', label: 'Sama atau Beda?', desc: 'Tim bergantian mengambil kartu K1–K6. Jawaban Beda harus disertai catatan pembeda yang diperiksa layar', create: createTeams },
   ],
   create(root, ctx) {
-    const wrap = el('div', { class: 'act rapikan-kode' });
-    root.append(wrap);
+    const wrap = el('div', { class: 'act rapikan-kode pk54-main' }); root.append(wrap);
     function render() {
-      wrap.replaceChildren();
-      let solved = false;
-      round(wrap, ctx, ctx.round % RONDE, () => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, 900); } });
+      wrap.replaceChildren(); const r = ctx.round; let solved = false;
+      const next = (wait = 5200) => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, wait); } };
+      const area = el('div', { class: 'pk54-area' }); let foe = null;
+      const go = (k, no) => { const [judul, tujuan, ulah] = HEAD54[k]; foe = el('div', { class: 'pk54-musuh' }, el('b', null, '👯 Si Kembar Palsu'), el('span', null, ulah)); wrap.append(el('div', { class: 'pk54-kepala' }, misiHead(no, judul, tujuan, '🏛️'), foe), area); };
+      const fin = (ms) => ({ oops: () => ctx.mistake(), done: () => { foe.classList.add('beres'); foe.lastChild.textContent = 'Perilaku terjaga ✓'; next(ms); } });
+      if (r === 0) { go('telusur', 1); telusurRound(area, ctx, fin(6000)); }
+      else if (r === 1) { go('ciri', 1); ciriRound(area, ctx, fin(6000)); }
+      else if (r === 2) { go('foto', 2); fotoRound(area, ctx, fin(6500)); }
+      else if (r === 3) { go('pugar', 3); pugarRound(area, ctx, fin(5500)); }
+      else if (r === 4) { go('rudi', 3); rudiRound(area, ctx, fin(6500)); }
+      else if (r === 5) { go('bongkar', 4); bongkarRound(area, ctx, fin(6000)); }
+      else if (r === 6) { go('babak4', 4); babak4Round(area, ctx, fin(7000)); }
+      else if (r === 7) { go('perbaiki', 5); perbaikiRound(area, ctx, fin(6500)); }
+      else if (r === 8) { go('kartu', 6); kartuRound(area, ctx, fin(6000)); }
+      else { go('bos', 'Bos'); bosRound(area, ctx, fin(7000)); }
     }
     render();
   },
