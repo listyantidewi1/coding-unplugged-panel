@@ -4,8 +4,9 @@
 // sensor and a lost message; version 2 adds validation, periodic messages and a watchdog.
 
 import { el, onTap, button, shake } from '../core/util.js';
-import { choice } from '../core/kit.js';
+import { choice, dnd } from '../core/kit.js';
 import { say, pickTeams, scoreBar, finishBoard, fmtNum } from './sma-kit.js';
+import { misiHead, fill } from './misi-kit.js';
 
 export const TOPICS = [['kebun/suhu', 'Sensor suhu larutan', ['pengendali', 'dasbor']], ['kebun/ph', 'Sensor pH', ['pengendali', 'dasbor']], ['kebun/air', 'Sensor ketinggian air tandon (cm)', ['pengendali', 'dasbor']], ['kebun/perintah/pompa', 'Pengendali', ['pompa']], ['kebun/perintah/kipas', 'Pengendali', ['kipas']], ['kebun/peringatan', 'Pengendali', ['dasbor', 'ponsel']]];
 export const TYPES = [['sensor', 'sensor'], ['aktuator', 'aktuator'], ['perantara', 'perantara'], ['pengendali', 'pengendali'], ['antarmuka', 'antarmuka']];
@@ -121,10 +122,29 @@ function makeBoard() {
   return { el: root, show, play, clear, feed };
 }
 
+// The program, one short block card per rule (at most 8 lines of 40 characters).
+export function ruleCards(v2 = false) {
+  const air = [['a0', 'SAAT kebun/air = x:'], ['a1', '  JIKA x < 20:'], ['a2', '    pompa MATI'], ['a3', '    peringatan "Air rendah"'], ['a4', '  LAINNYA:'], ['a5', '    pompa NYALA']];
+  const suhu = v2 ? [['s0', 'SAAT kebun/suhu = x:'], ['s1', '  JIKA x < 0 ATAU x > 50:', true], ['s2', '    peringatan "Sensor rusak?"', true], ['s3', '  LAINNYA JIKA x > 30:'], ['s4', '    kipas NYALA'], ['s5', '  LAINNYA JIKA x < 28:'], ['s6', '    kipas MATI']]
+    : [['s0', 'SAAT kebun/suhu = x:'], ['s1', '  JIKA x > 30:'], ['s2', '    kipas NYALA'], ['s3', '  JIKA x < 28:'], ['s4', '    kipas MATI']];
+  const ph = [['p0', 'SAAT kebun/ph = x:'], ['p1', '  JIKA x < 5,5 ATAU x > 6,5:'], ['p2', '    peringatan "pH di luar batas"']];
+  const cards = [['a', 'Aturan air', air], ['s', 'Aturan suhu', suhu], ['p', 'Aturan pH', ph]];
+  if (v2) cards.push(['w', 'Pengawas', [['w0', 'SETIAP 10 menit:', true], ['w1', '  JIKA air diam > 30 menit:', true], ['w2', '    peringatan "Sensor air diam"', true]]]);
+  return cards;
+}
 function makeCode(v2) {
-  const rows = code(v2).map(([k, t, ind, nu]) => el('div', { class: `hk-baris ${nu ? 'baru' : ''}`, 'data-k': k }, el('span', { style: { paddingLeft: `${ind * 1.6}em` } }, t || ' ')));
-  const root = el('div', { class: 'hk-kode' }, rows);
-  const mark = (hit) => { for (const r of rows) r.classList.toggle('jalan', hit.includes(r.dataset.k)); };
+  const cards = ruleCards(v2);
+  const tabs = el('div', { class: 'hk-tab-aturan' });
+  const body = el('div', { class: 'hk-kode' });
+  let cur = 'a'; let hit = [];
+  const draw = () => {
+    fill(tabs, cards.map(([k, l]) => onTap(el('button', { class: `hk-tab ${k === cur ? 'on' : ''}`, type: 'button' }, l), () => { cur = k; draw(); })));
+    const card = cards.find((c) => c[0] === cur);
+    fill(body, card[2].map(([k, t, nu]) => el('div', { class: `hk-baris ${nu ? 'baru' : ''} ${hit.includes(k) ? 'jalan' : ''}`, 'data-k': k }, t)));
+  };
+  const root = el('div', { class: 'hk-program' }, tabs, body);
+  const mark = (h) => { hit = h; if (h.length) cur = h[0][0]; draw(); };
+  draw();
   return { el: root, mark };
 }
 
@@ -170,6 +190,244 @@ function traceRound(wrap, ctx, { from, to, done }) {
   ask();
 }
 
+// ---------- Kebun Tetap Hijau: the ten missions ----------
+export const PICKS = [['pompa', 'NYALA', '⛲ pompa NYALA'], ['pompa', 'MATI', '⛲ pompa MATI'], ['kipas', 'NYALA', '🌀 kipas NYALA'], ['kipas', 'MATI', '🌀 kipas MATI'], ['peringatan', '', '⚠️ peringatan']];
+const pickKey = ([d, v]) => (d === 'peringatan' ? 'peringatan' : `${d} ${v}`);
+export const HARM = { K7: 'Kipas mati padahal larutan makin panas: satu daun layu!', K10: 'Tandon sudah penuh, tetapi pompa tetap mati: satu daun layu!' };
+export const NUMS = [-127, 0, 20, 28, 30, 50, 100];
+export const SAFETY = [['pelampung', '🎚️ Saklar pelampung di tandon', true, 'Saklar pelampung memutus listrik pompa langsung, tanpa jaringan.'], ['dasbor3', '🖥 Dasbor ketiga', false, 'Dasbor juga butuh jaringan dan hanya menampilkan.'], ['ponsel2', '📱 Ponsel tambahan', false, 'Ponsel juga butuh jaringan; perintah yang hilang tetap hilang.']];
+export const SLOTS7 = [['sensor', 'Sensor'], ['awas', 'Ambang peringatan'], ['sirene', 'Ambang sirene'], ['tahan', 'Anti salah baca'], ['valid', 'Batas validasi'], ['pengawas', 'Pengawas'], ['daya', 'Daya cadangan']];
+export const CARDS7 = [['c1', 'sensor', '📏 Sensor tinggi air sungai', true], ['c2', 'sensor', '🌡 Sensor suhu air', false, 'Yang perlu diukur tinggi air, bukan suhu.'], ['c3', 'awas', '> 2 m: peringatan ke ponsel ketua RT', true], ['c4', 'awas', '> 1 m: peringatan ke semua warga', false, 'Kebutuhannya 2 m; 1 m membuat peringatan terlalu sering sehingga diabaikan.'], ['c5', 'sirene', '> 3 m: sirene di balai desa', true], ['c6', 'tahan', 'Sirene bila dua pembacaan berturut-turut > 3 m', true], ['c7', 'tahan', 'Sirene langsung pada satu pembacaan > 3 m', false, 'Satu pembacaan salah bisa membunyikan sirene dan membuat warga panik.'], ['c8', 'valid', '< 0 m atau > 8 m: peringatan "sensor rusak?"', true], ['c9', 'pengawas', 'Tanpa pesan lebih dari 30 menit: peringatan', true], ['c10', 'daya', '🔋 Baterai cadangan dan panel surya', true], ['c11', 'daya', '🎨 Dasbor berwarna biru', false, 'Warna tidak membuat sistem tetap hidup saat listrik padam.']];
+export const STORMS = [['b1', 'Tinggi air 1,5 m', 'tidak', 'Di bawah 2 m: tidak ada tindakan.'], ['b2', 'Tinggi air 2,4 m', 'awas', 'Lebih dari 2 m: peringatan ke ponsel ketua RT.'], ['b3', '3,2 m, lalu 3,4 m', 'sirene', 'Dua pembacaan berturut-turut lebih dari 3 m: sirene menyala pada pembacaan kedua.'], ['b4', 'Satu pembacaan 9,9 m', 'rusak', 'Di luar 0–8 m: peringatan sensor rusak, sirene tidak menyala.'], ['b5', 'Listrik padam, sensor diam 30 menit', 'diam', 'Pengawas memberi peringatan karena tidak ada pesan.']];
+export const OUTCOMES = [['tidak', '😴 Tidak ada'], ['awas', '⚠️ Peringatan'], ['sirene', '🚨 Sirene'], ['rusak', '🔧 Sensor rusak?'], ['diam', '⏱️ Pengawas']];
+export const QUOTA = [[3, 'sensor'], [6, 'pesan per jam'], [24, 'jam'], [50, 'byte per pesan'], [30, 'hari']];
+export const QUOTA_CHIPS = [3, 6, 24, 50, 30, 10, 60, 12];
+export const SAVERS = [['ubah', 'Kirim hanya bila nilai berubah cukup banyak, ditambah pesan rutin setiap 30 menit', true, 'Pesan jauh berkurang, dan pengawas tetap tahu sensor masih hidup.'], ['pengawas', 'Matikan pengawas supaya pesan rutin tidak perlu', false, 'Tanpa pengawas, sensor yang mati tidak ketahuan.'], ['jarang', 'Kirim setiap 6 jam saja', false, 'Air bisa habis dalam 6 jam tanpa ada yang tahu.']];
+const HEAD30 = {
+  perangkat: ['Kenali Perangkat', 'Seret setiap perangkat ke jenisnya, lalu langgankan dasbor kedua.'],
+  hari1: ['Hari Pertama: Pagi', 'K1–K3: isi kotak keluar pengendali sesuai aturan, lalu jalankan.'],
+  hari2: ['Hari Pertama: Siang', 'K4–K6: isi kotak keluar pengendali sesuai aturan, lalu jalankan.'],
+  hari3: ['Hari Pertama: Sore', 'K7–K10: jalankan, lalu tunjuk kejadian yang membuat daun layu.'],
+  bug: ['Buru Bug Sensor', 'Pasang batas validasi supaya nilai −127 tidak mematikan kipas.'],
+  hilang: ['Pesan yang Hilang', 'Nyalakan pesan rutin dan pengawas, lalu pasang pengaman tanpa jaringan.'],
+  batas: ['Uji Nilai Batas', 'Seret tujuh nilai uji ke hasil aturan suhu versi 2.'],
+  sungai: ['Rancang Pemantau Sungai', 'Rakit pemantau banjir Desa Sukamakmur dari kartu blok.'],
+  badai: ['Uji Badai', 'Seret setiap kartu badai ke hasil yang akan terjadi pada rakitanmu.'],
+  bos: ['Hemat Kuota', 'Hitung pesan dan byte sebulan, lalu pilih cara hemat yang tetap aman.'],
+};
+const msg30 = (t) => el('p', { class: 'reveal info' }, t);
+function leafPot(start = 10) {
+  let n = start; const leaves = el('span', { class: 'hk30-daun' });
+  const draw = () => fill(leaves, Array.from({ length: 10 }, (_, i) => el('i', { class: i < n ? '' : 'gugur' }, i < n ? '🍃' : '·')));
+  const node = el('div', { class: 'hk30-pot' }, el('span', null, '🪴 Daun kebun'), leaves);
+  draw();
+  return { node, drop() { if (n > 0) { n--; draw(); node.classList.remove('goyang'); void node.offsetWidth; node.classList.add('goyang'); } }, grow() { if (n < 10) { n++; draw(); } } };
+}
+const dropBins = (defs, cls = '') => defs.map(([k, l]) => el('div', { class: `hk30-kotak ${cls} k-${k}`, 'data-drop': k }, el('b', null, l), el('div', { class: 'hk30-kotak-isi' })));
+function sortGame(area, ctx, { oops, msg, items, bins, cols, check, chip, after, done }) {
+  const tray = el('div', { class: 'hk30-baki' }, ctx.rand.shuffle(items.map((x) => x[0])).map((k) => el('div', { class: 'hk30-kartu', 'data-drag': k }, items.find((x) => x[0] === k)[1])));
+  let left = items.length;
+  const board = el('div', { class: 'hk30-papan' }, el('div', { class: 'hk30-kotak-kotak', style: { '--kol': cols || bins.length } }, bins), tray);
+  dnd(board, (card, box) => {
+    if (!left) return;
+    const it = items.find((x) => x[0] === card.dataset.drag); const why = check(it, box.dataset.drop);
+    if (why) { oops(); shake(card); say(msg, 'bad', why); return; }
+    card.remove(); box.querySelector('.hk30-kotak-isi').append(chip ? chip(it) : el('span', { class: 'hk30-chip' }, it[1])); ctx.sound.tap(); left--;
+    after?.(it, left); if (!left) done();
+  });
+  area.append(board, msg);
+}
+
+// Misi 1: device types, then a second dashboard by subscription only.
+function deviceRound(area, ctx, { oops, done }) {
+  const msg = msg30('Seret setiap perangkat ke jenisnya: sensor mengukur, aktuator menggerakkan, perantara meneruskan, pengendali memutuskan, antarmuka menampilkan.');
+  sortGame(area, ctx, { oops, msg, items: DEVICES.map(([n, t, w]) => [n, n, t, w]), bins: dropBins(TYPES), check: (d, k) => (k !== d[2] ? 'Belum tepat. Aktuator menggerakkan sesuatu; antarmuka adalah tampilan untuk manusia.' : ''), after: (d) => say(msg, '', d[3]), done: () => setTimeout(subs, 1600) });
+  function subs() {
+    area.replaceChildren();
+    say(msg, 'info', 'Kelompok tani menambah dasbor kedua di balai desa. Seret kartunya ke setiap topik yang perlu dilanggani.');
+    const want = ['suhu', 'ph', 'air', 'peringatan'];
+    const rows = TOPICS.map(([t, by, s]) => { const key = t.split('/').pop(); return el('div', { class: 'hk30-topik', 'data-drop': key }, el('code', null, t), el('small', null, `dari ${by}`), el('span', { class: 'hk30-pelanggan' }, s.map((x) => el('i', null, x)))); });
+    const token = el('div', { class: 'hk30-kartu dasbor2', 'data-drag': 'd2' }, '🖥 Dasbor balai desa');
+    const got = new Set();
+    const board = el('div', { class: 'hk30-dua' }, el('div', { class: 'hk30-langganan' }, el('b', null, '📮 Daftar langganan perantara'), rows), el('div', { class: 'hk30-kanan' }, token));
+    dnd(board, (card, row) => {
+      const key = row.dataset.drop; if (got.has(key) || got.size === 4) return;
+      if (!want.includes(key)) { oops(); shake(row); say(msg, 'bad', 'Dasbor hanya menampilkan data untuk manusia; perintah pompa dan kipas tidak untuknya.'); return; }
+      got.add(key); row.querySelector('.hk30-pelanggan').append(el('i', { class: 'baru' }, 'dasbor 2')); row.classList.add('isi'); ctx.sound.tap();
+      if (got.size < 4) { say(msg, '', `Dasbor 2 berlangganan ${row.querySelector('code').textContent}.`); return; }
+      token.remove(); say(msg, '', 'Selesai tanpa mengubah satu baris program pun: sensor tetap mengirim ke perantara, perantara yang meneruskan. Itulah kekuatan publish–subscribe.'); done();
+    });
+    area.append(board, msg);
+  }
+}
+
+// Misi 2: fill the controller's outbox for each event, then watch the envelopes travel.
+function dayRound(area, ctx, { oops, pot, from, to, finale, done }) {
+  const rows = simulate(false); let i = from; let busy = false;
+  const board = makeBoard(); const cv = makeCode(false);
+  if (from > 0) board.show({ pompa: rows[from - 1].pompa, kipas: rows[from - 1].kipas, dash: rows[from - 1].dash, alerts: rows[from - 1].alerts });
+  const msg = msg30('Baca aturannya, isi kotak keluar pengendali (kosong berarti tidak ada perintah), lalu jalankan.');
+  const ev = el('div', { class: 'hk30-ev' }); const box = el('div', { class: 'hk30-keluar' });
+  const sel = new Set();
+  const drawBox = () => fill(box, el('b', null, '📤 Kotak keluar pengendali'), el('div', { class: 'hk30-pilih' }, PICKS.map(([d, v, l]) => onTap(el('button', { class: `hk30-tindak ${sel.has(pickKey([d, v])) ? 'on' : ''}`, type: 'button', 'data-k': pickKey([d, v]) }, l), () => {
+    if (busy) return; const k = pickKey([d, v]);
+    if (sel.has(k)) sel.delete(k); else { sel.add(k); if (d !== 'peringatan') sel.delete(pickKey([d, v === 'NYALA' ? 'MATI' : 'NYALA'])); }
+    ctx.sound.tap(); drawBox();
+  })), button('🧠 Jalankan', run, 'primary')));
+  function show() { busy = false; box.classList.remove('sibuk'); const row = rows[i]; fill(ev, eventCard(row.e)); cv.mark([`${row.e[2][0]}0`]); sel.clear(); drawBox(); }
+  function run() {
+    if (busy) return; const row = rows[i];
+    const want = new Set(row.out.map(pickKey));
+    if (want.size !== sel.size || [...want].some((k) => !sel.has(k))) { oops(); shake(box); say(msg, 'bad', row.e[5] ? 'Pesannya tidak sampai ke perantara, jadi pengendali tidak menerima apa-apa.' : `Ikuti aturan untuk nilai ${fmt(row.e[2], row.e[3])}: periksa setiap JIKA.`); return; }
+    busy = true; box.classList.add('sibuk'); ctx.sound.tap(); cv.mark(row.hit);
+    say(msg, '', `${row.e[0]}: ${describe(row.out)}${row.e[5] ? ', karena pesannya hilang' : ''}.`);
+    board.play(row, () => {
+      if (HARM[row.e[0]]) { pot.drop(); say(msg, 'info', HARM[row.e[0]]); }
+      i++;
+      if (i < to) setTimeout(show, HARM[row.e[0]] ? 2200 : 700); else setTimeout(finale ? finale : done, 1500);
+    }, 320);
+  }
+  area.append(el('div', { class: 'hk30-dua' }, board.el, el('div', { class: 'hk30-kanan' }, ev, cv.el, box)), msg);
+  show();
+  if (finale) finale = finaleFn;
+  function finaleFn() {
+    say(msg, 'info', 'Dua kejadian membuat daun layu. Ketuk keduanya.'); box.remove();
+    const got = new Set();
+    const chips = el('div', { class: 'hk30-riwayat' }, rows.map((r) => onTap(el('button', { class: 'hk30-k', type: 'button', 'data-k': r.e[0] }, `${r.e[0]} · ${r.e[1]}`), (e) => {
+      const k = r.e[0]; if (got.has(k) || got.size === 2) return;
+      if (!HARM[k]) { oops(); shake(e.currentTarget); say(msg, 'bad', `${k} berjalan sesuai harapan.`); return; }
+      got.add(k); e.currentTarget.classList.add('on'); ctx.sound.tap();
+      if (got.size === 2) { say(msg, '', 'K7: sensor rusak (−127) dikira dingin. K10: pesan hilang, pompa tidak pernah dinyalakan lagi. Dasbor masih menunjukkan air 18 cm.'); done(); }
+    })));
+    fill(ev, chips);
+  }
+}
+
+// Misi 3: validation bounds for the temperature rule.
+function bugRound(area, ctx, { oops, pot, done }) {
+  const msg = msg30('K7: nilai −127 berarti kabel sensor lepas. Seret angka ke dua kotak supaya nilai mustahil ditandai rusak (suhu larutan selalu 0–50 °C).');
+  const blanks = [0, 50].map((w, i) => el('span', { class: 'hk30-celah', 'data-drop': i }, '?'));
+  const cardV = el('div', { class: 'hk30-kartu-aturan' }, el('div', null, 'SAAT kebun/suhu = x:'), el('div', { class: 'baru' }, '  JIKA x < ', blanks[0], ' ATAU x > ', blanks[1], ':'), el('div', { class: 'baru' }, '    peringatan "Sensor rusak?"'), el('div', null, '  LAINNYA JIKA x > 30:'), el('div', null, '    kipas NYALA'), el('div', null, '  LAINNYA JIKA x < 28:'), el('div', null, '    kipas MATI'));
+  const tray = el('div', { class: 'hk30-angka-angka' }, NUMS.map((x) => el('div', { class: 'hk30-angka', 'data-drag': x }, fmt('suhu', x))));
+  let left = 2;
+  const board = el('div', { class: 'hk30-dua' }, cardV, el('div', { class: 'hk30-kanan' }, tray));
+  dnd(board, (chip, blank) => {
+    if (!left || blank.classList.contains('isi')) return;
+    const x = +chip.dataset.drag; const w = [0, 50][+blank.dataset.drop];
+    if (x !== w) { oops(); shake(chip); say(msg, 'bad', x === -127 ? 'Kalau hanya −127, kerusakan lain (misalnya 85 atau −50) tetap lolos.' : +blank.dataset.drop === 0 ? 'Suhu larutan tidak mungkin di bawah 0 °C; angka ini masih mungkin.' : 'Suhu larutan tidak mungkin di atas 50 °C; batas ini terlalu rendah atau terlalu tinggi.'); return; }
+    blank.textContent = fmt('suhu', x); blank.classList.add('isi'); chip.remove(); ctx.sound.tap();
+    if (--left) { say(msg, '', 'Tepat.'); return; }
+    const { out } = controller('suhu', -127, true);
+    say(msg, '', `Uji ulang K7 dengan versi 2: ${describe(out)}. Kipas tetap NYALA, satu daun segar kembali.`); pot.grow(); done();
+  });
+  area.append(board, msg);
+}
+
+// Misi 3: routine messages, a watchdog, and a safety that needs no network.
+function lostRound(area, ctx, { oops, done }) {
+  const msg = msg30('K10: pesan 15.00 hilang, pompa tidak pernah menyala lagi. Nyalakan pesan rutin, lalu pilih batas pengawas.');
+  let routine = false; let wd = null; let stage = 1;
+  const panel = el('div', { class: 'hk30-panel' });
+  const drawPanel = () => fill(panel, onTap(el('button', { class: `hk30-sakelar ${routine ? 'on' : ''}`, type: 'button', 'data-k': 'rutin' }, `📨 Pesan rutin sensor setiap 10 menit: ${routine ? 'NYALA' : 'mati'}`), () => { if (routine) return; routine = true; ctx.sound.tap(); drawPanel(); say(msg, '', 'Sensor kini mengirim nilai setiap 10 menit, berubah atau tidak.'); }),
+    el('div', { class: 'hk30-pengawas' }, el('b', null, '⏱️ Pengawas: peringatan bila pesan air diam lebih dari'), el('div', { class: 'hk30-yt' }, [[5, 'Lebih cepat dari pesan rutin, jadi peringatan muncul terus-menerus.'], [30, ''], [1440, 'Sehari penuh terlalu lambat; tanaman sudah layu.']].map(([m, why]) => onTap(el('button', { class: `hk30-tindak ${wd === m ? 'on' : ''}`, type: 'button', 'data-m': m }, `${m === 1440 ? '24 jam' : `${m} menit`}`), (e) => {
+      if (wd) return; if (!routine) { say(msg, 'info', 'Nyalakan dulu pesan rutin: pengawas butuh pesan yang datang teratur.'); return; }
+      if (why) { oops(); shake(e.currentTarget); say(msg, 'bad', why); return; }
+      wd = m; ctx.sound.tap(); drawPanel(); stage = 2; timeline();
+    })))));
+  const line = el('div', { class: 'hk30-garis' });
+  function timeline() {
+    say(msg, 'info', 'Pesan 15.00 tetap hilang. Ketuk waktu pompa menyala lagi.');
+    fill(line, [['15.00', '✗ pesan hilang'], ['15.10', '📨 pesan rutin'], ['15.20', '📨 pesan rutin'], ['15.30', '⏱️ batas pengawas']].map(([t, l]) => onTap(el('button', { class: 'hk30-waktu', type: 'button', 'data-t': t }, el('b', null, t), el('small', null, l)), (e) => {
+      if (stage !== 2) return;
+      if (t !== '15.10') { oops(); shake(e.currentTarget); say(msg, 'bad', t === '15.00' ? 'Pesan 15.00 hilang, jadi belum ada yang menyalakan pompa.' : 'Ada pesan rutin yang datang lebih awal.'); return; }
+      stage = 3; e.currentTarget.classList.add('on'); ctx.sound.tap(); say(msg, '', 'Pesan rutin 15.10 membawa nilai 40 cm, dan pengendali menyalakan pompa.'); setTimeout(safety, 1500);
+    })));
+  }
+  function safety() {
+    say(msg, 'info', 'Bagaimana bila yang hilang perintah "pompa MATI" pada K9? Seret pengaman yang tidak bergantung pada jaringan ke tandon.');
+    const tank = el('div', { class: 'hk30-tandon', 'data-drop': 'tandon' }, el('b', null, '🛢️ Tandon dan pompa'), el('div', { class: 'hk30-kotak-isi' }));
+    const tray = el('div', { class: 'hk30-baki' }, SAFETY.map(([k, l]) => el('div', { class: 'hk30-kartu', 'data-drag': k }, l)));
+    const board = el('div', { class: 'hk30-dua' }, tank, tray);
+    dnd(board, (card) => {
+      if (stage !== 3) return;
+      const s = SAFETY.find((x) => x[0] === card.dataset.drag);
+      if (!s[2]) { oops(); shake(card); say(msg, 'bad', s[3]); return; }
+      stage = 4; card.classList.add('locked'); tank.querySelector('.hk30-kotak-isi').append(card); ctx.sound.tap(); say(msg, '', s[3]); done();
+    });
+    area.replaceChildren(board, msg);
+  }
+  drawPanel();
+  area.append(panel, line, msg);
+}
+
+// Misi 4: boundary tests for version 2.
+function boundaryRound(area, ctx, { oops, done }) {
+  const msg = msg30('Aturan suhu versi 2: rusak (x < 0 ATAU x > 50)? lebih dari 30? kurang dari 28? Seret setiap nilai uji ke hasilnya.');
+  const card = el('div', { class: 'hk30-kartu-aturan kecil' }, ['SAAT kebun/suhu = x:', '  JIKA x < 0 ATAU x > 50:', '    peringatan "Sensor rusak?"', '  LAINNYA JIKA x > 30:', '    kipas NYALA', '  LAINNYA JIKA x < 28:', '    kipas MATI'].map((t) => el('div', null, t)));
+  area.append(card);
+  sortGame(area, ctx, { oops, msg, items: TEST.map((x) => [String(x), `x = ${fmt('suhu', x)}`, testResult(x)]), bins: dropBins(TEST_OPTS.map((o) => [o, o])),
+    check: (it, k) => (k !== it[2] ? `Periksa urutannya untuk ${it[1]}: rusak? lebih dari 30? kurang dari 28? Ingat: 30 tidak lebih dari 30.` : ''), chip: (it) => el('span', { class: 'hk30-chip' }, fmt('suhu', +it[0])),
+    after: (it) => say(msg, '', `${it[1]}: ${it[2]}.`), done: () => { say(msg, '', 'Nilai batas 28, 30, 0, dan 50 adalah tempat bug paling sering bersembunyi. Semua lolos uji.'); done(); } });
+}
+
+// Misi 5: build the river monitor from block cards.
+function riverRound(area, ctx, { oops, done }) {
+  const msg = msg30('Ketua RT: peringatan bila air > 2 m, sirene bila > 3 m, tidak boleh berbunyi karena satu salah baca, dan tetap hidup saat listrik padam.');
+  const slots = SLOTS7.map(([k, l]) => el('div', { class: 'hk30-slot', 'data-drop': k }, el('small', null, l)));
+  const tray = el('div', { class: 'hk30-baki' }, ctx.rand.shuffle(CARDS7.map((c) => c[0])).map((k) => el('div', { class: 'hk30-kartu', 'data-drag': k }, CARDS7.find((c) => c[0] === k)[2])));
+  let left = SLOTS7.length;
+  const board = el('div', { class: 'hk30-papan' }, el('div', { class: 'hk30-rakit' }, el('b', null, '🌊 Pemantau Sungai Sukamakmur'), el('div', { class: 'hk30-slot-slot' }, slots)), tray);
+  dnd(board, (card, slot) => {
+    if (!left || slot.classList.contains('isi')) return;
+    const c = CARDS7.find((x) => x[0] === card.dataset.drag);
+    if (c[1] !== slot.dataset.drop) { oops(); shake(card); say(msg, 'bad', `Kartu ini untuk slot "${SLOTS7.find((s) => s[0] === c[1])[1]}".`); return; }
+    if (!c[3]) { oops(); shake(card); say(msg, 'bad', c[4]); return; }
+    card.classList.add('locked'); slot.replaceChildren(card); slot.classList.add('isi'); ctx.sound.tap();
+    if (--left) { say(msg, '', 'Terpasang.'); return; }
+    say(msg, '', 'Rakitan lengkap: yang dilakukan sistem (peringatan dan sirene) ditambah syarat keandalan (anti salah baca, validasi, pengawas, daya cadangan).'); done();
+  });
+  area.append(board, msg);
+}
+
+// Misi 6: storm cards on the finished design.
+function stormRound(area, ctx, { oops, done }) {
+  const msg = msg30('Dalang Badai mengirim lima kartu. Seret setiap kartu ke hasil yang akan terjadi pada rakitanmu.');
+  sortGame(area, ctx, { oops, msg, items: STORMS.map(([k, t, a, why]) => [k, t, a, why]), bins: dropBins(OUTCOMES), cols: 5,
+    check: (it, k) => (k !== it[2] ? 'Belum tepat. Periksa ambang 2 m dan 3 m, dua pembacaan berturut-turut, batas 0–8 m, dan pengawas 30 menit.' : ''), chip: (it) => el('span', { class: 'hk30-chip' }, it[1]),
+    after: (it) => say(msg, '', it[3]), done: () => { say(msg, '', 'Rakitan lolos uji badai: sirene hanya berbunyi bila memang perlu, dan kerusakan tetap ketahuan.'); done(); } });
+}
+
+// Misi Bos: quota arithmetic and a safe way to save.
+function quotaBoss(area, ctx, { oops, done }) {
+  const msg = msg30('Seret angka ke rumus dari kiri ke kanan. Paket data kebun terbatas!');
+  const blanks = QUOTA.map(([, l], i) => el('span', { class: 'hk30-celah', 'data-drop': i }, '?'));
+  const res = [el('b', { class: 'hk30-hasil' }, '…'), el('b', { class: 'hk30-hasil' }, '…'), el('b', { class: 'hk30-hasil' }, '…')];
+  const formula = el('div', { class: 'hk30-rumus' },
+    el('div', null, blanks[0], ' sensor × ', blanks[1], ' pesan/jam × ', blanks[2], ' jam = ', res[0], ' pesan sehari'),
+    el('div', null, '× ', blanks[3], ' byte per pesan = ', res[1], ' byte sehari'),
+    el('div', null, '× ', blanks[4], ' hari = ', res[2], ' byte sebulan'));
+  const tray = el('div', { class: 'hk30-angka-angka' }, QUOTA_CHIPS.map((x, i) => el('div', { class: 'hk30-angka', 'data-drag': `${i}` }, fmtNum(x))));
+  let k = 0;
+  const board = el('div', { class: 'hk30-papan' }, formula, tray);
+  dnd(board, (chip, blank) => {
+    if (k >= QUOTA.length) return;
+    const x = QUOTA_CHIPS[+chip.dataset.drag]; const i = +blank.dataset.drop;
+    if (i !== k) { say(msg, 'info', 'Isi rumus dari kiri ke kanan.'); return; }
+    if (x !== QUOTA[i][0]) { oops(); shake(chip); say(msg, 'bad', ['Ada berapa sensor di kebun?', 'Pesan setiap 10 menit: berapa pesan dalam satu jam?', 'Berapa jam dalam sehari?', 'Setiap pesan sekitar 50 byte.', 'Satu bulan dihitung 30 hari.'][i]); return; }
+    blank.textContent = fmtNum(x); blank.classList.add('isi'); chip.remove(); ctx.sound.tap(); k++;
+    if (k === 3) res[0].textContent = fmtNum(432); if (k === 4) res[1].textContent = fmtNum(21600); if (k === 5) res[2].textContent = fmtNum(648000);
+    if (k < QUOTA.length) { say(msg, '', 'Tepat.'); return; }
+    say(msg, 'info', '648.000 byte sebulan hanya untuk tiga sensor. Pilih cara hemat yang tetap aman.');
+    const row = el('div', { class: 'hk30-hemat' }, SAVERS.map(([key, t, ok, why]) => onTap(el('button', { class: 'hk30-tindak lebar', type: 'button', 'data-k': key }, t), (e) => {
+      if (row.classList.contains('beres')) return;
+      if (!ok) { oops(); shake(e.currentTarget); say(msg, 'bad', why); return; }
+      row.classList.add('beres'); e.currentTarget.classList.add('on'); ctx.sound.tap(); say(msg, '', `${why} Kebun tetap hijau!`); done();
+    })));
+    area.insertBefore(row, msg);
+  });
+  area.append(board, msg);
+}
+
 export default {
   id: 'sma-30-hidroponik',
   title: 'Kebun Hidroponik IoT',
@@ -180,41 +438,33 @@ export default {
   source: null,
   rounds: 10,
   maxPlayers: 4,
-  goal: 'Jaga kebun hidroponik Kelompok Tani Muda: jalankan program pengendali untuk sepuluh kejadian, temukan kesalahan akibat sensor rusak dan pesan hilang, perbaiki programnya, lalu uji ulang.',
+  goal: 'Kebun Tetap Hijau: kenali perangkat IoT, jalankan aturan pengendali untuk sepuluh kejadian sambil menjaga daun kebun, buru bug sensor dan pesan hilang, uji nilai batas, lalu rancang dan uji pemantau sungai.',
   extraModes: [
     { id: 'simulasi', icon: '📮', label: 'Simulasi Perantara', desc: 'Jalankan K1–K10 satu per satu: amplop pesan bergerak lewat perantara, baris program disorot, lalu ubah ke versi 2 dan uji nilai batas', create: createSim },
-    { id: 'giliran', icon: '🧑‍🤝‍🧑', label: 'Kejadian Antartim', desc: 'Tim bergiliran menebak perintah pengendali untuk setiap kejadian; tebakan benar 2 poin', create: createTeams },
+    { id: 'giliran', icon: '🧑‍🤝‍🧑', label: 'Kejadian Antartim', desc: 'Tim bergiliran mengisi kotak keluar pengendali untuk setiap kejadian; jawaban benar 2 poin', create: createTeams },
   ],
   create(root, ctx) {
-    const wrap = el('div', { class: 'act hidroponik' });
+    const wrap = el('div', { class: 'act hk30-main' });
     root.append(wrap);
     function render() {
       wrap.replaceChildren();
       const r = ctx.round;
       let solved = false;
-      const next = () => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, 2400); } };
-      const ask = (prompt, opts, columns = 1, subject = null, onRight = next) => choice(wrap, { prompt, subject, ctx, shuffle: true, onRight, columns, options: opts.map(([l, correct]) => ({ label: String(l), correct })) });
-      const then = (fn) => () => { wrap.replaceChildren(); fn(); };
-      if (r === 0) pickRows(wrap, ctx, { prompt: 'Mengenal perangkat: apa jenis setiap perangkat?', rows: DEVICES.map(([n, t, w]) => [n, n, t, w]), opts: TYPES, info: 'Sensor mengukur, aktuator menggerakkan, perantara meneruskan, pengendali memutuskan, antarmuka menampilkan untuk manusia.', why: () => 'Ingat: aktuator menggerakkan sesuatu, antarmuka adalah tampilan untuk manusia.', done: next });
-      else if (r === 1) ask('Kelompok tani ingin menambah dasbor kedua di balai desa. Apa yang perlu diubah?', [['Cukup daftar langganan: dasbor kedua berlangganan topik suhu, pH, air, dan peringatan', true], ['Program setiap sensor, supaya mengirim ke dua dasbor'], ['Program pengendali, supaya mengirim ulang setiap pesan'], ['Perantara harus diganti dengan yang lebih besar']], 1, topicTable(),
-        then(() => ask('Mengapa pompa dimatikan bila air tandon kurang dari 20 cm?', [['Pompa yang berjalan tanpa air bisa panas dan rusak', true], ['Supaya hemat listrik saja'], ['Supaya tanaman tidak terlalu banyak minum'], ['Supaya dasbor tidak penuh']])));
-      else if (r === 2) traceRound(wrap, ctx, { from: 0, to: 3, done: next });
-      else if (r === 3) traceRound(wrap, ctx, { from: 3, to: 6, done: then(() => ask('Mengapa pada K5 kipas tidak dimatikan, padahal suhu turun ke 29?', [['29 tidak lebih dari 30 dan tidak kurang dari 28, jadi tidak ada perintah; dua batas mencegah kipas nyala-mati berulang-ulang', true], ['Karena pesannya hilang'], ['Karena kipas rusak'], ['Karena pengendali hanya membaca suhu setiap jam']])) });
-      else if (r === 4) traceRound(wrap, ctx, { from: 6, to: 10, done: then(() => ask('Pukul 15.00, berapa nilai air tandon (cm) yang tampil di dasbor?', [[18, true], [20], [35], [40]], 4, null,
-        then(() => ask('Berapa peringatan yang sudah diterima ponsel Pak Darto?', [[1], [2, true], [3], [4]], 4)))) });
-      else if (r === 5) ask('Pada dua kejadian, sistem berperilaku salah. Kejadian mana?', [['K7 (kipas mati karena −127, padahal larutan panas) dan K10 (pompa tetap mati padahal tandon sudah diisi)', true], ['K5 dan K10'], ['K7 dan K9'], ['K6 dan K9']], 1, null,
-        then(() => ask('Aturan suhu versi 2: kondisi mana yang menandai sensor rusak? (suhu larutan tidak mungkin di bawah 0 °C atau di atas 50 °C)', [['x < 0 ATAU x > 50', true], ['x < 0 DAN x > 50'], ['x = -127'], ['x > 50']], 2, el('pre', { class: 'hk-pre' }, 'SAAT menerima "kebun/suhu" dengan nilai x:\n    JIKA ........ MAKA\n        kirim "kebun/peringatan" "Sensor suhu rusak? Nilai: x"\n    LAINNYA JIKA x > 30 MAKA\n        kirim "kebun/perintah/kipas" "NYALA"\n    LAINNYA JIKA x < 28 MAKA\n        kirim "kebun/perintah/kipas" "MATI"'))));
-      else if (r === 6) ask('Sensor mengirim nilai setiap 10 menit. Pengawas memberi peringatan bila pesan air terakhir lebih dari … menit yang lalu?', [['30 menit: cukup longgar untuk satu dua pesan terlambat, cukup cepat untuk tahu sensor diam', true], ['5 menit: lebih cepat dari pesan rutin, jadi peringatan muncul terus'], ['24 jam: terlambat, tanaman sudah layu'], ['0 menit']], 1, null,
-        then(() => ask('Dengan pesan rutin, bila hanya pesan pukul 15.00 yang hilang, pukul berapa pompa menyala lagi?', [['15.00'], ['15.10', true], ['15.30'], ['16.00']], 4, null,
-          then(() => ask('Bagaimana bila yang hilang adalah perintah "pompa MATI" pada K9? Pengaman apa yang tidak bergantung pada jaringan?', [['Saklar pelampung di tandon yang langsung memutus listrik pompa bila air terlalu rendah', true], ['Menambah dasbor ketiga'], ['Mengirim peringatan ke lebih banyak ponsel'], ['Memperbesar batas air menjadi 30 cm']])))));
-      else if (r === 7) pickRows(wrap, ctx, { prompt: 'Uji ulang aturan suhu versi 2, termasuk nilai batas', rows: TEST.map((x) => [String(x), `x = ${fmt('suhu', x)}`, testResult(x)]), opts: TEST_OPTS.map((o) => [o, o]), cls: 'uji', info: 'Versi 2: dulu periksa x < 0 ATAU x > 50, lalu x > 30, lalu x < 28.', why: (k, a) => `Periksa urutannya: rusak (x < 0 ATAU x > 50)? lebih dari 30? kurang dari 28?`,
-        done: then(() => ask('Jalankan lagi K7 (suhu −127) dengan versi 2. Apa yang terjadi?', [['Peringatan "Sensor suhu rusak? Nilai: -127" dikirim, dan kipas tetap NYALA', true], ['Kipas dimatikan seperti sebelumnya'], ['Kipas dimatikan dan peringatan dikirim'], ['Tidak terjadi apa-apa']])) });
-      else if (r === 8) pickRows(wrap, ctx, { prompt: 'Kartu kebutuhan: pemantau sungai Desa Sukamakmur', rows: REQS.map(([k, t, a]) => [k, t, a]), opts: REQ_OPTS, info: 'Ketua RT ingin peringatan bila air > 2 m dan sirene bila > 3 m. Listrik sering padam, sinyal lemah, dan sirene tidak boleh berbunyi karena satu pembacaan salah.', why: (k, a, ok) => (ok ? REQ_WHY[a] : 'Apakah ini tindakan sistem, syarat agar tetap andal, atau tidak diminta?'),
-        done: then(() => ask('Rancang: aturan mana yang memenuhi "sirene tidak boleh berbunyi hanya karena satu pembacaan salah"?', [['JIKA x > 3 DAN pembacaan sebelumnya juga > 3 MAKA kirim "sungai/perintah/sirene" "NYALA"', true], ['JIKA x > 3 MAKA kirim "sungai/perintah/sirene" "NYALA"'], ['JIKA x > 2 MAKA kirim "sungai/perintah/sirene" "NYALA"'], ['SETIAP 5 menit kirim "sungai/perintah/sirene" "NYALA"']], 1, null,
-          then(() => ask('Uji: kasus uji mana yang memeriksa pembacaan yang salah?', [['Satu pembacaan 9,9 m: peringatan sensor rusak, sirene tidak menyala', true], ['Tinggi air 1,5 m: tidak ada'], ['Tinggi air 2,4 m: peringatan'], ['3,2 m lalu 3,4 m: sirene menyala']])))) });
-      else ask('Tantangan: tiga sensor mengirim pesan setiap 10 menit. Berapa pesan dalam sehari?', [[72], [144], [432, true], ['1.296']], 4, null,
-        then(() => ask('Setiap pesan sekitar 50 byte. Berapa byte dalam 30 hari?', [['21.600'], ['64.800'], ['648.000', true], ['6.480.000']], 4, null,
-          then(() => ask('Cara mana mengurangi banyak pesan tanpa membuat sistem kurang aman?', [['Kirim hanya bila nilai berubah cukup banyak, ditambah pesan rutin setiap 30 menit supaya pengawas tahu sensor masih hidup', true], ['Matikan pengawas'], ['Kirim setiap 6 jam tanpa pengawas'], ['Hapus sensor pH']])))));
+      const next = (wait = 5200) => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, wait); } };
+      const pot = leafPot(r === 4 ? 9 : 10); const oops = () => { ctx.mistake(); pot.drop(); };
+      const area = el('div', { class: 'hk30-area' });
+      const go = (k, no) => { wrap.append(el('div', { class: 'hk30-kepala' }, misiHead(no, ...HEAD30[k], '🥬'), pot.node), area); };
+      const fin = (ms) => ({ oops, pot, done: () => next(ms) });
+      if (r === 0) { go('perangkat', 1); deviceRound(area, ctx, fin(6000)); }
+      else if (r === 1) { go('hari1', 2); dayRound(area, ctx, { from: 0, to: 3, ...fin(5000) }); }
+      else if (r === 2) { go('hari2', 2); dayRound(area, ctx, { from: 3, to: 6, ...fin(5000) }); }
+      else if (r === 3) { go('hari3', 2); dayRound(area, ctx, { from: 6, to: 10, finale: true, ...fin(6500) }); }
+      else if (r === 4) { go('bug', 3); bugRound(area, ctx, fin(6000)); }
+      else if (r === 5) { go('hilang', 3); lostRound(area, ctx, fin(6000)); }
+      else if (r === 6) { go('batas', 4); boundaryRound(area, ctx, fin(6000)); }
+      else if (r === 7) { go('sungai', 5); riverRound(area, ctx, fin(6500)); }
+      else if (r === 8) { go('badai', 6); stormRound(area, ctx, fin(6000)); }
+      else { go('bos', 'Bos'); quotaBoss(area, ctx, fin(7500)); }
     }
     render();
   },
@@ -259,15 +509,23 @@ function createTeams(root, ctx) {
     function turn() {
       if (k >= rows.length) { finishBoard(wrap, ctx, { title: 'Kejadian antartim selesai', pts, again: () => pickTeams(wrap, 'Kejadian Antartim', start) }); return; }
       const t = k % nT; const row = rows[k]; let answered = false;
-      const msg = el('p', { class: 'reveal info' }, `Tim ${t + 1}: apa yang dikirim pengendali?`);
-      const opts = ctx.rand.shuffle(traceOptions(row));
-      const area = el('div', { class: 'opts', style: { '--cols': 4 } }, opts.map(([l, ok]) => onTap(el('button', { class: 'opt', type: 'button' }, el('span', { class: 'opt-label' }, l)), (e) => {
-        if (answered) return; answered = true; if (ok) pts[t] += 2; e.currentTarget.classList.add(ok ? 'right' : 'wrong'); ctx.sound[ok ? 'good' : 'bad']();
-        say(msg, ok ? '' : 'bad', `${ok ? 'Tepat, +2. ' : 'Belum tepat. '}${row.e[0]}: ${describe(row.out)}. Pompa ${row.pompa}, kipas ${row.kipas}.`);
+      const msg = el('p', { class: 'reveal info' }, `Tim ${t + 1}: baca aturannya, isi kotak keluar pengendali, lalu jalankan.`);
+      const cv = makeCode(false); cv.mark([`${row.e[2][0]}0`]);
+      const sel = new Set(); const box = el('div', { class: 'hk30-keluar' });
+      const drawBox = () => fill(box, el('b', null, `📤 Kotak keluar pengendali · Tim ${t + 1}`), el('div', { class: 'hk30-pilih' }, PICKS.map(([d, v, l]) => onTap(el('button', { class: `hk30-tindak ${sel.has(pickKey([d, v])) ? 'on' : ''}`, type: 'button' }, l), () => {
+        if (answered) return; const key = pickKey([d, v]);
+        if (sel.has(key)) sel.delete(key); else { sel.add(key); if (d !== 'peringatan') sel.delete(pickKey([d, v === 'NYALA' ? 'MATI' : 'NYALA'])); }
+        ctx.sound.tap(); drawBox();
+      })), button('🧠 Jalankan', () => {
+        if (answered) return; answered = true; box.classList.add('sibuk');
+        const want = new Set(row.out.map(pickKey)); const ok = want.size === sel.size && [...want].every((x) => sel.has(x));
+        if (ok) pts[t] += 2; ctx.sound[ok ? 'good' : 'bad'](); cv.mark(row.hit);
+        say(msg, ok ? '' : 'bad', `${ok ? 'Tepat, +2. ' : 'Belum tepat. '}${row.e[0]}: ${describe(row.out)}${row.e[5] ? ', karena pesannya tidak sampai' : ''}.`);
         wrap.querySelector('.pb-skor')?.replaceWith(scoreBar(pts, t));
         board.play(row, () => { k++; setTimeout(turn, 1600); }, 300);
-      })));
-      wrap.replaceChildren(scoreBar(pts, t), el('p', { class: 'prompt' }, `Tim ${t + 1}: kejadian ${row.e[0]}`), board.el, el('div', { class: 'hk-tanya' }, eventCard(row.e)), area, msg);
+      }, 'primary')));
+      drawBox();
+      wrap.replaceChildren(scoreBar(pts, t), el('div', { class: 'hk30-area' }, el('div', { class: 'hk30-dua' }, board.el, el('div', { class: 'hk30-kanan' }, eventCard(row.e), cv.el, box)), msg));
     }
     turn();
   }
