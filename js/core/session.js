@@ -11,7 +11,7 @@ import { sound } from './sound.js';
 export const PLAYER_COLORS = ['#2563eb', '#ea580c', '#16a34a', '#9333ea'];
 const MEDALS = ['🥇', '🥈', '🥉', '🏅'];
 
-export function runSession(root, activity, { mode, players, extra, seed, onExit, onReplay }) {
+export function runSession(root, activity, { mode, players, extra, first = 0, seed, onExit, onReplay }) {
   const paneCount = mode === 'race' ? players : 1;
   const teams = mode === 'turns' ? players : 0;
   const stage = el('div', { class: `stage players-${paneCount}` });
@@ -34,10 +34,10 @@ export function runSession(root, activity, { mode, players, extra, seed, onExit,
     const total = extra ? 0
       : teams ? Math.ceil(activity.rounds / teams) * teams
         : activity.rounds;
-    const state = { solved: 0, mistakes: 0, doneAt: null, points: new Array(teams).fill(0), puzzleMistakes: 0 };
+    const state = { solved: Math.min(first, Math.max(0, total - 1)), mistakes: 0, doneAt: null, points: new Array(teams).fill(0), puzzleMistakes: 0 };
 
     const progress = el('div', { class: 'pane-progress' });
-    for (let r = 0; r < total; r++) progress.append(el('i'));
+    for (let r = 0; r < total; r++) progress.append(el('i', { class: r < state.solved ? 'on' : '' }));
     const nameEl = el('span', { class: 'pane-name' },
       mode === 'race' ? nameOf(index) : extra ? `${activity.title} · ${extra.label}` : activity.title);
     const timeEl = el('span', { class: 'pane-time' }, extra ? '' : '0:00');

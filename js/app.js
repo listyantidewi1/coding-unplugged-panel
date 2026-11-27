@@ -52,6 +52,8 @@ function route() {
     const a = findActivity(decodeURIComponent(id));
     if (!a) return renderNotFound();
     const mode = parseMode(a, params.get('mode'));
+    // ?soal=N opens at question N, so a teacher can go straight to it.
+    if (mode) mode.start = Math.max(0, (parseInt(params.get('soal'), 10) || 1) - 1);
     return mode ? renderPlay(a, mode) : renderStart(a);
   }
   renderHome(params.get('jenjang'), params.get('kategori'));
@@ -168,20 +170,20 @@ function showStory(a) {
   document.body.append(box);
 }
 
-function renderPlay(a, { mode, players, extra }) {
+function renderPlay(a, { mode, players, extra, start: first = 0 }) {
   const back = `#/${a.id}`;
   const storyBtn = PENGANTAR[a.id] ? button('📖', () => showStory(a), 'icon') : null;
   storyBtn?.setAttribute('aria-label', 'Baca pengantar');
   app.append(toolbar(a.title, back, storyBtn));
   const holder = el('div', { class: 'play' });
   app.append(holder);
-  const start = () => {
+  const start = (from = first) => {
     current?.destroy?.();
     holder.replaceChildren();
     current = runSession(holder, a, {
-      mode, players, extra, seed: newSeed(),
+      mode, players, extra, first: from, seed: newSeed(),
       onExit: () => go(back),
-      onReplay: start,
+      onReplay: () => start(0),
     });
   };
   start();

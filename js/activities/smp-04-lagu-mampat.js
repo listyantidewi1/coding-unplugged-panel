@@ -282,7 +282,7 @@ export function sizeMB(q) {
 function photoView(q0) {
   const full = el('canvas', { width: 320, height: 200 });
   drawBatik(full);
-  const view = el('canvas', { class: 'batik', width: 320, height: 200 });
+  const view = el('canvas', { class: 'lm-batik', width: 320, height: 200 });
   const label = el('p', { class: 'kode-warna' });
   function set(q) {
     const g = view.getContext('2d');
