@@ -4,8 +4,9 @@
 // version, Rudi's version without the asal check (stopped by a step limit), and
 // BFS limited to two rides. The JS search mirrors lines 10–37 exactly.
 
-import { el, onTap, button } from '../core/util.js';
-import { say, pickTeams, scoreBar, finishBoard, rowsChoose, pickSet, pyCode } from './smp-kit.js';
+import { el, onTap, button, shake } from '../core/util.js';
+import { misiHead, fill } from './misi-kit.js';
+import { say, pickTeams, scoreBar, finishBoard, pyCode } from './smp-kit.js';
 import { pyRepr } from './mini-py.js';
 
 export const TRAYEK = { A: ['Terminal', 'Pasar', 'Alun-alun', 'Stasiun'], B: ['Stasiun', 'SMA', 'Puskesmas'], C: ['Pasar', 'Kampus', 'Perumahan'], D: ['Alun-alun', 'Puskesmas', 'Pelabuhan'], E: ['Perumahan', 'Desa', 'Taman'], F: ['Pelabuhan', 'Taman', 'Desa'] };
@@ -18,7 +19,6 @@ export const KODE = ['from collections import deque', 'trayek = {', '    "A": ["
   'graf = {}', 'for kode in trayek:', '    for h in trayek[kode]:', '        if h not in graf:', '            graf[h] = []', '        for lain in trayek[kode]:', '            if lain != h and lain not in graf[h]:', '                graf[h].append(lain)',
   'def cari_rute(awal, tujuan):', '    antrean = deque([awal])', '    asal = {awal: None}', '    while antrean:', '        sekarang = antrean.popleft()', '        if sekarang == tujuan:', '            break', '        for t in graf[sekarang]:', '            if t not in asal:', '                asal[t] = sekarang', '                antrean.append(t)', '    if tujuan not in asal:', '        return None', '    jalur = []', '    h = tujuan', '    while h is not None:', '        jalur.append(h)', '        h = asal[h]', '    jalur.reverse()', '    return jalur'];
 export const DUA_NAIK = ['def dalam_dua_naik(awal):', '    jarak = {awal: 0}', '    antrean = deque([awal])', '    hasil = []', '    while antrean:', '        sekarang = antrean.popleft()', '        if jarak[sekarang] == 2:', '            continue', '        for t in graf[sekarang]:', '            if t not in jarak:', '                jarak[t] = jarak[sekarang] + 1', '                hasil.append(t)', '                antrean.append(t)', '    return hasil'];
-const lab = (from, n) => Array.from({ length: n }, (_, i) => String(from + i));
 const SEMUA = Object.keys(TRAYEK);
 
 // Lines 10–17: every pair of stops on one route is joined, without duplicates.
@@ -103,87 +103,214 @@ export default {
     { id: 'giliran', icon: '🗺️', label: 'Tim Memilih Tujuan', desc: 'Satu tim memilih awal dan tujuan, tim lain mengetuk rute dengan pindah paling sedikit', create: createTeams },
   ],
   create(root, ctx) {
-    const wrap = el('div', { class: 'act bfs-angkot ba-utama' });
+    const wrap = el('div', { class: 'act bfs-angkot ba-utama bm-main' });
     root.append(wrap);
-    const graf = bangunGraf(); const R = cariRute(graf, 'Terminal', 'Desa'); const J = jarakDari(graf, 'Terminal');
-    const stepRow = (k) => { const st = R.steps[k - 1]; const right = `${st.s} · ${st.baru.join(', ') || '—'}`; const other = R.steps[k] || R.steps[k - 2];
-      const alt = [`${st.s} · ${graf[st.s].join(', ')}`, `${other.s} · ${st.baru.join(', ') || '—'}`, `${st.s} · ${st.baru.length ? '—' : graf[st.s].slice(-2).join(', ')}`];
-      return [`p${k}`, `Putaran ${k}`, [right, ...[...new Set(alt)].filter((a) => a !== right)].slice(0, 4), right]; };
-    const qRow = (k) => { const q = R.steps[k - 1].q; const right = q.join(', ') || 'kosong'; const alt = [[R.steps[k - 1].s, ...q].join(', '), [...q].reverse().join(', '), q.slice(0, -1).join(', ') || 'kosong'];
-      return [`q${k}`, `Isi antrean setelah putaran ${k}`, [right, ...[...new Set(alt)].filter((a) => a !== right)].slice(0, 4), right]; };
+    const graf = bangunGraf();
     function render() {
       wrap.replaceChildren();
       const r = ctx.round;
       let solved = false;
-      const next = () => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, 2400); } };
-      const layer = (h) => (h in J ? `lap${J[h]}` : '');
-      if (r === 0) {
-        wrap.append(el('div', { class: 'ba-dua' }, pyCode(KODE.slice(0, 17), { labels: lab(1, 17), cls: 'ba-kecil', hl: [15] }), peta({})));
-        const dist = (h) => { const g = graf[h]; return [L(g), L([...g].reverse()), L([...g].sort()), L(g.slice(0, -1))]; };
-        rowsChoose(wrap, ctx, { prompt: 'Membangun graf (baris 10–17)', cls: 'ba-isi', rows: [
-          ...['Terminal', 'Pasar', 'Desa'].map((h) => [`g${h}`, `graf["${h}"]`, [...new Set(dist(h))], L(graf[h])]),
-          ['b', 'Yang mencegah Taman tercatat dua kali di graf["Desa"]', ['lain not in graf[h]', 'lain != h', 'if h not in graf', 'for kode in trayek'], 'lain not in graf[h]'],
-          ['c', 'Mengapa satu garis = satu kali naik?', ['semua halte di satu trayek saling terhubung langsung; untuk menghitung halte, hubungkan hanya halte yang bersebelahan', 'karena setiap trayek hanya punya dua halte', 'karena graf mencatat jarak dalam kilometer', 'karena BFS menghitung halte yang dilewati'], 'semua halte di satu trayek saling terhubung langsung; untuk menghitung halte, hubungkan hanya halte yang bersebelahan']], done: next });
-      }
-      else if (r === 1 || r === 2) {
-        const upTo = r === 1 ? 5 : 10; const st = R.steps[upTo - 1];
-        wrap.append(el('div', { class: 'ba-dua' }, peta({ kelas: (h) => (h in st.asal ? 'ditemu' : '') }), el('div', { class: 'ba-samping' }, pyCode(KODE.slice(17, 28), { labels: lab(18, 11), cls: 'ba-kecil' }), el('p', { class: 'ba-ket' }, 'Putaran 1: Terminal · Pasar, Alun-alun, Stasiun'))));
-        rowsChoose(wrap, ctx, { prompt: `cari_rute("Terminal", "Desa"): sekarang · halte baru yang dicatat di asal`, cls: 'ba-isi', rows: r === 1 ? [2, 3, 4, 5].map(stepRow).concat([qRow(3)]) : [6, 7, 8, 9].map(stepRow).concat([qRow(6), ['t', 'Putaran 10', [`${R.steps[9].s} · tujuan, berhenti di baris 24`, `${R.steps[9].s} · Taman`, 'Taman · tujuan, berhenti di baris 24', `${R.steps[9].s} · Perumahan`], `${R.steps[9].s} · tujuan, berhenti di baris 24`]]), done: next });
-      }
-      else if (r === 3) {
-        const pre = [...R.jalur].reverse();
-        wrap.append(el('div', { class: 'ba-dua' }, peta({ kelas: (h) => (h === 'Terminal' ? 'awal' : h === 'Desa' ? 'tujuan' : '') }), pyCode(KODE.slice(28, 37), { labels: lab(29, 9), cls: 'ba-kecil' })));
-        rowsChoose(wrap, ctx, { prompt: 'Menyusun rute dari catatan asal', cls: 'ba-isi', rows: [
-          ...['Desa', 'Perumahan', 'Pasar'].map((h) => [`a${h}`, `asal["${h}"]`, [...new Set([pyRepr(R.asal[h], true), "'Taman'", "'Kampus'", "'Terminal'", "'Pelabuhan'", "'Pasar'"])].slice(0, 4), pyRepr(R.asal[h], true)]),
-          ['s', 'jalur sebelum baris 36', [L(pre), L(R.jalur), L(['Desa', 'Taman', 'Pelabuhan', 'Terminal']), L(['Desa', 'Perumahan', 'Kampus', 'Pasar', 'Terminal'])], L(pre)],
-          ['d', 'jalur sesudah baris 36', [L(R.jalur), L(pre), L(['Terminal', 'Alun-alun', 'Pelabuhan', 'Desa']), L(['Terminal', 'Desa'])], L(R.jalur)]], done: next });
-      }
-      else if (r === 4) {
-        const lain = ['Terminal', 'Alun-alun', 'Pelabuhan', 'Desa'];
-        wrap.append(peta({ jalur: R.jalur, kelas: (h) => (R.jalur.includes(h) ? 'jalur' : lain.includes(h) ? 'lain' : '') }));
-        rowsChoose(wrap, ctx, { prompt: 'Petunjuk perjalanan Terminal → Desa', cls: 'ba-isi', rows: [
-          ['p', 'Petunjuk', [petunjuk(R.jalur), 'Naik angkot A dari Terminal sampai Alun-alun, pindah ke angkot D sampai Pelabuhan, lalu pindah ke angkot F sampai Desa.', 'Naik angkot A dari Terminal sampai Pasar, lalu pindah ke angkot E sampai Desa.', 'Naik angkot C dari Terminal sampai Perumahan, lalu pindah ke angkot E sampai Desa.'], petunjuk(R.jalur)],
-          ['n', 'Banyak naik dan pindah', [pindahText(R.jalur), '3 kali naik, 3 kali pindah', '4 kali naik, 3 kali pindah', '2 kali naik, 1 kali pindah'], pindahText(R.jalur)],
-          ['l', 'Rute lain dengan banyak naik yang sama', ['Terminal – Alun-alun (A) – Pelabuhan (D) – Desa (F)', 'Terminal – Stasiun (A) – Puskesmas (B) – Pelabuhan (D) – Desa (F)', 'Terminal – Kampus (C) – Desa (E)', 'tidak ada rute lain'], 'Terminal – Alun-alun (A) – Pelabuhan (D) – Desa (F)'],
-          ['w', 'Mengapa BFS memilih lewat Perumahan?', ['Pasar masuk antrean lebih dulu daripada Alun-alun, jadi Perumahan diambil sebelum Pelabuhan dan pertama menemukan Desa', 'karena rute lewat Perumahan lebih pendek dalam kilometer', 'karena BFS memilih nama halte menurut abjad', 'karena Pelabuhan tidak terhubung dengan Desa'], 'Pasar masuk antrean lebih dulu daripada Alun-alun, jadi Perumahan diambil sebelum Pelabuhan dan pertama menemukan Desa']], done: next });
-      }
-      else if (r === 5) {
-        wrap.append(peta({ kelas: layer }));
-        rowsChoose(wrap, ctx, { prompt: 'Banyak naik paling sedikit dari Terminal (Terminal = 0)', cls: 'ba-isi ba-angka', rows: HALTE.slice(1).map((h) => [`j${h}`, h, ['1', '2', '3', '4'], String(J[h])]), done: next });
-      }
-      else if (r === 6) {
-        const D = cariRute(graf, 'Terminal', 'Desa', 'dodi');
-        wrap.append(el('div', { class: 'ba-dua' }, peta({ jalur: D.jalur, kelas: (h) => (D.jalur.includes(h) ? 'dodi' : '') }), el('div', { class: 'ba-samping' }, pyCode(['        sekarang = antrean.pop()'], { labels: ['22'], cls: 'ba-kecil', warn: [0] }), el('p', { class: 'ba-hasil' }, L(D.jalur)))));
-        rowsChoose(wrap, ctx, { prompt: 'Versi Dodi: pop() menggantikan popleft()', cls: 'ba-isi', rows: [
-          ['n', 'Banyak naik rute Dodi', [`${D.jalur.length - 1} kali naik (${D.jalur.length - 2} kali pindah)`, '3 kali naik (2 kali pindah)', '5 kali naik (4 kali pindah)', '2 kali naik (1 kali pindah)'], `${D.jalur.length - 1} kali naik (${D.jalur.length - 2} kali pindah)`],
-          ['w', 'Mengapa antrean menjamin naik paling sedikit?', ['antrean mengambil semua halte berjarak 1 sebelum berjarak 2, dan seterusnya; tumpukan mengambil yang terakhir ditemukan dan menyelam ke satu arah', 'antrean selalu lebih cepat daripada tumpukan', 'tumpukan tidak bisa menyimpan nama halte', 'pop() menghapus halte tujuan'], 'antrean mengambil semua halte berjarak 1 sebelum berjarak 2, dan seterusnya; tumpukan mengambil yang terakhir ditemukan dan menyelam ke satu arah']], done: next });
-      }
-      else if (r === 7) {
-        const U = cariRute(graf, 'Terminal', 'Desa', 'rudi'); const t2 = pyRepr(cariRute(graf, 'Terminal', 'Desa', 'rudi', 2).asal.Terminal, true);
-        wrap.append(el('div', { class: 'ba-dua' }, pyCode(KODE.slice(24, 35), { labels: lab(25, 11), cls: 'ba-kecil', warn: [1, 8, 9, 10] }), el('div', { class: 'ba-samping' }, el('p', { class: 'ba-ket' }, 'Versi Rudi: baris 26 dihapus'), el('p', { class: 'ba-hasil salah' }, `rantai asal: ${U.rantai.join(' → ')} → …`))));
-        rowsChoose(wrap, ctx, { prompt: 'Versi Rudi tanpa if t not in asal:', cls: 'ba-isi', rows: [
-          ['t', 'asal["Terminal"] setelah putaran 2', [t2, 'None', "'Alun-alun'", "'Stasiun'"], t2],
-          ['l', 'Akibat bagi baris 33–35', ['rantai asal membentuk lingkaran, tidak pernah sampai None, perulangan berputar selamanya', 'jalur menjadi kosong', 'IndexError: pop from an empty deque', 'jalur tetap benar, hanya lebih lambat'], 'rantai asal membentuk lingkaran, tidak pernah sampai None, perulangan berputar selamanya'],
-          ['a', 'Desa diambil pada pengambilan ke- · antrean terpanjang', [`${U.ambil} · ${U.maxQ} halte`, '10 · 5 halte', `${U.ambil} · 11 halte`, `10 · ${U.maxQ} halte`], `${U.ambil} · ${U.maxQ} halte`]], done: next });
-      }
-      else if (r === 8) {
-        const H = dalamDuaNaik(graf, 'Terminal');
-        wrap.append(el('div', { class: 'ba-dua' }, pyCode(DUA_NAIK, { cls: 'ba-kecil', hl: [1, 6, 7, 10] }), peta({ kelas: layer, sub: (h) => (h in J ? `naik ${J[h]}` : '') })));
-        pickSet(wrap, ctx, { prompt: 'dalam_dua_naik("Terminal"): halte dengan paling banyak satu kali pindah', items: HALTE.slice(1).map((h) => [h, h]), right: H, why: `${L(H)}: ${H.length} halte. Hanya Desa dan Taman yang perlu dua kali pindah.`, done: next });
-      }
-      else {
-        const aktif = SEMUA.filter((k) => k !== 'D'); const g2 = bangunGraf(aktif); const biasa = cariRute(graf, 'Terminal', 'Pelabuhan').jalur; const minggu = cariRute(g2, 'Terminal', 'Pelabuhan').jalur;
-        wrap.append(peta({ aktif, jalur: minggu, kelas: (h) => (minggu.includes(h) ? 'jalur' : '') }));
-        rowsChoose(wrap, ctx, { prompt: 'Tantangan: hari Minggu angkot D tidak beroperasi', cls: 'ba-isi', rows: [
-          ['u', 'Yang perlu diubah di program', ['hapus baris 6 (trayek D) lalu bangun ulang graf; fungsi lain tetap', 'ubah fungsi cari_rute', 'hapus Pelabuhan dari graf', 'ganti deque dengan list'], 'hapus baris 6 (trayek D) lalu bangun ulang graf; fungsi lain tetap'],
-          ['b', 'Hari biasa: Terminal → Pelabuhan', [L(biasa), L(minggu), L(['Terminal', 'Stasiun', 'Puskesmas', 'Pelabuhan']), L(['Terminal', 'Pelabuhan'])], L(biasa)],
-          ['m', 'Hari Minggu: Terminal → Pelabuhan', [L(minggu), L(biasa), L(['Terminal', 'Pasar', 'Perumahan', 'Taman', 'Pelabuhan']), 'None'], L(minggu)],
-          ['o', 'Bila ongkos trayek berbeda', ['BFS tidak menjamin termurah; pakai Dijkstra dengan ongkos sebagai bobot', 'BFS tetap memberi rute termurah', 'pakai versi tumpukan Dodi', 'tambahkan halte baru'], 'BFS tidak menjamin termurah; pakai Dijkstra dengan ongkos sebagai bobot']], done: next });
+      const next = (wait = 2800) => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, wait); } };
+      const head = (no, judul, tujuan) => wrap.append(misiHead(no, judul, tujuan, '🚐'));
+      if (r === 0 || r === 1) {
+        const h = r === 0 ? 'Terminal' : 'Pasar';
+        head(1, 'Kartu Tetangga', `Susun kartu tetangga ${h}: halte yang bisa dicapai dengan sekali naik. Ketuk halte di peta sesuai urutan program membangunnya (trayek A sampai F, halte sesuai urutan trayek).`);
+        neighbourCard(wrap, ctx, graf, h, () => next());
+      } else if (r === 2 || r === 3 || r === 5) {
+        const [awal, tujuan] = r === 5 ? ['SMA', 'Kampus'] : ['Terminal', 'Desa'];
+        head(2, 'Mesin BFS', r === 2 ? `Jadilah mesin BFS dari ${awal} ke ${tujuan}. Ambil kartu terdepan antrean, lalu masukkan tetangga barunya ke belakang dan pasang panah asal. Jalankan 5 putaran.`
+          : r === 3 ? `Lanjutkan mesin BFS ${awal} → ${tujuan} dari putaran 6 sampai ${tujuan} diambil dari antrean.` : `Penumpang baru: dari ${awal} ke ${tujuan}. Jalankan mesin BFS sampai ${tujuan} diambil.`);
+        bfsMachine(wrap, ctx, { graf, awal, tujuan, from: r === 3 ? 5 : 0, until: r === 2 ? 5 : Infinity, onEnd(e) {
+          if (e.done) say(e.msg, '', `${tujuan} diambil pada pengambilan ke-${e.pops}. Mesin berhenti (baris 4). Panah asal kini menunjuk jalan pulang.`);
+          else say(e.msg, '', `5 putaran selesai. Antrean: ${e.q.join(', ')}. Halte yang masuk lebih dulu diambil lebih dulu.`);
+          next(3600);
+        } });
+      } else if (r === 4) {
+        head(3, 'Ikuti Panah', 'Mesin BFS sudah selesai. Mulai dari Desa, ketuk halte yang ditunjuk panah asal sampai Terminal, lalu pilih angkot untuk setiap naik.');
+        followArrows(wrap, ctx, graf, 'Terminal', 'Desa', () => next(4200));
+      } else if (r === 6 || r === 7) {
+        head(4, 'Dua Mesin Rusak', 'Mesin BFS ini rusak. Perhatikan mesinnya berjalan, lalu tebak kerusakannya: mesin Dodi atau mesin Rudi?');
+        sabotage(wrap, ctx, graf, r === 6 ? 'dodi' : 'rudi', () => next(5200));
+      } else if (r === 8) {
+        head(5, 'Wilayah Sekali Pindah', 'Ketuk semua halte yang bisa dicapai dari Terminal dengan paling banyak dua kali naik (sekali pindah), lalu Periksa.');
+        const H = dalamDuaNaik(graf, 'Terminal'); const on = new Set(); let fin = false;
+        const msg = el('p', { class: 'reveal hint' }, 'Ketuk halte untuk menandai atau membatalkan.');
+        const box = el('div', { class: 'bm-peta' });
+        const draw = () => fill(box, peta({ kelas: (h) => (h === 'Terminal' ? 'awal' : on.has(h) ? (fin && !H.includes(h) ? 'dodi' : 'jalur') : ''), onPick: fin ? null : (h) => { if (h === 'Terminal') return; on.has(h) ? on.delete(h) : on.add(h); ctx.sound.tap(); draw(); } }));
+        draw();
+        wrap.append(box, el('div', { class: 'kode-baris' }, button('Periksa', () => {
+          if (fin) return;
+          const miss = H.filter((h) => !on.has(h)); const extra = [...on].filter((h) => !H.includes(h));
+          if (miss.length || extra.length) { ctx.mistake(); shake(box); say(msg, 'bad', `Belum tepat: ${extra.length ? `${extra.join(', ')} perlu lebih dari dua kali naik. ` : ''}${miss.length ? `Masih ada ${miss.length} halte yang terlewat.` : ''}`); return; }
+          fin = true; ctx.sound.good(); draw(); say(msg, '', `Tepat: ${H.length} halte. Hanya Desa dan Taman yang perlu tiga kali naik. BFS menemukan halte lapis demi lapis: 1 naik, lalu 2 naik.`); next(4200);
+        }, 'primary')), msg);
+      } else {
+        head(6, 'Hari Minggu', 'Trayek D libur. Tunjukkan rute Terminal ke Pelabuhan dengan naik paling sedikit: ketuk halte satu per satu, setiap ketukan = sekali naik angkot yang beroperasi.');
+        sundayRoute(wrap, ctx, () => next(4200));
       }
     }
     render();
   },
 };
+
+const KODE_MESIN = ['antrean = deque([awal])', 'while antrean:', '    s = antrean.popleft()', '    if s == tujuan: break', '    for t in graf[s]:', '        if t not in asal:', '            asal[t] = s', '            antrean.append(t)'];
+
+// The queue lane: cards enter at the back (right) and leave from the front (left).
+function lane(q, { onTap: tap = null, judul = 'antrean: ambil dari depan ⟵ masuk dari belakang' } = {}) {
+  return el('div', { class: 'bm-lajur' }, el('small', null, judul),
+    el('div', { class: 'bm-kartu-kartu' }, q.length ? q.map((h, i) => { const b = el('button', { type: 'button', class: `bm-kartu ${i === 0 ? 'depan' : ''}` }, h); if (tap) onTap(b, () => tap(h, i)); else b.disabled = true; return b; }) : el('i', null, 'kosong')));
+}
+
+// Tap the stops of graf[h] in the order the program appends them.
+function neighbourCard(host, ctx, graf, h, done) {
+  const want = graf[h]; const got = [];
+  const msg = el('p', { class: 'reveal hint' }, `Program membaca trayek A, B, C, … dan menambahkan halte lain di trayek yang memuat ${h}.`);
+  const box = el('div', { class: 'bm-peta' });
+  const card = el('div', { class: 'bm-kartu-tetangga' });
+  const legend = el('div', { class: 'bm-legenda' }, Object.keys(TRAYEK).map((k) => el('span', { style: { '--tr': WARNA[k][1] } }, el('b', null, k), ` ${TRAYEK[k].join(' – ')}`)));
+  const draw = () => {
+    fill(box, peta({ kelas: (x) => (x === h ? 'kini' : got.includes(x) ? 'jalur' : ''), onPick: got.length === want.length ? null : pick }));
+    fill(card, el('b', null, `graf["${h}"] = `), el('span', { class: 'bm-daftar' }, '[', ...want.map((x, i) => el('span', { class: i < got.length ? 'isi' : 'kosong' }, i < got.length ? `"${x}"` : '___')), ']'));
+  };
+  function pick(x) {
+    const nx = want[got.length];
+    if (x === h || got.includes(x)) return;
+    if (x !== nx) {
+      ctx.mistake(); shake(box);
+      if (!want.includes(x)) say(msg, 'bad', `${x} tidak satu trayek dengan ${h}.`);
+      else { const k = Object.keys(TRAYEK).find((t) => TRAYEK[t].includes(h) && TRAYEK[t].includes(x)); say(msg, 'bad', `${x} memang tetangga (trayek ${k}), tetapi program belum sampai di sana. Baca trayek dari A dan halte dari kiri.`); }
+      return;
+    }
+    got.push(x); ctx.sound.tap(); msg.className = 'reveal hint'; draw();
+    if (got.length === want.length) { ctx.sound.good(); say(msg, '', `graf["${h}"] punya ${want.length} tetangga. Urutan ini menentukan urutan halte masuk antrean BFS nanti.`); done(); }
+  }
+  draw();
+  host.append(el('div', { class: 'bm-dua' }, box, el('div', { class: 'bm-samping' }, card, legend)), msg);
+}
+
+// The student is the BFS machine. Checks every pop and every append against the real run.
+function bfsMachine(host, ctx, { graf, awal, tujuan, from = 0, until = Infinity, onEnd }) {
+  const R = cariRute(graf, awal, tujuan); const J = jarakDari(graf, awal);
+  let q = from ? [...R.steps[from - 1].q] : [awal];
+  let asal = from ? { ...R.steps[from - 1].asal } : { [awal]: null };
+  let pops = from; let s = null; let todo = []; let baru = []; let over = false;
+  const msg = el('p', { class: 'reveal hint' }, 'Ketuk kartu terdepan antrean (paling kiri).');
+  const box = el('div', { class: 'bm-peta' });
+  const side = el('div', { class: 'bm-samping' });
+  const line = () => (over ? 3 : !s ? 2 : todo.length ? 6 : 4);
+  function draw() {
+    fill(box, peta({ kelas: (h) => [h === awal ? 'awal' : '', h === tujuan ? 'tujuan' : '', h === s ? 'kini' : '', baru.includes(h) ? 'baru' : '', h in asal ? `lap${J[h]}` : ''].join(' '), sub: (h) => (h in asal ? (asal[h] ? `← ${asal[h]}` : 'awal') : ''), onPick: s && todo.length ? add : null }));
+    fill(side, el('p', { class: 'bm-putaran' }, s ? `Putaran ${pops}: s = "${s}"` : `Putaran ${pops + 1}: ambil kartu`),
+      lane(q, { onTap: s ? null : take }),
+      s ? el('div', { class: 'bm-cek' }, el('small', null, `for t in graf["${s}"]:`), el('div', null, graf[s].map((t) => el('span', { class: t in asal && !baru.includes(t) ? 'lama' : baru.includes(t) ? 'baru' : 'tunggu' }, t)))) : null,
+      pyCode(KODE_MESIN, { hl: [line()], cls: 'bm-kode' }));
+  }
+  function take(h, i) {
+    if (over || s) return;
+    if (i !== 0) { ctx.mistake(); shake(side); say(msg, 'bad', `Antrean melayani yang datang lebih dulu: ambil "${q[0]}" di depan, bukan "${h}".`); return; }
+    q = q.slice(1); s = h; pops++; baru = []; ctx.sound.tap();
+    if (s === tujuan) { over = true; draw(); ctx.sound.good(); onEnd({ done: true, pops, msg, q }); return; }
+    todo = graf[s].filter((t) => !(t in asal));
+    say(msg, 'hint', todo.length ? `Periksa tetangga "${s}" dari kiri. Ketuk di peta setiap halte yang belum punya panah asal.` : `Semua tetangga "${s}" sudah punya asal. Tidak ada yang masuk antrean.`);
+    draw();
+    if (!todo.length) setTimeout(endTurn, 1400);
+  }
+  function add(h) {
+    if (!s || !todo.length || h === s) return;
+    if (h === todo[0]) { asal[h] = s; q = [...q, h]; baru.push(h); todo.shift(); ctx.sound.tap(); msg.className = 'reveal hint'; draw(); if (!todo.length) setTimeout(endTurn, 700); return; }
+    ctx.mistake(); shake(box);
+    if (h in asal) say(msg, 'bad', `"${h}" sudah punya panah asal (${asal[h] ?? 'awal'}). Mesin melewatinya.`);
+    else if (!graf[s].includes(h)) say(msg, 'bad', `"${h}" tidak bisa dicapai dengan sekali naik dari "${s}".`);
+    else say(msg, 'bad', `Mesin membaca graf["${s}"] dari kiri: "${todo[0]}" dulu.`);
+  }
+  function endTurn() {
+    s = null; baru = [];
+    if (pops >= until) { over = true; draw(); onEnd({ done: false, pops, msg, q }); return; }
+    say(msg, 'hint', 'Ketuk kartu terdepan antrean.'); draw();
+  }
+  draw();
+  host.append(el('div', { class: 'bm-dua' }, box, side), msg);
+}
+
+// Walk the asal arrows back from the goal, then name the angkot for each ride.
+function followArrows(host, ctx, graf, awal, tujuan, done) {
+  const R = cariRute(graf, awal, tujuan); const want = [...R.jalur].reverse();
+  let back = [tujuan]; let rides = []; const msg = el('p', { class: 'reveal hint' }, `Panah asal "${tujuan}" menunjuk ke mana?`);
+  const box = el('div', { class: 'bm-peta' }); const side = el('div', { class: 'bm-samping' });
+  const jalur = () => [...back].reverse();
+  function draw() {
+    const walking = back[back.length - 1] !== awal;
+    fill(box, peta({ jalur: back.length > 1 ? jalur() : null, kelas: (h) => [h === awal ? 'awal' : '', h === tujuan ? 'tujuan' : '', back.includes(h) ? 'jalur' : h in R.asal ? 'ditemu' : ''].join(' '), sub: (h) => (h in R.asal ? (R.asal[h] ? `← ${R.asal[h]}` : 'awal') : ''), onPick: walking ? step : null }));
+    const legs = jalur().slice(1).map((h, i) => [jalur()[i], h]);
+    fill(side, el('p', { class: 'bm-putaran' }, `jalur = ${pyRepr(back)}`),
+      walking ? null : el('div', { class: 'bm-naik' }, legs.map(([a, b], i) => el('div', null, el('span', null, `${a} → ${b}`), rides[i] ? el('b', { class: 'bm-tr', style: { '--tr': WARNA[rides[i]][1] } }, rides[i])
+        : i === rides.length ? el('div', { class: 'seg' }, Object.keys(TRAYEK).map((k) => onTap(el('button', { class: 'seg-btn ba-tr on', type: 'button', style: { '--tr': WARNA[k][1] } }, k), () => ride(k, a, b)))) : null))));
+  }
+  function step(h) {
+    const at = back[back.length - 1];
+    if (h !== R.asal[at]) { ctx.mistake(); shake(box); say(msg, 'bad', `Panah di "${at}" bertuliskan ← ${R.asal[at]}. Ikuti panahnya.`); return; }
+    back.push(h); ctx.sound.tap();
+    if (h === awal) say(msg, 'hint', `Sampai di awal. jalur.reverse() memberi ${pyRepr(jalur())}. Sekarang pilih angkot untuk setiap naik.`);
+    draw();
+  }
+  function ride(k, a, b) {
+    if (!(TRAYEK[k].includes(a) && TRAYEK[k].includes(b))) { ctx.mistake(); shake(side); say(msg, 'bad', `Angkot ${k} tidak lewat ${a} dan ${b} sekaligus.`); return; }
+    rides.push(k); ctx.sound.tap(); draw();
+    if (rides.length === jalur().length - 1) { ctx.sound.good(); say(msg, '', `${petunjuk(jalur())} ${pindahText(jalur())}.`); done(); }
+  }
+  draw();
+  host.append(el('div', { class: 'bm-dua' }, box, side), msg);
+}
+
+// Watch a broken machine run (Dodi: pop(), Rudi: no asal check), then name it.
+function sabotage(host, ctx, graf, versi, done) {
+  const R = cariRute(graf, 'Terminal', 'Desa', versi, 14);
+  const box = el('div', { class: 'bm-peta' }); const side = el('div', { class: 'bm-samping' }); const msg = el('p', { class: 'reveal hint' }, 'Mesin berjalan sendiri…');
+  const cards = el('div', { class: 'bm-sabot' });
+  let k = 0; let fin = false;
+  const show = () => {
+    const st = R.steps[k - 1]; const asal = st ? st.asal : { Terminal: null };
+    const end = k >= R.steps.length;
+    fill(box, peta({ jalur: end && R.jalur ? R.jalur : null, kelas: (h) => [h === 'Terminal' ? 'awal' : '', h === 'Desa' ? 'tujuan' : '', st && h === st.s ? 'kini' : '', end && R.jalur?.includes(h) ? 'dodi' : h in asal ? 'ditemu' : ''].join(' '), sub: (h) => (h in asal ? (asal[h] ? `← ${asal[h]}` : 'awal') : '') }));
+    fill(side, el('p', { class: 'bm-putaran' }, st ? `Pengambilan ${k}: "${st.s}"` : 'Mulai'), lane(st ? st.q : ['Terminal'], { judul: 'antrean' }),
+      end ? el('p', { class: 'ba-hasil salah' }, R.jalur ? `Hasil: ${R.jalur.join(' – ')} (${pindahText(R.jalur)})` : `Mesin dihentikan: ${R.ambil} pengambilan, antrean ${R.steps[R.steps.length - 1].q.length} kartu. asal["Terminal"] = "${R.asal.Terminal}"`) : null);
+  };
+  const OPT = [['dodi', '🔧 Mesin Dodi', 's = antrean.pop()  (ambil dari belakang)'], ['rudi', '🔧 Mesin Rudi', 'tanpa baris  if t not in asal:'], ['bersih', '✅ Tidak rusak', 'mesin BFS biasa']];
+  const timer = setInterval(() => { k++; show(); if (k >= R.steps.length) { clearInterval(timer); offer(); } }, 650);
+  function offer() {
+    say(msg, 'hint', R.jalur ? 'Mesin menemukan rute, tetapi naiknya lebih banyak dari BFS biasa (3 kali naik). Mesin siapa ini?' : 'Mesin tidak berhenti sendiri dan rantai asalnya berputar. Mesin siapa ini?');
+    fill(cards, ...OPT.map(([v, t, d]) => onTap(el('button', { type: 'button', class: 'bm-sabot-kartu' }, el('b', null, t), el('code', null, d)), () => {
+      if (fin) return;
+      if (v !== versi) { ctx.mistake(); shake(cards); say(msg, 'bad', v === 'bersih' ? 'Mesin BFS biasa memberi Terminal – Pasar – Perumahan – Desa (3 kali naik) dan berhenti sendiri.' : 'Bukan. Perhatikan dari mana kartu diambil dan apakah halte bisa mendapat panah asal dua kali.'); return; }
+      fin = true; ctx.sound.good();
+      say(msg, '', versi === 'dodi' ? 'Tepat! pop() mengambil kartu terakhir, jadi mesin menyelam ke satu arah (seperti DFS) dan tidak menjamin naik paling sedikit.' : 'Tepat! Tanpa pemeriksaan asal, halte yang sudah ditemukan dimasukkan lagi dan panah asalnya ditimpa: asal["Terminal"] menjadi "Pasar", rantai asal berputar, antrean tidak pernah habis.');
+      done();
+    })));
+  }
+  show();
+  host.append(el('div', { class: 'bm-dua' }, box, side), cards, msg);
+  return () => clearInterval(timer);
+}
+
+// Sunday: route D is off. Tap stops ride by ride; fewest rides wins.
+function sundayRoute(host, ctx, done) {
+  const aktif = Object.keys(TRAYEK).filter((k) => k !== 'D'); const g2 = bangunGraf(aktif); const best = cariRute(g2, 'Terminal', 'Pelabuhan').jalur;
+  let rute = ['Terminal']; let fin = false;
+  const msg = el('p', { class: 'reveal hint' }, 'Garis putus-putus: trayek D tidak beroperasi.');
+  const box = el('div', { class: 'bm-peta' }); const info = el('p', { class: 'bm-putaran' });
+  const draw = () => { fill(box, peta({ aktif, jalur: rute.length > 1 ? rute : null, kelas: (h) => [h === 'Terminal' ? 'awal' : '', h === 'Pelabuhan' ? 'tujuan' : '', rute.includes(h) ? 'jalur' : ''].join(' '), onPick: fin ? null : pick })); info.textContent = `${rute.join(' – ')} · ${rute.length - 1} kali naik`; };
+  function pick(h) {
+    const last = rute[rute.length - 1];
+    if (h === last) { if (rute.length > 1) { rute.pop(); draw(); } return; }
+    if (!g2[last]?.includes(h)) { ctx.mistake(); shake(box); say(msg, 'bad', `Tidak ada angkot yang beroperasi langsung dari ${last} ke ${h} hari ini.`); return; }
+    rute.push(h); ctx.sound.tap(); draw();
+    if (h !== 'Pelabuhan') return;
+    if (rute.length === best.length) { fin = true; ctx.sound.good(); say(msg, '', `Tepat, ${rute.length - 1} kali naik! Hari biasa cukup 2 kali (lewat Alun-alun dengan angkot D). Programnya cukup membangun ulang graf tanpa trayek D; fungsi BFS tidak berubah.`); done(); return; }
+    ctx.mistake(); say(msg, 'bad', `Sampai dengan ${rute.length - 1} kali naik, tetapi bisa lebih sedikit. Coba lagi.`); setTimeout(() => { rute = ['Terminal']; draw(); }, 1800);
+  }
+  draw();
+  host.append(box, info, msg);
+}
 
 // Pick start and goal, switch routes off, and step through the search.
 function createSteps(root, ctx) {

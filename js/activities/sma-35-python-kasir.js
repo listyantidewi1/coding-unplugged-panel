@@ -3,9 +3,9 @@
 // %, round() rounding half to even, input() giving text, Rudi's "2" + "3"
 // bug and the TypeError, change in notes and coins, and tax in whole rupiah.
 
-import { el, onTap, button } from '../core/util.js';
-import { choice } from '../core/kit.js';
-import { say, pickTeams, scoreBar, finishBoard, rowsChoose, pyTracer, pyCode, stepper } from './smp-kit.js';
+import { el, onTap, button, shake } from '../core/util.js';
+import { misiHead, valueCard, fill } from './misi-kit.js';
+import { say, pickTeams, scoreBar, finishBoard, pyTracer, pyCode, stepper } from './smp-kit.js';
 import { runPy, pyRepr, pyType } from './mini-py.js';
 
 export const KASIR = (fix = false) => ['harga_buku = 4500', 'harga_pulpen = 3000', 'jumlah_buku = int(input("Jumlah buku: "))', 'jumlah_pulpen = int(input("Jumlah pulpen: "))', 'total = harga_buku * jumlah_buku + harga_pulpen * jumlah_pulpen', 'dapat_diskon = total >= 25000', 'if dapat_diskon:',
@@ -22,8 +22,6 @@ export const varsOf = (input, fix = false) => run(KASIR(fix), input).vars;
 export const pajak = (bayar) => evalExpr(`round(${bayar} * 0.11)`);
 export const pajakBulat = (bayar) => Math.floor((bayar * 11 + 50) / 100);
 const rupiah = (n) => `Rp${n.toLocaleString('id-ID')}`;
-const VARS = ['jumlah_buku', 'total', 'dapat_diskon', 'diskon', 'bayar', 'kembalian'];
-const TYPES = ['int', 'float', 'str', 'bool'];
 // Options "value · type" around the right one.
 function vtOpts(v) {
   const t = pyType(v); const s = show(v); const out = new Set([`${s} · ${t}`]);
@@ -51,41 +49,192 @@ export default {
     { id: 'giliran', icon: '🧑‍🤝‍🧑', label: 'Tebak Keluaran', desc: 'Satu tim memilih masukan pembeli, tim lain menebak nilai dan tipe keluaran print', create: createTeams },
   ],
   create(root, ctx) {
-    const wrap = el('div', { class: 'act python-kasir' });
+    const wrap = el('div', { class: 'act python-kasir jp-main' });
     root.append(wrap);
-    const VA = varsOf(A); const VB = varsOf(B); const VF = varsOf(B, true);
+    // Seeded variants (same in every race pane): a customer near the 25000 discount line, and a change amount.
+    const near = ctx.rand.shuffle([[2, 5], [3, 4], [4, 2], [5, 1], [1, 7], [3, 3], [2, 6], [4, 3]]);
+    const V1 = near[0]; const V2 = near[1];
+    const uangFor = ([b, p]) => (4500 * b + 3000 * p > 25000 ? 50000 : 30000);
+    const laciK = ctx.rand.int(21, 999) * 50;
     function render() {
       wrap.replaceChildren();
       const r = ctx.round;
       let solved = false;
-      const next = () => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, 2400); } };
-      const ask = (prompt, opts, columns = 1, subject = null, onRight = next) => choice(wrap, { prompt, subject, ctx, shuffle: true, onRight, columns, options: opts.map(([l, correct]) => ({ label: String(l), correct })) });
-      const then = (fn) => () => { wrap.replaceChildren(); fn(); };
-      const exprRow = (src) => { const v = evalExpr(src); return [src, src, vtOpts(v).sort(), `${show(v)} · ${pyType(v)}`]; };
-      const varRows = (V) => VARS.map((n) => [n, n, vtOpts(V[n]).sort(), `${show(V[n])} · ${pyType(V[n])}`]);
-      const traced = (input, label, V, extraRows = []) => { const tr = pyTracer(KASIR(), { opts: { input: [...input] }, cls: 'pk-jejak', onEnd: () => setTimeout(then(() => rowsChoose(wrap, ctx, { prompt: `${label}: nilai · tipe di akhir program`, cls: 'pk-isi', rows: [...varRows(V), ...extraRows], done: next })), 1600) });
-        wrap.append(el('p', { class: 'prompt' }, `${label}: masukan ${input.join(', ')}`), tr); };
-      if (r === 0) rowsChoose(wrap, ctx, { prompt: 'Tebak hasil dan tipenya (1)', cls: 'pk-isi', rows: EXPR.slice(0, 6).map(exprRow), info: '4500 → 4500 · int sudah diisi.', done: next });
-      else if (r === 1) rowsChoose(wrap, ctx, { prompt: 'Tebak hasil dan tipenya (2)', cls: 'pk-isi', rows: [...EXPR.slice(6).map(exprRow), ['beda', 'Beda / dan //', ['/ selalu menghasilkan float; // membuang sisa (seperti DIV)', '/ dan // sama saja', '// selalu menghasilkan float', '/ membulatkan ke atas'], '/ selalu menghasilkan float; // membuang sisa (seperti DIV)', '0.1 + 0.2 tidak tepat 0,3 karena pecahan desimal disimpan dalam bentuk biner.']], done: next });
-      else if (r === 2) traced(A, 'Pembeli A (3 buku, 2 pulpen, uang 20000)', VA);
-      else if (r === 3) traced(B, 'Pembeli B (5 buku, 3 pulpen, uang 50000)', VB);
-      else if (r === 4) { const out = run(KASIR(), B).out; ask('Keluaran program untuk pembeli B', [[out.join(' / '), true], ['Total: 31500 / Diskon: 3150 / Bayar: 28350 / Kembalian: 21650'], ['Total: 31500.0 / Diskon: 3150.0 / Bayar: 28350.0 / Kembalian: 21650.0'], ['Total: 31500 / Diskon: 0 / Bayar: 31500 / Kembalian: 18500']], 1, pyCode(KASIR()),
-        then(() => rowsChoose(wrap, ctx, { prompt: 'Mengapa .0, dan bagaimana diskon selalu int?', rows: [['c', 'Pembeli B diakhiri .0 karena', ['total * 0.1 melibatkan float, dan int dengan float selalu menghasilkan float', 'uang 50000 lebih besar', 'print selalu menambah .0', 'jumlah_buku bertipe float'], 'total * 0.1 melibatkan float, dan int dengan float selalu menghasilkan float', 'Untuk pembeli A baris 10 yang dijalankan, dan 0 adalah int.'], ['r', 'Cara dengan round', ['diskon = round(total * 0.1)', 'diskon = int(total) * 0.1', 'diskon = round(total) * 0.1'], 'diskon = round(total * 0.1)'], ['d', 'Cara dengan //', ['diskon = total // 10', 'diskon = total // 0.1', 'diskon = total / 10'], 'diskon = total // 10', `Keduanya menghasilkan ${VF.diskon}.`]], done: next }))); }
-      else if (r === 5) { const p = runPy([...KASIR(true), ...PECAHAN], { input: [...B] }); const q = runPy([...KASIR(), ...PECAHAN], { input: [...B] }); const v = p.vars;
-        wrap.append(pyCode(PECAHAN)); rowsChoose(wrap, ctx, { prompt: 'Pecahan kembalian pembeli B (baris 8 sudah diperbaiki)', cls: 'pk-isi', rows: [['k', 'kembalian · lembar_10000 · lembar_1000', [`${v.kembalian} · ${v.lembar_10000} · ${v.lembar_1000}`, `${v.kembalian} · 2 · 2`, `21650.0 · 2 · 1`, `${v.kembalian} · 21 · 6`], `${v.kembalian} · ${v.lembar_10000} · ${v.lembar_1000}`], ['c', 'koin_500 · koin_100 · sisa', [`${v.koin_500} · ${v.koin_100} · ${v.sisa}`, '1 · 1 · 0', '0 · 6 · 50', '1 · 2 · 0'], `${v.koin_500} · ${v.koin_100} · ${v.sisa}`], ['b', 'Koperasi tidak punya koin 50', ['pembeli B menerima kembalian kurang Rp50; misalnya bulatkan bayar ke ratusan terdekat', 'tidak ada masalah', 'program galat'], 'pembeli B menerima kembalian kurang Rp50; misalnya bulatkan bayar ke ratusan terdekat'], ['f', 'Bila baris 8 belum diperbaiki, baris 26 menampilkan', [q.out.at(-1), '2 1 1 1 50', '2.0 1 1 1 50', '21650.0'], q.out.at(-1), '// dan % pada float menghasilkan float.']], done: next }); }
-      else if (r === 6) { const tr = pyTracer(RUDI, { opts: { input: ['2', '3'] }, cls: 'pk-jejak', hideVars: ['total'], extra: (st) => (typeof st.vars.total === 'string' ? el('p', { class: 'pk-panjang' }, `total: teks "${st.vars.total.slice(0, 6)}…${st.vars.total.slice(-6)}", panjang ${st.vars.total.length.toLocaleString('id-ID')} karakter`) : null),
-        onEnd: (st) => setTimeout(then(() => rowsChoose(wrap, ctx, { prompt: 'Program Rudi tanpa int(): pembeli mengetik 2 dan 3', rows: [['a', 'Baris 6 menampilkan · tipe banyak', ['Banyak barang: 23 · str', 'Banyak barang: 5 · int', 'Banyak barang: 23 · int', 'Banyak barang: 2 3 · str'], `${run(RUDI, ['2', '3']).out[0]} · ${pyType(st.vars.banyak)}`], ['b', 'Isi total setelah baris 7', ['teks "222…2333…3" sepanjang 7.500 karakter', 'bilangan 18000', 'teks "18000"', 'galat'], `teks "222…2333…3" sepanjang ${st.vars.total.length.toLocaleString('id-ID')} karakter`], ['c', st.error ? `${st.error.type}: ${st.error.message}` : '', ['Python tidak bisa membandingkan teks dengan bilangan memakai >=', 'total terlalu besar', '25000 harus ditulis 25.000', 'variabel total belum dibuat'], 'Python tidak bisa membandingkan teks dengan bilangan memakai >=', 'Pesan galat menyebut operatornya dan kedua tipe yang bermasalah.']], done: next })), 1600) });
-        wrap.append(el('p', { class: 'prompt' }, 'Program Rudi: lupa int() di baris 3 dan 4'), tr); }
-      else if (r === 7) { const e1 = runPy(['jumlah_buku = int(input("Jumlah buku: "))'], { input: ['2.5'] }).error; const e2 = runPy(['jumlah_buku = int(input("Jumlah buku: "))'], { input: ['dua'] }).error;
-        ask('Setelah int() ditambahkan lagi, pembeli mengetik 2.5 atau dua. Apa yang terjadi?', [[`Program berhenti dengan ${e1.text} (atau '${'dua'}'), karena teks itu tidak bisa diubah menjadi bilangan bulat`, true], ['jumlah_buku menjadi 2'], ['jumlah_buku menjadi 2.5 bertipe float'], ['jumlah_buku menjadi 0']], 1, el('pre', { class: 'pk-galat' }, `>>> int("2.5")\n${e1.text}\n>>> int("dua")\n${e2.text}`)); }
-      else if (r === 8) { const bayar = VF.bayar; const x = evalExpr(`${bayar} * 0.11`); const pj = pajak(bayar);
-        rowsChoose(wrap, ctx, { prompt: `Pajak 11% dari bayar (pembeli B, bayar = ${bayar})`, cls: 'pk-isi', rows: [['27', 'Baris 27: pajak =', ['round(bayar * 0.11)', 'bayar * 0.11', 'round(bayar) * 0.11', 'bayar // 0.11'], 'round(bayar * 0.11)'], ['28', 'Baris 28: total_akhir =', ['bayar + pajak', 'bayar * pajak', 'pajak', 'total + pajak'], 'bayar + pajak'], ['29', 'Baris 29: .replace(…, …)', ['",", "."', '".", ","', '"Rp", ""', '",", ""'], '",", "."', `Keluarannya Total akhir: ${rupiah(bayar + pj)}.`], ['x', 'bayar * 0.11', [pyRepr(x), '3119', '3118', '3118.0'], pyRepr(x)], ['g', `round(${pyRepr(x)}) = ${pj} dan round(2381.5) = ${evalExpr('round(2381.5)')}. Aturannya`, ['angka tepat .5 dibulatkan ke bilangan bulat genap terdekat', '.5 selalu dibulatkan ke atas', '.5 selalu dibulatkan ke bawah', 'acak'], 'angka tepat .5 dibulatkan ke bilangan bulat genap terdekat', 'Disebut juga pembulatan bankir.']], done: next }); }
-      else { const xs = [28250, 28350, 19550, 19650]; const a = xs.map((x) => evalExpr(`round(${x}, -2)`)); const b = xs.map((x) => evalExpr(`(${x} + 50) // 100 * 100`));
-        rowsChoose(wrap, ctx, { prompt: 'Pajak dengan bilangan bulat, dan tantangan pembulatan ratusan', rows: [['c', 'Pajak hanya dengan bilangan bulat, .5 ke atas', ['pajak = (bayar * 11 + 50) // 100', 'pajak = bayar * 11 // 100', 'pajak = (bayar + 50) * 11 // 100', 'pajak = round(bayar * 11 / 100)'], 'pajak = (bayar * 11 + 50) // 100', `Untuk pembeli B: ${pajakBulat(VF.bayar)}, total akhir ${rupiah(VF.bayar + pajakBulat(VF.bayar))}.`], ['r', 'round(x, -2) untuk 28250 · 28350 · 19550 · 19650', [a.join(' · '), b.join(' · '), '28300 · 28400 · 19600 · 19600'], a.join(' · ')], ['f', '(x + 50) // 100 * 100', [b.join(' · '), a.join(' · '), '28200 · 28300 · 19500 · 19600'], b.join(' · ')], ['s', 'Rumus yang sesuai pembulatan di sekolah (50 ke atas)', ['(x + 50) // 100 * 100', 'round(x, -2)', 'keduanya sama'], '(x + 50) // 100 * 100', 'round membulatkan ke ratusan yang genap bila tepat 50.']], done: next }); }
+      const next = (wait = 3000) => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, wait); } };
+      const head = (no, judul, tujuan) => wrap.append(misiHead(no, judul, tujuan, '🧾'));
+      if (r === 0 || r === 1) {
+        head(1, 'Mesin Tipe', 'Ekspresi masuk ke mesin Python. Ketuk kartu hasil yang tepat: nilainya dan warna tipenya (biru int, hijau float, kuning str, merah bool).');
+        typeMachine(wrap, ctx, r === 0 ? EXPR.slice(0, 6) : EXPR.slice(6), () => next());
+      } else if (r === 2 || r === 3 || r === 7 || r === 9) {
+        const [b, p, u] = r === 2 ? [3, 2, 20000] : r === 3 ? [5, 3, 50000] : r === 7 ? [...V1, uangFor(V1)] : [...V2, uangFor(V2)];
+        head(2, 'Layani Pembeli', `Kalian adalah komputer kasir. Pembeli membeli ${b} buku dan ${p} pulpen, membayar dengan ${rupiah(u)}. Jalankan program baris demi baris: taruh kartu nilai di kotak variabel.`);
+        serveCustomer(wrap, ctx, b, p, u, () => next(3600));
+      } else if (r === 4 || r === 8) {
+        const K = r === 4 ? 21650 : laciK;
+        head(3, 'Laci Kembalian', `Kembalian ${rupiah(K)}. Ambil uang dari laci dengan // dan %: lembar terbesar dulu, sebanyak mungkin, lalu hitung sisanya.`);
+        changeDrawer(wrap, ctx, K, () => next(3600));
+      } else if (r === 5) {
+        head(4, 'Sabotase Rudi', 'Rudi menghapus int() dari baris masukan. Pembeli mengetik 2 dan 3. Jadilah komputernya dan ramalkan apa yang terjadi.');
+        playMachine(wrap, ctx, rudiSteps(), () => next(4200));
+      } else {
+        head(5, 'Pajak dan Struk', 'Koperasi menambah pajak 11% (angka contoh) pada bayar = 28350. Jalankan programnya: hati-hati dengan round() dan pembulatan ke genap.');
+        playMachine(wrap, ctx, taxSteps(), () => next(4200));
+      }
     }
     render();
   },
 };
+
+const rupiahPy = (v) => (pyType(v) === 'float' ? pyRepr(v) : String(v));
+// A card is {text, kind}; kind is a Python type name, 'err', or 'out' (screen text).
+const cardOf = (v) => ({ text: show(v), kind: pyType(v) });
+function wrongCards(v) {
+  const t = pyType(v); const s = show(v);
+  if (t === 'int') return [{ text: `${s}.0`, kind: 'float' }, { text: `"${s}"`, kind: 'str' }, { text: String(v + (v % 2 ? -1 : 1)), kind: 'int' }];
+  if (t === 'bool') return [{ text: s === 'True' ? 'False' : 'True', kind: 'bool' }, { text: `"${s}"`, kind: 'str' }, { text: s === 'True' ? '1' : '0', kind: 'int' }];
+  if (t === 'float') {
+    if (s.endsWith('.0')) { const n = s.slice(0, -2); return [{ text: n, kind: 'int' }, { text: `"${s}"`, kind: 'str' }, { text: n, kind: 'float' }]; }
+    if (s.length > 8) return [{ text: '0.3', kind: 'float' }, { text: '"0.3"', kind: 'str' }, { text: '0', kind: 'int' }];
+    const x = Number(s); return [{ text: String(Math.floor(x)), kind: 'int' }, { text: String(Math.ceil(x)), kind: 'int' }, { text: `"${s}"`, kind: 'str' }];
+  }
+  const inner = s.slice(1, -1);
+  if (/^\d+$/.test(inner)) return [{ text: inner, kind: 'int' }, { text: `${inner}.0`, kind: 'float' }, { text: String([...inner].reduce((a, c) => a + Number(c), 0)), kind: inner.length > 1 && inner.length < 3 ? 'int' : 'str' }];
+  return [{ text: inner, kind: 'int' }, { text: `${inner}.0`, kind: 'float' }, { text: `'${inner}'`, kind: 'err' }];
+}
+const KIND = { int: 'int', float: 'float', str: 'str', bool: 'bool', err: 'galat', out: 'layar' };
+
+// Expressions roll in one by one; tap the result card.
+function typeMachine(host, ctx, exprs, done) {
+  let k = 0; const made = [];
+  const msg = el('p', { class: 'reveal hint' }, 'Kartu yang sama nilainya tetapi beda warna adalah tipe yang berbeda.');
+  const machine = el('div', { class: 'jp-mesin' }); const belt = el('div', { class: 'jp-sabuk' }); const tray = el('div', { class: 'jp-baki' });
+  function draw() {
+    const src = exprs[k]; const v = evalExpr(src); const right = cardOf(v);
+    fill(machine, el('small', null, `ekspresi ${k + 1} dari ${exprs.length}`), el('code', null, src), el('span', { class: 'jp-panah' }, '⟶ ?'));
+    fill(belt, ...made.map(([s, c]) => el('div', { class: 'jp-jadi' }, el('code', null, s), valueCard(c.text, c.kind, { disabled: true, tabindex: '-1' }))));
+    const opts = ctx.rand.shuffle([right, ...wrongCards(v)]);
+    fill(tray, ...opts.map((c) => onTap(valueCard(c.text, c.kind), () => {
+      if (c.text !== right.text || c.kind !== right.kind) { ctx.mistake(); shake(tray); say(msg, 'bad', c.text === right.text ? `Nilainya benar, tetapi tipenya ${KIND[right.kind]}, bukan ${KIND[c.kind]}.` : `${src} bukan ${c.text}. ${hintFor(src)}`); return; }
+      ctx.sound.good(); made.push([src, right]); k++; msg.className = 'reveal hint';
+      if (k === exprs.length) { draw2(); say(msg, '', 'Semua ekspresi selesai! / selalu float, // dan % tetap int untuk int, round() membulatkan .5 ke genap, dan + pada teks menyambung.'); done(); return; }
+      draw();
+    })));
+  }
+  const draw2 = () => { fill(machine, el('code', null, '✓')); fill(tray, ); fill(belt, ...made.map(([s, c]) => el('div', { class: 'jp-jadi' }, el('code', null, s), valueCard(c.text, c.kind, { disabled: true, tabindex: '-1' })))); };
+  draw();
+  host.append(el('div', { class: 'jp-dua' }, el('div', { class: 'jp-kiri' }, machine, tray), belt), msg);
+}
+function hintFor(src) {
+  if (src.includes('//')) return '// membuang sisa pembagian.';
+  if (src.includes('/')) return '/ selalu menghasilkan float.';
+  if (src.includes('%')) return '% memberi sisa pembagian.';
+  if (src.startsWith('round')) return 'round() membulatkan .5 ke bilangan genap terdekat.';
+  if (src.includes('"') && src.includes('+') && !src.includes('int(')) return '+ pada dua teks menyambungkannya.';
+  if (src.includes('>=')) return 'Perbandingan menghasilkan True atau False.';
+  if (src.includes('0.1')) return 'Float disimpan dalam biner, jadi 0,1 tidak tepat.';
+  return 'Perhatikan tanda petik dan titik desimal.';
+}
+
+// The cashier computer: code on the left, memory boxes and screen on the right.
+// steps: [{line, box, value: card, opts: [cards], why}]; box '?' = condition, 'layar' = print.
+function playMachine(host, ctx, { lines, given, boxes, steps }, done) {
+  const mem = Object.fromEntries(boxes.map((b) => [b, null])); for (const [n, c] of given) mem[n] = c;
+  let k = 0; let cond = null; const screen = [];
+  const msg = el('p', { class: 'reveal hint' }, 'Penunjuk baris ada di baris kuning. Ketuk kartu nilai untuk baris itu.');
+  const left = el('div', { class: 'jp-kode' }); const right = el('div', { class: 'jp-memori' }); const tray = el('div', { class: 'jp-baki' });
+  function draw() {
+    const st = steps[k];
+    fill(left, pyCode(lines, { hl: st ? [st.line] : [], warn: st?.warn ? [st.line] : [] }), cond ? el('div', { class: 'jp-kondisi' }, el('small', null, 'kondisi'), valueCard(cond.text, cond.kind, { disabled: true, tabindex: '-1' })) : null);
+    fill(right, el('div', { class: 'jp-kotak-kotak' }, boxes.map((b) => el('div', { class: `jp-kotak ${st && st.box === b ? 'sasaran' : ''}` }, el('small', null, b), mem[b] ? valueCard(mem[b].text, mem[b].kind, { disabled: true, tabindex: '-1' }) : el('i', null, '…')))),
+      el('div', { class: 'jp-layar' }, el('small', null, '🖥️ layar'), screen.length ? screen.map((s) => el('div', null, s)) : el('i', null, ' ')));
+    fill(tray, ...(st ? ctx.rand.shuffle([st.value, ...st.opts]).map((c) => onTap(valueCard(c.text, c.kind), () => pick(c))) : []));
+  }
+  function pick(c) {
+    const st = steps[k];
+    if (c.text !== st.value.text || c.kind !== st.value.kind) { ctx.mistake(); shake(tray); say(msg, 'bad', st.bad ? st.bad(c) : c.text === st.value.text ? `Nilainya benar, tetapi tipenya bukan ${KIND[c.kind]}.` : `Bukan ${c.text}. Hitung lagi baris ${st.line + 1}.`); return; }
+    ctx.sound.tap();
+    if (st.box === '?') cond = c; else if (st.box === 'layar') screen.push(c.text); else mem[st.box] = c;
+    if (st.why) say(msg, st.value.kind === 'err' ? 'bad' : '', st.why); else msg.className = 'reveal hint';
+    k++;
+    draw();
+    if (k === steps.length) { ctx.sound.good(); done(); }
+  }
+  draw();
+  host.append(el('div', { class: 'jp-dua' }, left, el('div', { class: 'jp-kanan' }, right, tray)), msg);
+}
+
+const LAYANI = ['total = 4500*buku + 3000*pulpen', 'if total >= 25000:', '    diskon = total * 0.1', 'else:', '    diskon = 0', 'bayar = total - diskon', 'kembali = uang - bayar', 'print("Kembalian:", kembali)'];
+function serveCustomer(host, ctx, b, p, u, done) {
+  const V = runPy([`buku = ${b}`, `pulpen = ${p}`, `uang = ${u}`, ...LAYANI]).vars;
+  const c = evalExpr(`${V.total} >= 25000`);
+  const outText = `Kembalian: ${rupiahPy(V.kembali)}`;
+  const alt = rupiahPy(V.kembali).endsWith('.0') ? rupiahPy(V.kembali).slice(0, -2) : `${rupiahPy(V.kembali)}.0`;
+  const steps = [
+    { line: 0, box: 'total', value: cardOf(V.total), opts: wrongCards(V.total) },
+    { line: 1, box: '?', value: cardOf(c), opts: wrongCards(c), why: c ? 'True: penunjuk melompat ke baris 3.' : 'False: penunjuk melompat ke baris 5 (else).' },
+    { line: c ? 2 : 4, box: 'diskon', value: cardOf(V.diskon), opts: wrongCards(V.diskon), why: c ? 'int dikali float menghasilkan float: kartu hijau muncul.' : '' },
+    { line: 5, box: 'bayar', value: cardOf(V.bayar), opts: wrongCards(V.bayar), why: c ? 'Warna hijau menular: int dikurangi float menjadi float.' : '' },
+    { line: 6, box: 'kembali', value: cardOf(V.kembali), opts: wrongCards(V.kembali) },
+    { line: 7, box: 'layar', value: { text: outText, kind: 'out' }, opts: [{ text: `Kembalian: ${alt}`, kind: 'out' }, { text: `Kembalian:${rupiahPy(V.kembali)}`, kind: 'out' }, { text: `("Kembalian:", ${rupiahPy(V.kembali)})`, kind: 'out' }], why: `Layar: ${outText}. print memberi satu spasi di antara nilai.` },
+  ];
+  playMachine(host, ctx, { lines: LAYANI, given: [['buku', cardOf(b)], ['pulpen', cardOf(p)], ['uang', cardOf(u)]], boxes: ['buku', 'pulpen', 'uang', 'total', 'diskon', 'bayar', 'kembali'], steps }, done);
+}
+function rudiSteps() {
+  const lines = ['harga_buku = 4500', 'harga_pulpen = 3000', 'jumlah_buku = input("Jumlah buku: ")', 'jumlah_pulpen = input("Jumlah pulpen: ")', 'banyak = jumlah_buku + jumlah_pulpen', 'print("Banyak barang:", banyak)', 'total = harga_buku * jumlah_buku + ...', 'dapat_diskon = total >= 25000'];
+  const s = (t) => ({ text: t, kind: 'str' });
+  return { lines, given: [['harga_buku', cardOf(4500)], ['harga_pulpen', cardOf(3000)]], boxes: ['harga_buku', 'harga_pulpen', 'jumlah_buku', 'jumlah_pulpen', 'banyak', 'total'], steps: [
+    { line: 2, box: 'jumlah_buku', value: s('"2"'), opts: [{ text: '2', kind: 'int' }, { text: '2.0', kind: 'float' }, s('"jumlah_buku"')], why: 'input() selalu memberi teks: kartu kuning "2".' },
+    { line: 3, box: 'jumlah_pulpen', value: s('"3"'), opts: [{ text: '3', kind: 'int' }, { text: '3.0', kind: 'float' }, s('"Jumlah pulpen: "')] },
+    { line: 4, box: 'banyak', value: s('"23"'), opts: [{ text: '5', kind: 'int' }, s('"5"'), { text: '23', kind: 'int' }], why: '+ pada dua teks menyambung: "2" + "3" = "23".' },
+    { line: 5, box: 'layar', value: { text: 'Banyak barang: 23', kind: 'out' }, opts: [{ text: 'Banyak barang: 5', kind: 'out' }, { text: 'Banyak barang: "23"', kind: 'out' }, { text: 'Banyak barang: 2 3', kind: 'out' }], why: 'Pembeli bingung: dua barang ditulis 23!' },
+    { line: 6, box: 'total', value: s('teks 7.500 karakter'), opts: [{ text: '18000', kind: 'int' }, { text: '💥 TypeError', kind: 'err' }, s('"45003000"')], why: '4500 * "2" mengulang teks "2" sebanyak 4500 kali. total menjadi teks sepanjang 7.500 karakter.' },
+    { line: 7, box: '?', warn: true, value: { text: '💥 TypeError', kind: 'err' }, opts: [{ text: 'True', kind: 'bool' }, { text: 'False', kind: 'bool' }, s('"True"')], why: 'Komputer macet: teks tidak bisa dibandingkan dengan bilangan (TypeError). Perbaikannya: int(input(...)).' },
+  ] };
+}
+function taxSteps() {
+  const lines = ['bayar = 28350', 'pajak = round(bayar * 0.11)', 'bulat = (bayar * 11 + 50) // 100', 'total_akhir = bayar + pajak', 'print("Total akhir:", total_akhir)'];
+  const i = (n) => ({ text: String(n), kind: 'int' });
+  return { lines, given: [['bayar', i(28350)]], boxes: ['bayar', 'pajak', 'bulat', 'total_akhir'], steps: [
+    { line: 1, box: 'pajak', value: i(3118), opts: [i(3119), { text: '3118.5', kind: 'float' }, { text: '"3118"', kind: 'str' }], bad: (c) => (c.text === '3119' ? 'bayar * 0.11 = 3118.5, dan round() membulatkan .5 ke genap: 3118.' : 'round() memberi int.'), why: 'bayar * 0.11 = 3118.5, dan round() membulatkan .5 ke bilangan genap: 3118.' },
+    { line: 2, box: 'bulat', value: i(3119), opts: [i(3118), { text: '3119.0', kind: 'float' }, { text: '3118.5', kind: 'float' }], why: 'Rumus bilangan bulat selalu membulatkan .5 ke atas: 3119. Tanpa float, tanpa kejutan.' },
+    { line: 3, box: 'total_akhir', value: i(31468), opts: [i(31469), { text: '31468.0', kind: 'float' }, { text: '"283503118"', kind: 'str' }] },
+    { line: 4, box: 'layar', value: { text: 'Total akhir: 31468', kind: 'out' }, opts: [{ text: 'Total akhir: 31469', kind: 'out' }, { text: 'Total akhir:31468', kind: 'out' }, { text: 'Total akhir: Rp31.468', kind: 'out' }], why: 'Di struk ditulis Rp31.468. Untuk uang, rumus bilangan bulat lebih aman daripada round() pada float.' },
+  ] };
+}
+
+// The change drawer: take notes for the current line, as many as fit, then compute the remainder.
+function changeDrawer(host, ctx, K, done) {
+  const lines = ['lembar_10000 = kembali // 10000', 'sisa = kembali % 10000', 'lembar_1000 = sisa // 1000', 'sisa = sisa % 1000', 'koin_500 = sisa // 500', 'sisa = sisa % 500', 'koin_100 = sisa // 100', 'sisa = sisa % 100'];
+  const P = [10000, 1000, 500, 100]; const NAMA = ['lembar_10000', 'lembar_1000', 'koin_500', 'koin_100'];
+  let d = 0; let sisa = K; let n = 0; const got = []; let fin = false;
+  const msg = el('p', { class: 'reveal hint' }, `Baris 1: ambil lembar 10.000 sebanyak mungkin (${K} // 10000), lalu ketuk Hitung sisa.`);
+  const left = el('div', { class: 'jp-kode' }); const right = el('div', { class: 'jp-memori' });
+  const note = (p, extra = {}) => el('button', { type: 'button', class: `jp-uang u${p}`, ...extra }, p >= 1000 ? `${p / 1000}.000` : String(p));
+  function draw() {
+    fill(left, pyCode(lines, { hl: fin ? [] : [d * 2] }));
+    fill(right, 
+      el('div', { class: 'jp-kotak-kotak' }, el('div', { class: 'jp-kotak' }, el('small', null, 'kembali'), valueCard(String(K), 'int', { disabled: true, tabindex: '-1' })), el('div', { class: 'jp-kotak sasaran' }, el('small', null, 'sisa'), valueCard(String(sisa), 'int', { disabled: true, tabindex: '-1' })),
+        ...NAMA.map((nm, i) => el('div', { class: 'jp-kotak' }, el('small', null, nm), i < got.length ? valueCard(String(got[i]), 'int', { disabled: true, tabindex: '-1' }) : i === d && !fin ? el('b', null, String(n)) : el('i', null, '…')))),
+      el('div', { class: 'jp-laci' }, el('small', null, '🗄️ laci'), P.map((p, i) => onTap(note(p), () => take(i)))),
+      el('div', { class: 'jp-tangan' }, el('small', null, '✋ untuk pembeli'), ...got.flatMap((c, i) => Array.from({ length: c }, () => note(P[i], { disabled: true, tabindex: '-1' }))), ...Array.from({ length: fin ? 0 : n }, () => note(P[d], { disabled: true, tabindex: '-1' }))),
+      fin ? null : button('Hitung sisa (%) ➜', settle, 'primary'));
+  }
+  function take(i) {
+    if (fin) return;
+    if (i !== d) { ctx.mistake(); shake(right); say(msg, 'bad', `Penunjuk ada di baris ${d * 2 + 1}: ${NAMA[d]}. ${i < d ? 'Pecahan itu sudah selesai.' : 'Ambil pecahan yang lebih besar dulu.'}`); return; }
+    if ((n + 1) * P[d] > sisa) { ctx.mistake(); shake(right); say(msg, 'bad', `Sisa ${sisa} tidak cukup untuk satu ${P[d]} lagi. ${sisa} // ${P[d]} = ${n}.`); return; }
+    n++; ctx.sound.tap(); draw();
+  }
+  function settle() {
+    const want = Math.floor(sisa / P[d]);
+    if (n < want) { ctx.mistake(); shake(right); say(msg, 'bad', `Masih cukup untuk ${P[d]} lagi: // mengambil sebanyak mungkin.`); return; }
+    got.push(n); sisa %= P[d]; n = 0; d++; ctx.sound.good();
+    if (d === P.length) { fin = true; draw(); say(msg, sisa ? 'hint' : '', `Kembalian ${K}: ${got.map((c, i) => `${c} × ${P[i]}`).join(', ')}${sisa ? `, sisa ${sisa}: koperasi tidak punya koin ${sisa}, jadi pembeli perlu diberi tahu` : ''}.`); done(); return; }
+    say(msg, 'hint', `sisa = ${sisa}. Baris ${d * 2 + 1}: ambil ${P[d] >= 1000 ? 'lembar' : 'koin'} ${P[d]} sebanyak mungkin.`); draw();
+  }
+  draw();
+  host.append(el('div', { class: 'jp-dua' }, left, right), msg);
+}
 
 function createTrace(root, ctx) {
   const wrap = el('div', { class: 'act python-kasir' });

@@ -1,6 +1,6 @@
 // Offline support: cache the app shell so a panel keeps working when the
 // school network drops. Bump VERSION whenever files change.
-const VERSION = 'cu-v18';
+const VERSION = 'cu-v19';
 const FILES = [
   './',
   'index.html',
@@ -83,6 +83,7 @@ const FILES = [
   'js/activities/smp-25-chatbot.js',
   'js/activities/sma-01-aksara-unicode.js',
   'js/activities/sma-kit.js',
+  'js/activities/misi-kit.js',
   'js/activities/sma-02-kode-hemat.js',
   'js/activities/sma-03-antrean-tumpukan.js',
   'js/activities/sma-04-pohon-cari.js',

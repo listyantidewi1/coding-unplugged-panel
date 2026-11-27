@@ -4,8 +4,8 @@
 // by undoing crossing legs (2-opt), and watch (n − 1)!/2 explode.
 
 import { el, onTap, button, shake } from '../core/util.js';
-import { choice } from '../core/kit.js';
 import { say, pickTeams, scoreBar, finishBoard, fmtNum } from './sma-kit.js';
+import { misiHead, gauge, stars } from './misi-kit.js';
 
 export const KOTA = { G: ['Gudang', 6, 9], A: ['Arjasari', 9, 8], B: ['Bumijaya', 17, 0], C: ['Cempakawangi', 30, 14], D: ['Dukuhsari', 14, 9], E: ['Endahrejo', 3, 4] };
 export const JARAK = { GA: 3, GB: 14, GC: 25, GD: 8, GE: 6, AB: 11, AC: 22, AD: 5, AE: 7, BC: 19, BD: 9, BE: 15, CD: 17, CE: 29, DE: 12 };
@@ -162,73 +162,180 @@ export default {
     { id: 'giliran', icon: '🔁', label: 'Rute Bergiliran', desc: 'Tim bergantian menambah satu kota ke rute bersama; panjang ruas yang ditambahkan menjadi skor tim, skor terkecil menang', create: createTeams },
   ],
   create(root, ctx) {
-    const wrap = el('div', { class: 'act kurir-keliling' });
+    const wrap = el('div', { class: 'act kurir-keliling kr-main' });
     root.append(wrap);
     const NN = nearest(PETA);
+    // Random variants: same seed in every race pane, so every team gets the same map.
+    const acak = (k, needCross = false) => { for (let t = 0; t < 60; t++) { const m = randomMap(ctx.rand, k); if (!needCross || crossings(m, nearest(m)).length) return m; } return randomMap(ctx.rand, k); };
+    const tankFor = (m) => Math.ceil(shortest(m).best * 1.08);
+    const MAPS = { 7: acak(6), 8: acak(6, true), 9: acak(7) };
     function render() {
       wrap.replaceChildren();
       const r = ctx.round;
       let solved = false;
-      const next = () => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, 2400); } };
-      const ask = (prompt, opts, columns = 1, subject = null, onRight = next) => choice(wrap, { prompt, subject, ctx, shuffle: true, onRight, columns, options: opts.map(([l, correct]) => ({ label: String(l), correct })) });
-      const then = (fn) => () => { wrap.replaceChildren(); fn(); };
-      const pic = (o = {}) => el('div', { class: 'kk-peta kecil', html: mapSvg(PETA, o) });
-      const board = (prompt, hint, opts) => {
-        const msg = el('p', { class: 'reveal hint' }, hint);
-        wrap.append(el('p', { class: 'prompt' }, prompt));
-        const b = routeBoard(wrap, ctx, { map: PETA, ...opts(msg) });
-        wrap.append(msg);
-        return b;
-      };
-      if (r === 0) ask('Kurir berangkat dari gudang, mendatangi A, B, C, D, E masing-masing sekali, lalu kembali. Berapa banyak urutan kota, dan berapa rute yang panjangnya mungkin berbeda?', [['120 urutan (5 × 4 × 3 × 2 × 1); 60 rute, karena setiap rute sama panjang dengan kebalikannya', true], ['25 urutan; 25 rute'], ['120 urutan; 120 rute'], ['15 urutan; 5 rute']], 1, pic());
-      else if (r === 1) board('Cara tetangga terdekat: dari gudang, selalu ke kota terdekat yang belum didatangi.', 'Ketuk kota satu per satu. Lihat tabel jarak.', (msg) => ({ rule: 'nn', onDone(t) { say(msg, '', `Rute ${fmtRoute(NN)}: ${t} km. Ruas terakhir E–C (29) dan C–G (25) sangat panjang.`); next(); } }));
-      else if (r === 2) {
-        let tries = 0;
-        const b = board('Cari rute terpendek dari gudang dan kembali.', 'Ketuk kota berurutan. Ketuk kota terakhir lagi untuk membatalkannya.', (msg) => ({
-          onDone(t) {
-            if (t === 65) { say(msg, '', `${fmtRoute(b.route)}: 65 km. Ini rute terpendek, satu-satunya (bersama kebalikannya).`); next(); return; }
-            tries++; ctx.mistake();
-            say(msg, 'bad', `${t} km. Masih ada rute yang lebih pendek.${tries >= 2 ? ' Petunjuk: mulai G–A–D, lalu ke kota terjauh dulu.' : ''}`);
-            setTimeout(() => b.reset(), 1800);
-          },
-        }));
-      } else if (r === 3) ask('Pasangan (A, E): kota kedua A, kota terakhir E. Dari enam rute ini, mana yang terpendek?', [['G–A–D–C–B–E–G: 3 + 5 + 17 + 19 + 15 + 6 = 65 km', true], ['G–A–B–C–D–E–G: 68 km'], ['G–A–C–B–D–E–G: 71 km'], ['G–A–B–D–C–E–G: 75 km']], 1, distTable(PETA));
-      else if (r === 4) ask('Tetangga terdekat 86 km, rute terpendek 65 km. Berapa selisihnya, dan di mana cara tetangga terdekat "terjebak"?', [['21 km (sekitar 32 %); di akhir, karena C yang jauh tersisa sehingga harus E–C (29) lalu C–G (25)', true], ['21 km (sekitar 24 %); di awal, karena G–A terlalu pendek'], ['11 km (sekitar 17 %); di tengah'], ['Tidak ada selisih']], 1, pic({ route: NN, closed: true, legs: [4, 5] }));
-      else if (r === 5) {
-        board('Jalankan tetangga terdekat yang dimulai dari Dukuhsari (D).', 'Dari D, selalu ke kota terdekat yang belum didatangi.', (msg) => ({ rule: 'nn', start: 'D', onDone(t, rt) {
-          say(msg, '', `${fmtRoute(rt)}: ${t} km. Ditulis dari gudang: ${fmtRoute(rotateTo(rt))}.`);
-          setTimeout(then(() => ask('Mulai dari D memberi 65 km. Apakah "coba setiap kota awal lalu pilih yang terbaik" selalu menemukan rute terpendek?', [['Tidak: sering memperbaiki hasil, tetapi tidak dijamin. Di peta ini mulai dari A, B, atau E hanya memberi 71 km', true], ['Ya, selalu'], ['Ya, asal mulai dari gudang'], ['Tidak pernah memperbaiki hasil']], 1, pic({ route: rotateTo(nearest(PETA, 'D')), closed: true }))), 2200);
-        } }));
-      } else if (r === 6) ask('Untuk n kota (termasuk gudang) ada (n − 1)! : 2 rute. Komputer memeriksa 10⁸ rute per detik. Berapa rute untuk 10 kota, dan berapa lama mencoba semua untuk 15 dan 20 kota?', [['181.440 rute; 15 kota ≈ 7 menit; 20 kota ≈ 19 tahun', true], ['200 rute; 15 kota sekejap; 20 kota 1 detik'], ['181.440 rute; 15 kota ≈ 7 menit; 20 kota ≈ 9 menit'], ['3.628.800 rute; 15 kota ≈ 1 tahun; 20 kota ≈ 2 tahun']], 1,
-        el('div', { class: 'au-status' }, [8, 10, 15, 20, 30].map((n) => `${n} kota: ${n < 15 ? fmtNum(countRoutes(n)) : '?'}`).join(' · ')));
-      else if (r === 7) ask('Kurir di kota besar mengantar 40 paket sehari. Mengapa aplikasinya memakai cara seperti tetangga terdekat, bukan mencoba semua rute?', [['41 tempat memberi rute jauh lebih banyak dari 30 kota (≈ 10³⁰ tahun); heuristik cepat dan hasilnya cukup baik', true], ['Karena tetangga terdekat selalu terpendek'], ['Karena komputer tidak bisa menjumlah jarak'], ['Karena 40 paket hanya punya 40 rute']]);
-      else if (r === 8) {
-        const msg = el('p', { class: 'reveal hint' }, 'Ketuk dua ruas yang bersilangan.');
-        const box = el('div', { class: 'kk-peta' });
-        const cross = crossings(PETA, NN)[0];
-        let picked = [];
-        const draw = () => { box.innerHTML = mapSvg(PETA, { route: NN, closed: true, tapLegs: true, legs: picked }); };
-        box.addEventListener('pointerdown', (e) => {
-          const g = e.target.closest('[data-l]');
-          if (!g || solved || picked.length === 2) return;
-          e.preventDefault();
-          const i = Number(g.dataset.l);
-          if (picked.includes(i)) return;
-          if (!cross.includes(i)) { ctx.mistake(); shake(box); say(msg, 'bad', `Ruas ${NN[i]}–${NN[(i + 1) % 6]} tidak bersilangan dengan ruas lain.`); return; }
-          picked.push(i); ctx.sound.tap(); draw();
-          if (picked.length === 2) {
-            const nr = [...NN.slice(0, cross[0] + 1), ...NN.slice(cross[0] + 1, cross[1] + 1).reverse(), ...NN.slice(cross[1] + 1)];
-            setTimeout(() => { box.innerHTML = mapSvg(PETA, { route: nr, closed: true }); say(msg, '', `Balik urutan B–E: ${fmtRoute(nr)} = ${tourLen(PETA, nr)} km, 7 km lebih pendek dari 86 km.`); }, 900);
-            setTimeout(then(() => ask('Mengapa rute yang ruasnya bersilangan hampir selalu bisa diperpendek?', [['Dua ruas yang bersilangan adalah diagonal segi empat; menggantinya dengan dua sisi yang berhadapan lebih pendek (ketaksamaan segitiga). Langkah ini disebut 2-opt', true], ['Karena kota di tengah dilewati dua kali'], ['Karena ruas bersilangan selalu lebih murah'], ['Tidak bisa; bersilangan justru lebih pendek']], 1, pic({ route: nr, closed: true }))), 3600);
-          }
-        });
-        draw();
-        wrap.append(el('p', { class: 'prompt' }, `Tantangan: rute tetangga terdekat ${fmtRoute(NN)} punya dua ruas yang bersilangan.`), box, msg);
-      } else ask('Memeriksa "apakah rute ini kurang dari 70 km?" mudah. Mencari rute terpendek untuk banyak kota sulit. Persoalan ini mirip yang mana?', [['Pembagian karung adil (Mudah Dicek, Sulit Dicari): mudah diperiksa, sangat sulit dicari', true], ['Mengurutkan angka: mudah dicari dan mudah diperiksa'], ['Menjumlah dua bilangan'], ['Tidak ada persoalan lain yang mirip']]);
+      const next = (wait = 2600) => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, wait); } };
+      const head = (no, judul, tujuan) => wrap.append(misiHead(no, judul, tujuan, '🛵'));
+      if (r === 0) {
+        head(1, 'Kurir Malas', 'Kurir selalu ke kota terdekat yang belum didatangi. Ketuk kotanya satu per satu, lalu pulang ke Gudang.');
+        courier(wrap, ctx, { map: PETA, tank: 70, rule: 'nn', onEnd(e) {
+          if (e.stalled) say(e.msg, 'bad', `Mogok! Rute ${fmtRoute(e.route)} butuh ${tourLen(PETA, e.route)} km. Bensin habis di ruas ${e.at}, ${e.short} km sebelum ${e.home}.`);
+          next(4200);
+        } });
+      } else if (r === 1 || r === 7 || r === 9) {
+        const m = r === 1 ? PETA : MAPS[r]; const tank = r === 1 ? 70 : tankFor(m); const best = shortest(m).best;
+        head(r === 1 ? 2 : r === 7 ? 6 : 8, 'Rute Hemat Bensin', `Susun rute sendiri. Tangki ${tank} km: pulang ke Gudang sebelum bensin habis.${r > 1 ? ' Peta baru!' : ''}`);
+        courier(wrap, ctx, { map: m, tank, onEnd(e) {
+          if (e.stalled) { ctx.mistake(); say(e.msg, 'bad', `Mogok di ruas ${e.at}! Coba rute lain.`); setTimeout(e.reset, 2200); return; }
+          const n = e.len === best ? 3 : e.len - best <= 3 ? 2 : 1;
+          e.msg.replaceChildren(stars(n), ` Sampai! ${e.len} km, sisa bensin ${tank - e.len} km.${n < 3 ? ` Rute terpendek ${best} km.` : ' Ini rute terpendek!'}`);
+          e.msg.className = 'reveal';
+          next(3800);
+        } });
+      } else if (r === 2 || r === 3) {
+        const [a, z] = r === 2 ? ['A', 'E'] : ['D', 'E'];
+        const best = r === 2 ? 65 : 68;
+        head(r + 1, 'Bagi Tugas', `Kelasmu mencoba semua 60 rute. Timmu memegang kantong (${a}, ${z}): 6 rute yang kota keduanya ${a} dan kota terakhirnya ${z}. Temukan yang terpendek.`);
+        const tried = new Map();
+        const log = el('div', { class: 'kr-kantong' });
+        const drawLog = () => log.replaceChildren(el('small', null, `Kantong (${a}, ${z}): ${tried.size} dari 6 rute dicoba`), ...[...tried].sort((p, q) => p[1] - q[1]).map(([k, v]) => el('span', { class: v === best ? 'terbaik' : '' }, `${k} = ${v} km`)));
+        drawLog();
+        courier(wrap, ctx, { map: PETA, pocket: [a, z], side: log, onEnd(e) {
+          tried.set(fmtRoute(e.route), e.len); drawLog();
+          if (e.len === best) { say(e.msg, '', `${e.len} km: terpendek di kantong (${a}, ${z}). Gabungkan hasil 10 kantong, dan kelas menemukan rute terpendek dari 60 rute.`); next(4200); return; }
+          say(e.msg, 'bad', `${e.len} km. Masih ada rute lebih pendek di kantong ini.`); setTimeout(e.reset, 1600);
+        } });
+      } else if (r === 4 || r === 5) {
+        const s = r === 4 ? 'D' : 'E';
+        head(r + 1, 'Mulai dari Kota Lain', `Kurir malas kini berangkat dari ${PETA.kota[s][0]} (${s}). Tangki 70 km. Apakah lebih hemat daripada dari Gudang (86 km)?`);
+        courier(wrap, ctx, { map: PETA, tank: 70, rule: 'nn', start: s, onEnd(e) {
+          const len = tourLen(PETA, e.route);
+          if (e.stalled) say(e.msg, 'bad', `Mogok ${e.short} km sebelum ${e.home}: rute ini ${len} km. Mulai dari kota lain tidak selalu menolong.`);
+          else say(e.msg, '', `${len} km, sampai! Ditulis dari Gudang: ${fmtRoute(rotateTo(e.route))}. Sama dengan rute terpendek, tetapi itu kebetulan.`);
+          next(4200);
+        } });
+      } else {
+        const m = r === 6 ? PETA : MAPS[8];
+        const route = nearest(m);
+        head(r === 6 ? 7 : 9, 'Urai Simpul', `Rute kurir malas ${tourLen(m, route)} km punya ruas yang bersilangan. Ketuk dua ruas yang bersilangan untuk mengurainya.`);
+        untangle(wrap, ctx, m, route, (len, before) => next(4200));
+      }
     }
     render();
   },
 };
+
+// The courier game board: a map with a scooter token, a fuel tank, and the towns to tap.
+// rule 'nn' only accepts the nearest unvisited town. pocket [a, z] fixes the
+// second town and keeps z for last. onEnd gets {route, len, stalled, at, short, home, msg, reset}.
+function courier(host, ctx, { map: m, tank = null, rule = 'bebas', start = 'G', pocket = null, side = null, onEnd }) {
+  const svg = el('div', { class: 'kk-peta kr-peta' });
+  const msg = el('p', { class: 'reveal hint' }, rule === 'nn' ? 'Garis putus-putus menunjukkan jarak ke kota yang belum didatangi.' : 'Ketuk kota berikutnya. Ketuk kota terakhir lagi untuk mundur.');
+  const routeEl = el('p', { class: 'kr-rute' });
+  const g = tank ? gauge(tank) : null;
+  let route; let used; let over;
+  const P = (c) => [X(m.kota[c][1]), Y(m.kota[c][2])];
+  svg.innerHTML = '<svg viewBox="0 0 730 370" role="img" aria-label="Peta kota"><g class="kr-calon"></g><g class="kr-jejak"></g><g class="kr-kota"></g><g class="kr-motor"><text font-size="34" text-anchor="middle" y="-14">🛵</text></g></svg>';
+  const [calon, jejak, kota, motor] = ['.kr-calon', '.kr-jejak', '.kr-kota', '.kr-motor'].map((s) => svg.querySelector(s));
+  const moveTo = ([x, y], ms = 550) => { motor.style.transition = ms ? `transform ${ms}ms ease-in-out` : 'none'; motor.style.transform = `translate(${x}px, ${y}px)`; };
+  const allowed = () => {
+    const left = m.ids.filter((c) => !route.includes(c));
+    if (!left.length) return [route[0]];
+    if (pocket && left.length > 1) return left.filter((c) => c !== pocket[1]);
+    return left;
+  };
+  const leg = (a, b, cls, label = true) => { const [x1, y1] = P(a); const [x2, y2] = P(b); const f = cls === 'kr-calon-garis' ? 0.62 : 0.5; const mx = x1 + (x2 - x1) * f; const my = y1 + (y2 - y1) * f;
+    return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" class="${cls}"/>${label ? `<g class="${cls}-km"><circle cx="${mx}" cy="${my}" r="15"/><text x="${mx}" y="${my + 6}" text-anchor="middle">${m.d(a, b)}</text></g>` : ''}`; };
+  function draw() {
+    const here = route[route.length - 1];
+    const closed = over === 'home';
+    jejak.innerHTML = route.slice(1).map((c, i) => leg(route[i], c, 'kr-sudah')).join('') + (closed ? leg(here, route[0], 'kr-sudah') : '');
+    calon.innerHTML = over ? '' : allowed().map((c) => leg(here, c, 'kr-calon-garis')).join('');
+    kota.innerHTML = m.ids.map((c) => { const [x, y] = P(c); const cls = c === route[0] ? 'awal' : route.includes(c) ? 'sudah' : allowed().includes(c) && !over ? 'bisa' : '';
+      return `<g data-c="${c}" class="kk-kota ${cls}"><circle cx="${x}" cy="${y}" r="24" fill="transparent"/><circle cx="${x}" cy="${y}" r="18" class="kr-titik"/><text x="${x}" y="${y + 6}" font-size="17" font-weight="900" text-anchor="middle">${c}</text><text x="${x}" y="${y + (y > 300 ? -26 : 40)}" font-size="16" font-weight="700" text-anchor="middle" fill="#334155">${m.kota[c][0]}</text></g>`; }).join('');
+    const len = route.slice(1).reduce((s, c, i) => s + m.d(route[i], c), 0) + (closed ? m.d(here, route[0]) : 0);
+    routeEl.textContent = `${fmtRoute(route, closed)} · ${len} km`;
+    if (g) g.set(tank - used);
+  }
+  function reset() {
+    route = [start]; used = 0; over = null;
+    if (pocket) { route.push(pocket[0]); used = m.d(start, pocket[0]); }
+    moveTo(P(route[route.length - 1]), 0); draw(); msg.className = 'reveal hint';
+  }
+  function go(c) {
+    const here = route[route.length - 1]; const d = m.d(here, c); const home = c === route[0];
+    if (tank && used + d > tank) {
+      const left = tank - used; const [x1, y1] = P(here); const [x2, y2] = P(c); const f = left / d;
+      used = tank; over = 'mogok'; moveTo([x1 + (x2 - x1) * f, y1 + (y2 - y1) * f], 900); ctx.sound.bad(); draw();
+      jejak.insertAdjacentHTML('beforeend', `<line x1="${x1}" y1="${y1}" x2="${x1 + (x2 - x1) * f}" y2="${y1 + (y2 - y1) * f}" class="kr-sudah"/><line x1="${x1 + (x2 - x1) * f}" y1="${y1 + (y2 - y1) * f}" x2="${x2}" y2="${y2}" class="kr-sisa"/>`);
+      if (!home) route.push(c);
+      svg.classList.add('mogok');
+      setTimeout(() => svg.classList.remove('mogok'), 900);
+      const done = home ? route : [...route, ...m.ids.filter((x) => !route.includes(x))];
+      setTimeout(() => onEnd({ route: done, len: tourLen(m, done), stalled: true, at: `${here}–${c}`, short: d - left, home: m.kota[c][0], msg, reset }), 950);
+      return;
+    }
+    used += d; ctx.sound.tap(); moveTo(P(c));
+    if (home) { over = 'home'; draw(); setTimeout(() => { ctx.sound.good(); onEnd({ route, len: used, stalled: false, msg, reset }); }, 650); return; }
+    route.push(c); draw();
+  }
+  svg.addEventListener('pointerdown', (e) => {
+    const t = e.target.closest('[data-c]');
+    if (!t || over) return;
+    e.preventDefault();
+    const c = t.dataset.c; const here = route[route.length - 1];
+    if (c === here && rule === 'bebas' && route.length > (pocket ? 2 : 1)) { used -= m.d(route[route.length - 2], here); route.pop(); moveTo(P(route[route.length - 1]), 300); draw(); return; }
+    const ok = allowed();
+    if (!ok.includes(c)) {
+      shake(svg);
+      if (c === route[0]) say(msg, 'bad', 'Datangi semua kota dulu, baru pulang.');
+      else if (pocket && c === pocket[1]) say(msg, 'bad', `${c} adalah kota terakhir di kantong ini. Datangi kota lain dulu.`);
+      return;
+    }
+    if (rule === 'nn') {
+      const min = Math.min(...ok.map((x) => m.d(here, x)));
+      if (m.d(here, c) > min) { ctx.mistake(); shake(svg); say(msg, 'bad', `Kurir malas tidak ke ${c} (${m.d(here, c)} km). Kota terdekat dari ${here}: ${ok.filter((x) => m.d(here, x) === min).join(' atau ')} (${min} km).`); return; }
+    }
+    msg.className = 'reveal hint';
+    go(c);
+  });
+  const tools = el('div', { class: 'kr-alat' }, g ? g.node : null, side, routeEl, onTap(el('button', { class: 'seg-btn', type: 'button' }, '🔄 Ulang'), () => { if (over !== 'home') reset(); }));
+  host.append(el('div', { class: 'kr-papan' }, svg, tools), msg);
+  reset();
+  return { reset };
+}
+
+// Tap the two crossing legs; the towns between them are reversed (2-opt).
+function untangle(host, ctx, m, route, done) {
+  const box = el('div', { class: 'kk-peta kr-peta' });
+  const msg = el('p', { class: 'reveal hint' }, 'Ketuk satu ruas, lalu ruas yang menyilanginya.');
+  const before = tourLen(m, route);
+  const cross = crossings(m, route);
+  let picked = []; let r = route; let finished = false;
+  const draw = () => { box.innerHTML = mapSvg(m, { route: r, closed: true, tapLegs: !finished, legs: picked }); };
+  box.addEventListener('pointerdown', (e) => {
+    const g = e.target.closest('[data-l]');
+    if (!g || finished || picked.length === 2) return;
+    e.preventDefault();
+    const i = Number(g.dataset.l);
+    if (picked.includes(i)) { picked = []; draw(); return; }
+    if (picked.length === 1 && !cross.some(([a, b]) => (a === picked[0] && b === i) || (b === picked[0] && a === i))) { ctx.mistake(); shake(box); say(msg, 'bad', `Ruas ${r[i]}–${r[(i + 1) % r.length]} tidak menyilangi ruas yang kamu pilih.`); picked = []; draw(); return; }
+    if (picked.length === 0 && !cross.some((p) => p.includes(i))) { ctx.mistake(); shake(box); say(msg, 'bad', `Ruas ${r[i]}–${r[(i + 1) % r.length]} tidak bersilangan dengan ruas mana pun.`); return; }
+    picked.push(i); ctx.sound.tap(); draw();
+    if (picked.length === 2) {
+      const [a, b] = picked.sort((x, y) => x - y);
+      setTimeout(() => {
+        r = [...r.slice(0, a + 1), ...r.slice(a + 1, b + 1).reverse(), ...r.slice(b + 1)];
+        finished = !crossings(m, r).length; picked = [];
+        const len = tourLen(m, r);
+        draw();
+        if (finished) { ctx.sound.good(); say(msg, '', `Terurai! ${fmtRoute(r)} = ${len} km, hemat ${before - len} km. Membalik urutan kota di antara dua ruas yang bersilangan disebut 2-opt.`); done(len, before); }
+        else { say(msg, '', `${len} km. Masih ada ruas yang bersilangan: urai lagi.`); cross.splice(0, cross.length, ...crossings(m, r)); }
+      }, 700);
+    }
+  });
+  draw();
+  host.append(el('div', { class: 'kr-papan' }, box), msg);
+}
 
 function createMap(root, ctx) {
   const wrap = el('div', { class: 'act kurir-keliling' });
