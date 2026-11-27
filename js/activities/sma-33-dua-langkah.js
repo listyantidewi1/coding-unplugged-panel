@@ -4,8 +4,9 @@
 // modes, and set up a digital-wallet account. The calculator never takes typed passwords.
 
 import { el, onTap, button, shake } from '../core/util.js';
-import { choice } from '../core/kit.js';
+import { dnd } from '../core/kit.js';
 import { say, pickTeams, scoreBar, finishBoard, fmtNum } from './sma-kit.js';
+import { misiHead, fill } from './misi-kit.js';
 
 export const RATE = 1e10;          // tebakan per detik pada berkas curian
 export const ONLINE = 20;          // tebakan per jam langsung di aplikasi
@@ -61,36 +62,6 @@ export const SETTINGS = [
 ];
 
 // --- view pieces ---
-function rowsChoose(wrap, ctx, { prompt, rows, done, info, cls = '', sorted = false }) {
-  // rows: [k, label, options[], right, explain]
-  const res = {};
-  const msg = el('p', { class: 'reveal info' }, info);
-  const box = el('div', { class: `dl-baris-baris ${cls}` });
-  const draw = () => box.replaceChildren(...rows.map(([k, t, opts, a, w]) => el('div', { class: `dl-baris ${k in res ? 'beres' : ''}` }, el('span', null, t), k in res ? el('b', null, a) : el('div', { class: 'seg' }, (sorted ? opts : opts).map((v) => onTap(el('button', { class: 'seg-btn', type: 'button' }, v), () => {
-    if (v !== a) { ctx.mistake(); say(msg, 'bad', `${t}: belum tepat.`); return; }
-    res[k] = v; ctx.sound.tap(); say(msg, '', w || 'Tepat.'); draw();
-    if (Object.keys(res).length === rows.length) setTimeout(done, 1600);
-  }))))));
-  draw();
-  wrap.append(el('p', { class: 'prompt' }, prompt), box, msg);
-}
-
-function pairRound(wrap, ctx, { prompt, left, texts, done, finalMsg, hint }) {
-  const got = {}; let sel = null;
-  const msg = el('p', { class: 'reveal info' }, 'Ketuk kartu kiri, lalu pasangannya di kanan.');
-  const host = el('div', { class: 'dl-pasang' });
-  const letters = ctx.rand.shuffle(Object.keys(texts));
-  const draw = () => host.replaceChildren(el('div', { class: 'dl-kol' }, left.map(([k, n, a]) => onTap(el('button', { class: `dl-item ${sel === k ? 'pilih' : ''} ${k in got ? 'beres' : ''}`, type: 'button' }, el('b', null, k), el('span', null, n), k in got ? el('em', null, `→ ${a}`) : null), () => { if (!(k in got)) { sel = k; draw(); } }))),
-    el('div', { class: 'dl-kol' }, letters.map((L) => onTap(el('button', { class: `dl-item ${Object.values(got).includes(L) ? 'beres' : ''}`, type: 'button' }, el('b', null, L), el('span', null, texts[L])), () => {
-      if (!sel || Object.values(got).includes(L)) return; const want = left.find((p) => p[0] === sel)[2];
-      if (L !== want) { ctx.mistake(); shake(host); say(msg, 'bad', hint); return; }
-      got[sel] = L; sel = null; ctx.sound.tap(); draw();
-      if (Object.keys(got).length === left.length) { say(msg, '', finalMsg); done(); }
-    }))));
-  draw();
-  wrap.append(el('p', { class: 'prompt' }, prompt), host, msg);
-}
-
 // Login simulation: lanes for the four actors, one step at a time.
 function makeSim(ctx, { scen, onEnd, choose = true }) {
   const steps = SCEN[scen]; let i = 0; let ended = false; let period = 1;
@@ -145,6 +116,257 @@ function settingsScreen(ctx, { check = true, onDone } = {}) {
   return el('div', { class: 'dl-ponsel-wadah' }, el('div', { class: 'dl-ponsel' }, el('b', { class: 'dl-ponsel-judul' }, '⚙ Pengaturan Keamanan · Dompet Digital (rekaan)'), meter, host), save, msg);
 }
 
+// ---------- Jaga Dompet Sekar: the ten missions ----------
+export const ONLINE_CHIPS = ['10⁶', '20', '50.000', '5,7', '10¹⁰', '0,0001', '200'];
+export const ONLINE_WANT = ['10⁶', '20', '50.000', '5,7'];
+export const TOY_CHIPS = ['37', '74', '11', '111', '47', '03'];
+export const PODIUM = ['3', '2', '1'];
+export const HABITS = [['h1', '🤐 Kode OTP, PIN, dan sandi tidak diberikan kepada siapa pun', true], ['h2', '🔐 Nyalakan dua langkah', true], ['h3', '🗝 Sandi berbeda untuk setiap akun, simpan di manajer kata sandi', true], ['h4', '🔍 Periksa alamat situs sebelum masuk', true], ['h5', '🔔 Pemberitahuan transaksi menyala', true], ['x1', '📝 Simpan PIN di catatan ponsel', false, 'Catatan biasa bisa dibaca siapa pun yang memegang ponsel.'], ['x2', '🎂 Pakai tanggal lahir sebagai PIN', false, 'Tanggal lahir mudah ditebak.'], ['x3', '🎁 Klik tautan hadiah untuk memastikan', false, 'Tautan hadiah adalah jalan masuk penipuan.']];
+export const GRANNY = [['tutup', '📵 Tutup telepon', 0], ['buka', '📱 Buka aplikasi resmi sendiri', 1], ['cek', '🔍 Periksa transaksi, lalu ganti sandi bila perlu', 2], ['sebut', '🔢 Sebutkan kode supaya cepat selesai', -1, 'Kode tidak boleh diberikan kepada siapa pun, termasuk "petugas".'], ['balik', '☎️ Telepon balik nomor si penelepon', -1, 'Nomor itu milik penipu; hubungi layanan lewat aplikasi resmi.']];
+const HEAD33 = {
+  hitung: ['Hitung Waktu Bobol', 'Setel kalkulator sesuai kartu sandi (tanpa mengetik sandi), lalu uji di mesin pembobol.'],
+  langsung: ['Tebakan Langsung', 'Di aplikasi penyerang hanya bisa 20 tebakan per jam. Seret angka ke rumus.'],
+  drama: ['Drama Pencurian Akun', 'Jalankan skenario A dan B, lalu tunjuk langkah tempat serangan B berhenti.'],
+  dramaC: ['Penelepon Misterius', 'Skenario C: apa yang dilakukan Sekar? Lalu hitung kode sekali pakai mainan.'],
+  telepon: ['Telepon Berdering', 'Lima pesan masuk. Asli atau penipuan? Penipuan yang dipercaya menguras saldo.'],
+  gembok: ['Pilih Gembok', 'Seret setiap moda ke penjelasannya, lalu susun podium yang paling tahan situs palsu.'],
+  benteng: ['Atur Benteng Akun', 'Setiap pengaturan yang tepat menambah satu bata benteng.'],
+  duel1: ['Duel Serangan I', 'Seret kartu pertahanan ke serangan sebelum waktunya habis.'],
+  duel2: ['Duel Serangan II', 'Tiga serangan lagi. Seret pertahanannya sebelum waktunya habis.'],
+  bos: ['Uji Nenek', 'Susun poster lima kebiasaan aman, lalu bantu Nenek menghadapi penelepon.'],
+};
+const msg33 = (t) => el('p', { class: 'reveal info' }, t);
+function wallet() {
+  let n = 300000; const b = el('b', null, ''); const node = el('div', { class: 'dl33-dompet' }, el('span', null, '👛 Saldo Sekar'), b);
+  const draw = () => { b.textContent = `Rp${fmtNum(n)}`; node.classList.toggle('tipis', n < 200000); };
+  draw();
+  return { node, rob() { if (n > 0) n -= 50000; draw(); node.classList.remove('goyang'); void node.offsetWidth; node.classList.add('goyang'); } };
+}
+
+// Misi 1: build each password on the calculator, then run the cracking machine.
+function calcRound(area, ctx, { oops, done }) {
+  const msg = msg33('Berkas kata sandi curian diuji 10 miliar (10¹⁰) tebakan per detik.');
+  let i = 0; let kind = 'pin'; let len = 4; let over = false;
+  const cards = CRACK.map(([k, t]) => el('div', { class: 'dl33-sandi', 'data-k': k }, el('b', null, `${k}.`), el('span', null, t), el('em', { class: 'dl33-cap' })));
+  const calc = el('div', { class: 'dl33-kalku' });
+  const draw = () => {
+    const K = KINDS.find((x) => x[0] === kind); const n = space(kind, len);
+    cards.forEach((c, j) => c.classList.toggle('aktif', j === i && !over));
+    fill(calc, el('b', { class: 'dl33-kalku-judul' }, '🧮 Kalkulator kekuatan sandi'),
+      el('div', { class: 'dl33-jenis' }, KINDS.map(([k, l, c]) => onTap(el('button', { class: `dl33-pil ${k === kind ? 'on' : ''}`, type: 'button', 'data-k': k }, el('span', null, l), el('small', null, fmtNum(c))), () => { if (over) return; kind = k; ctx.sound.tap(); draw(); }))),
+      el('div', { class: 'dl33-panjang' }, onTap(el('button', { class: 'dl33-pil', type: 'button', 'data-d': '-1' }, '−'), () => { if (!over && len > 1) { len--; ctx.sound.tap(); draw(); } }), el('b', { 'data-len': len }, `${len} ${K[3]}`), onTap(el('button', { class: 'dl33-pil', type: 'button', 'data-d': '1' }, '+'), () => { if (!over && len < 16) { len++; ctx.sound.tap(); draw(); } })),
+      el('div', { class: 'dl33-layar' }, el('span', null, `${fmtNum(K[2])} pilihan, ${len} ${K[3]}`), el('b', null, `${sci(n)} kemungkinan`)),
+      button('💥 Uji di mesin pembobol', test, 'primary'));
+  };
+  function test() {
+    if (over) return; const [k, t, wk, wl, ans] = CRACK[i];
+    if (kind !== wk || len !== wl) { oops(); shake(calc); say(msg, 'bad', `Kalkulator belum sesuai kartu ${k}: "${t}".`); return; }
+    const c = cards[i]; c.querySelector('.dl33-cap').textContent = `⏱ ${fmtTime(space(wk, wl) / RATE)}`; c.classList.add('beres', /tahun/.test(ans) ? 'kuat' : /detik/.test(ans) ? 'lemah' : 'sedang'); ctx.sound.tap(); i++;
+    if (i < CRACK.length) { say(msg, '', `${t}: ${ans}.`); draw(); return; }
+    over = true; draw(); say(msg, '', 'Panjang lebih penting daripada rumit: 12 karakter acak bertahan 10.000 tahun, dan frasa 5 kata 310 tahun.'); done();
+  }
+  draw();
+  area.append(el('div', { class: 'dl33-dua' }, el('div', { class: 'dl33-sandi-sandi' }, cards), calc), msg);
+}
+
+// Formula with blanks, filled left to right from a chip tray.
+function formulaRound(area, ctx, { oops, msg, lines, chips, want, hints, done }) {
+  let k = 0; const blanks = [];
+  const mk = () => { const b = el('span', { class: 'dl33-celah', 'data-drop': String(blanks.length) }, '?'); blanks.push(b); return b; };
+  const rows = el('div', { class: 'dl33-rumus' }, lines.map((parts) => el('div', null, parts.map((p) => (p === '_' ? mk() : p)))));
+  const tray = el('div', { class: 'dl33-angka-angka' }, ctx.rand.shuffle(chips.slice()).map((c) => el('div', { class: 'dl33-angka', 'data-drag': c }, c)));
+  const host = el('div', { class: 'dl33-papan' }, rows, tray);
+  dnd(host, (chip, blank) => {
+    if (k >= want.length) return;
+    if (+blank.dataset.drop !== k) { say(msg, 'info', 'Isi dari kiri ke kanan.'); return; }
+    if (chip.dataset.drag !== want[k]) { oops(); shake(chip); say(msg, 'bad', hints[k]); return; }
+    blank.textContent = want[k]; blank.classList.add('isi'); chip.remove(); ctx.sound.tap(); k++;
+    if (k < want.length) { say(msg, '', 'Tepat.'); return; }
+    done();
+  });
+  area.append(host, msg);
+}
+
+function onlineRound(area, ctx, { oops, done }) {
+  const msg = msg33('Akun dikunci 15 menit setiap 5 kali salah, jadi hanya sekitar 20 tebakan per jam.');
+  formulaRound(area, ctx, { oops, msg, chips: ONLINE_CHIPS, want: ONLINE_WANT,
+    lines: [['PIN 6 angka: ', '_', ' kemungkinan'], ['÷ ', '_', ' tebakan per jam = ', '_', ' jam'], ['50.000 jam ÷ 8.760 jam setahun ≈ ', '_', ' tahun']],
+    hints: ['Ada berapa PIN 6 angka? 10 × 10 × 10 × 10 × 10 × 10.', 'Berapa tebakan per jam langsung di aplikasi?', '1.000.000 ÷ 20.', '50.000 ÷ 8.760.'],
+    done: () => { say(msg, '', 'Berkas curian: 0,0001 detik. Langsung di aplikasi: 5,7 tahun. Karena itu sandi yang bocor dari berkas jauh lebih berbahaya.'); done(); } });
+}
+
+// Misi 2: scenarios A and B on the stage, then point at the step where B stops.
+function dramaRound(area, ctx, { oops, done }) {
+  const msg = msg33('Skenario A: akun tanpa dua langkah. Jalankan langkah demi langkah.');
+  const s1 = makeSim(ctx, { scen: 'A', onEnd: () => setTimeout(showB, 1600) });
+  area.append(s1.el, msg);
+  function showB() {
+    say(msg, 'info', 'Skenario B: akun dengan dua langkah.');
+    const s2 = makeSim(ctx, { scen: 'B', onEnd: () => setTimeout(pickStep, 1600) });
+    area.replaceChildren(s2.el, msg);
+  }
+  function pickStep() {
+    say(msg, 'info', 'Ketuk langkah tempat serangan B berhenti.'); let over = false;
+    const list = el('div', { class: 'dl33-langkah' }, SCEN.B.map(([a, t], j) => onTap(el('button', { class: 'dl33-lk', type: 'button', 'data-j': j }, el('b', null, `${j + 1}`), el('span', null, `${ACTORS.find((x) => x[0] === a)[1]} ${t}`)), (e) => {
+      if (over) return;
+      if (j !== 3) { oops(); shake(e.currentTarget); say(msg, 'bad', j < 3 ? 'Di langkah ini penyerang masih maju.' : 'Serangan sudah berhenti sebelum langkah ini.'); return; }
+      over = true; e.currentTarget.classList.add('on'); ctx.sound.tap(); say(msg, '', 'Langkah 4: penyerang tidak punya kodenya. Kode yang tidak diminta di langkah 5 adalah tanda kata sandi Sekar bocor.'); done();
+    })));
+    area.replaceChildren(list, msg);
+  }
+}
+
+function dramaC(area, ctx, { oops, rob, done }) {
+  const msg = msg33('Skenario C: penyerang punya kata sandinya, lalu menelepon Sekar.');
+  const run = () => {
+    const s = makeSim(ctx, { scen: 'C', onEnd: (kind) => {
+      if (kind === 'bobol') { rob(); ctx.mistake(); say(msg, 'bad', 'Saldo terkuras! Dua langkah tidak menolong bila kodenya diberikan. Ulangi skenario C.'); setTimeout(run, 2600); return; }
+      say(msg, '', 'Sekar menutup telepon: kode tidak pernah diberikan.'); setTimeout(codes, 1800);
+    } });
+    area.replaceChildren(s.el, msg);
+  };
+  run();
+  function codes() {
+    say(msg, 'info', 'Kode mainan: rahasia 37, kode = dua angka terakhir dari 37 × nomor periode (satu periode 30 detik).');
+    area.replaceChildren();
+    formulaRound(area, ctx, { oops, msg, chips: TOY_CHIPS, want: ['37', '74', '11'],
+      lines: [['Periode 1: 37 × 1 = 37 → kode ', '_'], ['Periode 2: 37 × 2 = 74 → kode ', '_'], ['Periode 3: 37 × 3 = 111 → kode ', '_']],
+      hints: ['Dua angka terakhir dari 37.', 'Dua angka terakhir dari 74.', 'Dua angka terakhir dari 111.'],
+      done: () => { say(msg, '', 'Kode periode 2 (74) tidak berlaku di periode 3. Aplikasi sungguhan memakai rumus rumit supaya rahasianya tidak bisa ditebak dari kodenya.'); done(); } });
+  }
+}
+
+// Misi 3: five messages ring one by one.
+function phoneRound(area, ctx, { oops, rob, done }) {
+  const order = ctx.rand.shuffle(MESSAGES.slice()); let i = 0; let busy = false;
+  const msg = msg33('Siapa yang meminta, apa yang diminta, dan seberapa terburu-buru?');
+  const screen = el('div', { class: 'dl33-layar-hp' });
+  const count = el('small', { class: 'dl33-hitung' });
+  const show = () => {
+    const [k, t] = order[i]; busy = false; count.textContent = `Pesan ${i + 1} dari ${order.length}`;
+    fill(screen, el('div', { class: 'dl33-gelembung', 'data-k': k }, t), el('div', { class: 'dl33-vonis' }, [['A', '✅ Asli'], ['P', '🚨 Penipuan']].map(([v, l]) => onTap(el('button', { class: `dl33-tombol v-${v}`, type: 'button', 'data-v': v }, l), () => judge(v)))));
+  };
+  function judge(v) {
+    if (busy) return; const [, , a, why] = order[i];
+    if (v !== a) { if (a === 'P') { rob(); oops(); say(msg, 'bad', `Tertipu! Saldo berkurang Rp50.000. ${why}`); } else { oops(); say(msg, 'bad', why); } shake(screen); return; }
+    busy = true; ctx.sound.tap(); screen.querySelector('.dl33-gelembung').classList.add(a === 'P' ? 'tipu' : 'asli'); say(msg, '', why); i++;
+    setTimeout(() => { if (i < order.length) show(); else { say(msg, '', 'Aturannya satu kalimat: kode OTP, PIN, dan kata sandi tidak diberikan kepada siapa pun, termasuk yang mengaku petugas.'); done(); } }, 2600);
+  }
+  show();
+  area.append(el('div', { class: 'dl33-hp' }, el('b', null, '📱 Ponsel Sekar'), count, screen), msg);
+}
+
+// Generic drag-to-row board.
+function rowBoard(area, ctx, { oops, msg, items, rows, check, done, extra }) {
+  let left = rows.length;
+  const rowEls = rows.map(([k, t]) => el('div', { class: 'dl33-baris', 'data-drop': k }, el('span', { class: 'dl33-slot' }, '?'), el('span', null, t)));
+  const tray = el('div', { class: 'dl33-baki' }, ctx.rand.shuffle(items.slice()).map(([k, t]) => el('div', { class: 'dl33-kartu', 'data-drag': k }, t)));
+  const host = el('div', { class: 'dl33-papan' }, el('div', { class: 'dl33-baris-baris' }, rowEls), tray);
+  dnd(host, (card, row) => {
+    if (!left || row.classList.contains('isi') || !row.classList.contains('dl33-baris')) return;
+    const why = check(card.dataset.drag, row.dataset.drop);
+    if (why) { oops(); shake(card); say(msg, 'bad', why); return; }
+    card.classList.add('locked'); row.querySelector('.dl33-slot').replaceWith(card); row.classList.add('isi'); ctx.sound.tap();
+    if (--left) { say(msg, '', 'Tepat.'); return; }
+    done(host);
+  });
+  area.append(host, msg);
+}
+
+function lockRound(area, ctx, { oops, done }) {
+  const msg = msg33('Mana yang dikirim operator, dibuat di ponsel, berupa benda kecil, atau memakai tubuh?');
+  rowBoard(area, ctx, { oops, msg, items: AUTH.map(([k, n]) => [k, n]), rows: ctx.rand.shuffle(Object.entries(AUTH_TEXT)),
+    check: (k, L) => (AUTH.find((a) => a[0] === k)[2] !== L ? 'Belum cocok.' : ''),
+    done: () => setTimeout(podium, 1500) });
+  function podium() {
+    say(msg, 'info', 'Situs palsu meniru halaman masuk. Susun podium: moda mana yang paling tahan?'); let k = 0;
+    const slots = ['🥇', '🥈', '🥉'].map((m, j) => el('div', { class: `dl33-podium p${j}`, 'data-drop': String(j) }, el('b', null, m)));
+    const tray = el('div', { class: 'dl33-baki' }, ctx.rand.shuffle(PODIUM.slice()).map((x) => el('div', { class: 'dl33-kartu', 'data-drag': x }, AUTH.find((a) => a[0] === x)[1])));
+    const host = el('div', { class: 'dl33-papan' }, el('div', { class: 'dl33-podium-podium' }, slots[1], slots[0], slots[2]), tray);
+    dnd(host, (card, slot) => {
+      if (k >= 3) return;
+      const j = +slot.dataset.drop; if (j !== k) { say(msg, 'info', 'Mulai dari juara 1.'); return; }
+      if (card.dataset.drag !== PODIUM[j]) { oops(); shake(card); say(msg, 'bad', 'Mana yang hanya mau bekerja di situs asli? Mana yang kodenya bisa diketik ke situs palsu atau dibajak lewat SIM?'); return; }
+      card.classList.add('locked'); slot.append(card); slot.classList.add('isi'); ctx.sound.tap(); k++;
+      if (k < 3) return;
+      say(msg, '', 'Kunci fisik menolak situs palsu; kode aplikasi masih bisa diketik ke situs palsu; SMS bisa dibajak lewat SIM pengganti. Tetap saja, SMS jauh lebih baik daripada tanpa dua langkah.'); done();
+    });
+    area.replaceChildren(host, msg);
+  }
+}
+
+// Misi 5: each right setting lays one brick.
+function fortRound(area, ctx, { oops, done }) {
+  const msg = msg33('Sekar belanja paling banyak Rp100.000 sehari. Pilih pengaturan yang paling aman.'); let left = SETTINGS.length;
+  const bricks = el('div', { class: 'dl33-bata-bata' }, SETTINGS.map((_, j) => el('i', { class: 'dl33-bata' })));
+  const rows = el('div', { class: 'dl33-setel' }, SETTINGS.map(([k, t, opts, right, why]) => el('div', { class: 'dl33-set', 'data-k': k }, el('span', null, t), el('div', { class: 'dl33-opsi' }, opts.map((o, j) => onTap(el('button', { class: 'dl33-pil', type: 'button', 'data-j': j }, o), (e) => {
+    const row = e.currentTarget.closest('.dl33-set'); if (row.classList.contains('beres')) return;
+    if (j !== right) { oops(); shake(row); say(msg, 'bad', `${t}: ${why}`); return; }
+    row.classList.add('beres'); e.currentTarget.classList.add('on'); bricks.children[SETTINGS.length - left].classList.add('ada'); ctx.sound.tap(); left--;
+    if (left) { say(msg, '', why); return; }
+    say(msg, '', 'Benteng berdiri: delapan bata, delapan pengaturan aman.'); done();
+  }))))));
+  area.append(el('div', { class: 'dl33-dua' }, rows, el('div', { class: 'dl33-benteng' }, el('b', null, '🏰 Benteng akun'), bricks)), msg);
+}
+
+// Misi 6: attacks arrive with a 20-second fuse; drag the matching defence onto them.
+function duelRound(area, ctx, { oops, rob, attacks, done }) {
+  const msg = msg33('Seret kartu pertahanan ke serangan. Waktu habis: saldo berkurang Rp50.000.'); let i = 0; let timer = null; let t0 = 0; let busy = false; let blocked = 0;
+  const stage = el('div', { class: 'dl33-serangan' });
+  const tray = el('div', { class: 'dl33-baki tiga' }, ctx.rand.shuffle(Object.keys(DEFENSES)).map((L) => el('div', { class: 'dl33-kartu tameng', 'data-drag': L }, `🛡 ${DEFENSES[L]}`)));
+  const host = el('div', { class: 'dl33-papan' }, stage, tray);
+  const fuse = el('i');
+  function show() {
+    const a = ATTACKS.find((x) => x[0] === attacks[i]); busy = false;
+    fill(stage, el('div', { class: 'dl33-musuh', 'data-drop': a[0] }, el('b', null, `⚔️ Serangan ${i + 1} dari ${attacks.length}`), el('span', null, a[1]), el('div', { class: 'dl33-sumbu' }, fuse)));
+    t0 = Date.now(); fuse.style.width = '100%';
+    clearInterval(timer); timer = setInterval(() => {
+      if (!host.isConnected) { clearInterval(timer); return; }
+      const f = 1 - (Date.now() - t0) / 20000; fuse.style.width = `${Math.max(0, f * 100)}%`;
+      if (f <= 0 && !busy) { busy = true; clearInterval(timer); rob(); ctx.mistake(); say(msg, 'bad', `Waktu habis! Pertahanannya: ${DEFENSES[a[2]]}.`); setTimeout(nextOne, 2600); }
+    }, 200);
+  }
+  function nextOne() { i++; if (i < attacks.length) show(); else { say(msg, '', `${blocked} dari ${attacks.length} serangan tertangkis. Setiap serangan punya pertahanan yang tepat, bukan satu pertahanan untuk semua.`); done(); } }
+  dnd(host, (card, target) => {
+    if (busy || !target.classList.contains('dl33-musuh')) return;
+    const a = ATTACKS.find((x) => x[0] === target.dataset.drop);
+    if (card.dataset.drag !== a[2]) { rob(); oops(); shake(card); say(msg, 'bad', 'Pertahanan itu tidak menghentikan serangan ini. Saldo berkurang Rp50.000!'); return; }
+    busy = true; blocked++; clearInterval(timer); target.classList.add('tangkis'); ctx.sound.good(); say(msg, '', `Tertangkis: ${DEFENSES[a[2]]}.`);
+    setTimeout(nextOne, 1800);
+  });
+  show();
+  area.append(host, msg);
+}
+
+// Misi Bos: a five-habit poster, then Granny's phone call.
+function grannyBoss(area, ctx, { oops, done }) {
+  const msg = msg33('Pilih lima kebiasaan aman untuk poster. Tiga kartu adalah kebiasaan buruk.'); let left = 5;
+  const poster = el('div', { class: 'dl33-poster', 'data-drop': 'poster' }, el('b', null, '📜 Lima Kebiasaan Aman Dompet Digital'), el('ol', { class: 'dl33-poster-isi' }));
+  const tray = el('div', { class: 'dl33-baki' }, ctx.rand.shuffle(HABITS.slice()).map(([k, t]) => el('div', { class: 'dl33-kartu', 'data-drag': k }, t)));
+  const host = el('div', { class: 'dl33-dua' }, poster, tray);
+  dnd(host, (card) => {
+    if (!left) return;
+    const h = HABITS.find((x) => x[0] === card.dataset.drag);
+    if (!h[2]) { oops(); shake(card); say(msg, 'bad', h[3]); return; }
+    poster.querySelector('ol').append(el('li', null, h[1])); card.remove(); ctx.sound.tap();
+    if (--left) return;
+    setTimeout(call, 1500);
+  });
+  area.append(host, msg);
+  function call() {
+    say(msg, 'info', 'Telepon Nenek berdering: "Saya petugas dompet digital. Sebutkan kode yang baru masuk ke SMS Ibu." Ketuk tindakan Nenek secara berurutan.'); let k = 0;
+    const steps = el('ol', { class: 'dl33-urut' });
+    const opts = el('div', { class: 'dl33-opsi lebar' }, ctx.rand.shuffle(GRANNY.slice()).map(([key, t, pos, why]) => onTap(el('button', { class: 'dl33-pil', type: 'button', 'data-k': key }, t), (e) => {
+      if (k >= 3 || e.currentTarget.classList.contains('on')) return;
+      if (pos !== k) { oops(); shake(e.currentTarget); say(msg, 'bad', why || 'Belum urutannya.'); return; }
+      e.currentTarget.classList.add('on'); steps.append(el('li', null, t)); ctx.sound.tap(); k++;
+      if (k < 3) return;
+      say(msg, '', 'Nenek lulus uji: tutup telepon, buka aplikasi resmi sendiri, periksa. Dompet Sekar dan Nenek aman!'); done();
+    })));
+    area.replaceChildren(el('div', { class: 'dl33-dua' }, el('div', { class: 'dl33-nenek' }, el('b', null, '👵 Nenek'), steps), opts), msg);
+  }
+}
+
 export default {
   id: 'sma-33-dua-langkah',
   title: 'Satu Sandi Tidak Cukup',
@@ -155,7 +377,7 @@ export default {
   source: null,
   rounds: 10,
   maxPlayers: 4,
-  goal: 'Lindungi dompet digital Sekar setelah kata sandinya bocor dari forum permainan: hitung kekuatan kata sandi, peragakan pencurian akun, kenali modus minta kode OTP, dan atur keamanan akunnya.',
+  goal: 'Jaga Dompet Sekar: saldo Rp300.000 diincar penipu dari segala arah. Hitung waktu bobol sandi, peragakan pencurian akun, tangkis pesan penipuan, pilih gembok, bangun benteng akun, dan menangkan duel serangan.',
   extraModes: [
     { id: 'kalkulator', icon: '🧮', label: 'Kalkulator Kekuatan Sandi', desc: 'Pilih jenis karakter dan panjang (tanpa mengetik kata sandi) untuk melihat banyak kemungkinan dan waktu menebaknya', create: createCalc },
     { id: 'simulasi', icon: '📲', label: 'Simulasi Masuk Akun', desc: 'Jalankan skenario A, B, dan C langkah demi langkah; di skenario C pilih apakah Sekar menyebutkan kodenya', create: createSim },
@@ -163,37 +385,26 @@ export default {
     { id: 'giliran', icon: '⚔️', label: 'Serangan dan Pertahanan', desc: 'Tim penyerang memilih kartu serangan, tim pembela memilih pertahanan dalam 20 detik; peran bergantian', create: createTeams },
   ],
   create(root, ctx) {
-    const wrap = el('div', { class: 'act dua-langkah' });
+    const wrap = el('div', { class: 'act dl33-main' });
     root.append(wrap);
     function render() {
       wrap.replaceChildren();
       const r = ctx.round;
       let solved = false;
-      const next = () => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, 2400); } };
-      const ask = (prompt, opts, columns = 1, subject = null, onRight = next) => choice(wrap, { prompt, subject, ctx, shuffle: true, onRight, columns, options: opts.map(([l, correct]) => ({ label: String(l), correct })) });
-      const then = (fn) => () => { wrap.replaceChildren(); fn(); };
-      if (r === 0) rowsChoose(wrap, ctx, { prompt: 'Berkas kata sandi dicuri: 10 miliar (10¹⁰) tebakan per detik. Berapa lama mencoba semuanya?', rows: CRACK.map(([k, t, kind, len, ans]) => [k, `${k}. ${t} · ${sci(space(kind, len))} kemungkinan`, CRACK_OPTS, ans, `${t}: ${sci(space(kind, len))} : 10¹⁰ ≈ ${ans}.`]), info: 'Waktu = banyak kemungkinan : 10¹⁰ detik. 1 jam = 3.600 detik; 1 tahun ≈ 3,2 × 10⁷ detik.', cls: 'waktu', done: next });
-      else if (r === 1) ask('Kini penyerang menebak langsung di aplikasi: hanya 20 tebakan per jam karena akun dikunci setiap 5 kali salah. Berapa lama untuk semua PIN 6 angka?', [['50.000 jam, kira-kira 5,7 tahun', true], ['0,0001 detik'], ['50 jam'], ['20 jam']], 1, null,
-        then(() => ask('"Wanasari2009!" panjangnya 13 karakter. Mengapa tetap lemah?', [['Polanya mudah ditebak: nama tempat, tahun, lalu tanda seru; penyerang mencoba pola seperti ini lebih dulu', true], ['Karena terlalu panjang'], ['Karena memakai huruf besar'], ['Tidak lemah; 13 karakter pasti aman']], 1, null,
-          then(() => ask('Sekar punya 15 akun. Mengapa manajer kata sandi lebih aman, dan kata sandi mana yang harus paling kuat?', [['Setiap akun mendapat kata sandi acak yang berbeda; yang harus paling kuat adalah kata sandi utama manajer itu (frasa sandi panjang + dua langkah)', true], ['Karena manajer kata sandi memakai satu kata sandi untuk semua akun'], ['Kata sandi dompet digital saja yang perlu kuat'], ['Manajer kata sandi tidak lebih aman']])))));
-      else if (r === 2) {
-        const table = () => el('table', { class: 'dl-tabel' }, el('tr', null, el('th', null, 'Langkah'), el('th', null, 'A: tanpa dua langkah'), el('th', null, 'B: dua langkah'), el('th', null, 'C: dua langkah, Sekar tertipu')), [0, 1, 2, 3, 4, 5].map((j) => el('tr', null, el('td', null, String(j + 1)), ['A', 'B', 'C'].map((s) => el('td', null, SCEN[s][j]?.[1] || '')))));
-        const finalAsk = then(() => ask('Pada skenario mana serangan berhasil, dan di langkah berapa skenario B dihentikan?', [['Berhasil di A dan C; B dihentikan di langkah 4 karena penyerang tidak punya kodenya', true], ['Berhasil di A saja; B dihentikan di langkah 2'], ['Berhasil di semua skenario'], ['Berhasil di B dan C; A dihentikan di langkah 3']], 1, table()));
-        const showB = then(() => { const s2 = makeSim(ctx, { scen: 'B', onEnd: () => setTimeout(finalAsk, 1800) }); wrap.append(el('p', { class: 'prompt' }, 'Skenario B: dengan dua langkah'), s2.el); });
-        const s1 = makeSim(ctx, { scen: 'A', onEnd: () => setTimeout(showB, 1800) });
-        wrap.append(el('p', { class: 'prompt' }, 'Skenario A: tanpa dua langkah'), s1.el);
-      }
-      else if (r === 3) ask('Skenario B: apa yang harus segera dilakukan Sekar setelah menerima kode yang tidak ia minta?', [['Tidak memberikan kode itu kepada siapa pun, mengganti kata sandi di semua akun yang memakai sandi sama, dan memeriksa perangkat yang sedang masuk', true], ['Mengirim kode itu ke nomor pengirim untuk memastikan'], ['Mengabaikannya saja'], ['Mematikan ponsel selama sehari']], 1, null,
-        then(() => ask('Mengapa kebocoran data di forum permainan bisa membuat dompet digital Sekar ikut dibobol?', [['Penyerang mencoba pasangan surel dan kata sandi yang bocor di situs lain, dan Sekar memakai kata sandi yang sama', true], ['Forum permainan dan dompet digital milik perusahaan yang sama'], ['Karena dompet digital tidak punya kata sandi'], ['Karena ponsel Sekar terkena virus dari forum']])));
-      else if (r === 4) rowsChoose(wrap, ctx, { prompt: 'Kode sekali pakai mainan: rahasia 37, kode = dua angka terakhir dari 37 × nomor periode', rows: [1, 2, 3].map((p) => [String(p), `Periode ${p}: 37 × ${p} = ${37 * p}`, ['11', '37', '74', '111'], toyCode(37, p), `Periode ${p}: kode ${toyCode(37, p)}.`]), info: 'Setiap 30 detik disebut satu periode.', cls: 'otp',
-        done: then(() => ask('Penyerang mencuri kode periode 2 (74). Bisakah ia memakainya pada periode 3? Mengapa aplikasi sungguhan memakai rumus yang jauh lebih rumit?', [['Tidak bisa, kodenya sudah berganti; rumus mainan terlalu mudah karena dari kode periode 1 saja rahasianya (37) langsung ketahuan', true], ['Bisa, kode berlaku selamanya'], ['Tidak bisa, karena 74 lebih besar dari 11'], ['Bisa, asal dipakai cepat-cepat']])) });
-      else if (r === 5) rowsChoose(wrap, ctx, { prompt: 'Modus "minta kode OTP": asli (A) atau penipuan (P)?', rows: MESSAGES.map(([k, t, a, w]) => [k, `${k}. ${t}`, ['A', 'P'], a, w]), info: 'Perhatikan siapa yang meminta, apa yang diminta, dan seberapa terburu-buru.', cls: 'pesan',
-        done: then(() => ask('Aturan satu kalimat mana yang menjawab pesan 1, 3, dan 4?', [['Kode OTP, PIN, dan kata sandi tidak boleh diberikan kepada siapa pun, termasuk orang yang mengaku petugas resmi', true], ['Kode boleh diberikan kepada teman dekat'], ['Kode boleh diberikan kepada petugas yang menelepon'], ['Kode boleh dimasukkan di situs hadiah resmi']])) });
-      else if (r === 6) pairRound(wrap, ctx, { prompt: 'Moda autentikasi: pasangkan dengan penjelasannya', left: AUTH, texts: AUTH_TEXT, finalMsg: '1–R, 2–P, 3–S, 4–Q.', hint: 'Mana yang dikirim operator, dibuat di ponsel, berupa benda kecil, atau memakai tubuh?', done: next });
-      else if (r === 7) ask('Urutkan dari yang paling tahan terhadap situs palsu', [['Kunci keamanan fisik, aplikasi autentikator, kode SMS', true], ['Kode SMS, aplikasi autentikator, kunci keamanan fisik'], ['Aplikasi autentikator, kode SMS, kunci keamanan fisik'], ['Ketiganya sama kuat']], 1, null,
-        then(() => ask('Moda apa yang cocok untuk nenek dengan ponsel sederhana, dan untuk bendahara OSIS yang mengelola dana kegiatan?', [['Nenek: kode SMS (tetap jauh lebih aman daripada tanpa dua langkah) · Bendahara: kunci keamanan fisik atau aplikasi autentikator', true], ['Nenek: kunci fisik · Bendahara: tanpa dua langkah'], ['Keduanya cukup memakai kata sandi saja'], ['Nenek: tanpa dua langkah · Bendahara: kode SMS']])));
-      else if (r === 8) { wrap.append(el('p', { class: 'prompt' }, 'Mengatur akun dompet digital Sekar')); wrap.append(settingsScreen(ctx, { onDone: () => setTimeout(next, 1500) })); }
-      else pairRound(wrap, ctx, { prompt: 'Serangan dan pertahanan: pasangkan', left: ATTACKS, texts: DEFENSES, finalMsg: '1–R, 2–T, 3–Q, 4–U, 5–P, 6–S.', hint: 'Pertahanan mana yang langsung menghentikan serangan itu?', done: next });
+      const next = (wait = 5200) => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, wait); } };
+      const w = wallet(); const area = el('div', { class: 'dl33-area' });
+      const go = (k, no) => wrap.append(el('div', { class: 'dl33-kepala' }, misiHead(no, ...HEAD33[k], '🔐'), w.node), area);
+      const fin = (ms) => ({ oops: () => ctx.mistake(), rob: w.rob, done: () => next(ms) });
+      if (r === 0) { go('hitung', 1); calcRound(area, ctx, fin(6000)); }
+      else if (r === 1) { go('langsung', 1); onlineRound(area, ctx, fin(6000)); }
+      else if (r === 2) { go('drama', 2); dramaRound(area, ctx, fin(6000)); }
+      else if (r === 3) { go('dramaC', 2); dramaC(area, ctx, fin(6500)); }
+      else if (r === 4) { go('telepon', 3); phoneRound(area, ctx, fin(5000)); }
+      else if (r === 5) { go('gembok', 4); lockRound(area, ctx, fin(7000)); }
+      else if (r === 6) { go('benteng', 5); fortRound(area, ctx, fin(5000)); }
+      else if (r === 7) { go('duel1', 6); duelRound(area, ctx, { attacks: ['1', '2', '3'], ...fin(4000) }); }
+      else if (r === 8) { go('duel2', 6); duelRound(area, ctx, { attacks: ['4', '5', '6'], ...fin(4000) }); }
+      else { go('bos', 'Bos'); grannyBoss(area, ctx, fin(7000)); }
     }
     render();
   },
@@ -261,7 +472,7 @@ function createTeams(root, ctx) {
           say(msg, ok ? '' : 'bad', `${ok ? `Pertahanan tepat: Tim ${def + 1} +2.` : `${L ? 'Belum tepat' : 'Waktu habis'}: Tim ${att + 1} +1.`} Pertahanan untuk "${a[1]}": ${DEFENSES[a[2]]}.`);
           wrap.querySelector('.pb-skor')?.replaceWith(scoreBar(pts, def)); k++; setTimeout(turn, 3600);
         };
-        area.replaceChildren(el('div', { class: 'dl-item serang pilih' }, el('b', null, a[0]), el('span', null, a[1])), clock, ...ctx.rand.shuffle(Object.keys(DEFENSES)).map((L) => onTap(el('button', { class: 'dl-item', type: 'button' }, el('b', null, L), el('span', null, DEFENSES[L])), () => finish(L))));
+        area.replaceChildren(el('div', { class: 'dl-item serang pilih' }, el('b', null, a[0]), el('span', null, a[1])), clock, el('div', { class: 'dl33-baki dua' }, ctx.rand.shuffle(Object.keys(DEFENSES)).map((L) => onTap(el('button', { class: 'dl-item', type: 'button' }, el('b', null, L), el('span', null, DEFENSES[L])), () => finish(L)))));
         say(msg, '', `Tim ${def + 1} (pembela): pilih pertahanan dalam 20 detik.`);
         timer = setInterval(() => { if (!wrap.isConnected) { clearInterval(timer); return; } left--; clock.textContent = String(left); if (left <= 0) finish(null); }, 1000);
       }
