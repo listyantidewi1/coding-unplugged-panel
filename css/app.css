@@ -6488,7 +6488,7 @@ button.at-orang { font-size: clamp(0.55rem, 3.4cqmin, 1.8rem); }
 @container (max-height: 520px) { .tk9-main .kd-peta svg { max-height: 40cqh; } }
 @container (max-aspect-ratio: 1/1) { .tk9-main .kd-peta svg { max-height: 40cqh; } .tk9-main .tk9-antre { font-size: clamp(0.5rem, 2cqmin, 1rem); } }
 @container (max-width: 1000px) and (min-height: 600px) { .tk9-main .kd-peta svg { max-height: 38cqh; } .tk9-main .kode-baris .btn { font-size: clamp(0.7rem, 3cqmin, 1.4rem); } }
-:is(.kk-main, .rh-main, .pk6-main, .mph-main, .pp8-main, .tk9-main, .kb10-main, .gk11-main, .rk13-main, .nd14-main, .tp15-main, .ka16-main, .pl17-main, .dk18-main, .lj19-main, .wb20-main, .jm21-main, .aj22-main) .reveal { font-size: clamp(0.7rem, 3cqmin, 1.6rem); text-wrap: balance; }
+:is(.kk-main, .rh-main, .pk6-main, .mph-main, .pp8-main, .tk9-main, .kb10-main, .gk11-main, .rk13-main, .nd14-main, .tp15-main, .ka16-main, .pl17-main, .dk18-main, .lj19-main, .wb20-main, .jm21-main, .aj22-main, .gp23-main) .reveal { font-size: clamp(0.7rem, 3cqmin, 1.6rem); text-wrap: balance; }
 @container (max-width: 1000px) and (min-height: 600px) { .tk9-main .kd-peta svg { max-height: 46cqh; } }
 
 /* sma-10 Konter Bagasi */
@@ -7233,3 +7233,76 @@ button.aj22-orang { cursor: pointer; }
   .aj22-dua > .aj22-meja { width: min(52%, 80cqh, 44em); }
 }
 @container (max-aspect-ratio: 1/1) { .aj22-dua { flex-direction: column; } .aj22-dua > .aj22-meja { width: min(100%, 60cqh); } }
+/* sma-23 Rahasia di Papan Umum (gp23-) */
+.gp23-main { gap: 0.7cqmin; }
+.gp23-main > .prompt { display: none; }
+.gp23-area, .gp23-langkah2 { display: flex; flex-direction: column; align-items: center; gap: 0.8cqmin; width: 100%; }
+.gp23-lebar { display: flex; justify-content: center; min-width: 0; max-width: 100%; }
+.gp23-jalur .kp-pos { min-width: 7em; font-size: clamp(0.6rem, min(2.4cqmin, 1.7cqw), 1.3rem); }
+.gp23-kartu-kartu .kp-kartu { font-size: clamp(0.6rem, min(2.4cqmin, 1.7cqw), 1.3rem); }
+.gp23-dua { display: flex; gap: 1.5cqmin; align-items: center; justify-content: center; width: 100%; max-width: 84em; }
+.gp23-dua > * { min-width: 0; }
+.gp23-sisi { display: flex; flex-direction: column; gap: 0.5em; align-items: center; flex: none; }
+.gp23-tabel { overflow: visible; }
+.gp23-tabel .kp-tabel-baris { grid-template-columns: 5.6em repeat(11, minmax(1.6em, 1fr)); font-size: clamp(0.5rem, min(2cqmin, 1.35cqw), 1.1rem); }
+.gp23-sel { padding: 0.15em 0.2em; border: 1px solid #94a3b8; border-radius: 0.2em; background: #fff; color: #111827; font: inherit; font-variant-numeric: tabular-nums; cursor: pointer; }
+.gp23-sel:hover { background: #eff6ff; }
+.gp23-sel.tanda { background: #fde047; font-weight: 900; }
+.gp23-pad .kp-tombol { grid-template-columns: repeat(3, min(9cqmin, 5.5cqw, 4.4rem)); }
+.gp23-pad .kp-t { height: min(6cqmin, 4cqw, 3.4rem); font-size: clamp(0.7rem, min(2.8cqmin, 2cqw), 1.5rem); }
+.gp23-pad .kp-layar { font-size: clamp(0.8rem, min(3.2cqmin, 2.2cqw), 1.7rem); }
+.gp23-papan { font-size: clamp(0.6rem, min(2.5cqmin, 1.8cqw), 1.35rem); }
+.gp23-catat { padding: 0.15em 0.7em; border-radius: 0.4em; background: #fee2e2; color: #7f1d1d; font-weight: 800; font-size: clamp(0.6rem, min(2.4cqmin, 1.7cqw), 1.3rem); }
+.gp23-besar { display: flex; flex-direction: column; align-items: center; gap: 0.25em; max-width: 22em; padding: 0.4em 0.8em; border: 2px dashed #64748b; border-radius: 0.6em; background: #f8fafc; color: #111827; text-align: center; font-size: clamp(0.55rem, min(2.1cqmin, 1.5cqw), 1.1rem); }
+.gp23-besar code { font-weight: 900; }
+.gp23-besar small { color: #991b1b; font-weight: 700; }
+.gp23-besar .btn { font-size: 1em; padding: 0.25em 0.9em; }
+.gp23-langkah { width: min(100%, 40em); font-size: clamp(0.55rem, min(2.2cqmin, 1.55cqw), 1.2rem); }
+.gp23-langkah .kp-l { padding: 0.15em 0.7em; font-size: 1em; }
+.gp23-mesin { display: flex; gap: 1.2em; align-items: center; padding: 0.4em 1.2em; border: 3px solid #334155; border-radius: 0.8em; background: #0f172a; color: #e2e8f0; font-size: clamp(0.7rem, min(2.8cqmin, 2cqw), 1.5rem); }
+.gp23-mesin b { color: #facc15; }
+.gp23-layar { min-width: 4.5em; padding: 0.1em 0.6em; border-radius: 0.4em; background: #052e16; color: #4ade80; font-family: ui-monospace, Menlo, Consolas, monospace; font-weight: 900; font-size: 1.6em; text-align: right; }
+.gp23-tombol { display: flex; flex-wrap: wrap; gap: 0.6em; align-items: center; justify-content: center; font-size: clamp(0.65rem, min(2.6cqmin, 1.9cqw), 1.4rem); }
+.gp23-tombol:empty { display: none; }
+.gp23-tombol > small { font-weight: 800; color: #475569; }
+.gp23-tombol .btn { font-size: 1em; padding: 0.35em 1.1em; }
+.gp23-log { display: flex; flex-wrap: wrap; gap: 0.4em; justify-content: center; font-size: clamp(0.55rem, min(2.2cqmin, 1.6cqw), 1.2rem); }
+.gp23-log code { padding: 0.1em 0.5em; border-radius: 0.4em; background: #f1f5f9; color: #334155; font-weight: 800; }
+.gp23-faktor .seg-btn { font-size: clamp(0.65rem, min(2.6cqmin, 1.9cqw), 1.4rem); }
+.gp23-d { display: grid; grid-template-columns: repeat(13, minmax(0, 1fr)); gap: 3px; width: min(100%, 52em); font-size: clamp(0.5rem, min(2cqmin, 1.4cqw), 1.05rem); }
+.gp23-dbtn { padding: 0.2em 0; border: 2px solid #94a3b8; border-radius: 0.35em; background: #fff; color: #111827; font: inherit; font-weight: 800; cursor: pointer; white-space: nowrap; }
+.gp23-dbtn.on { background: #e2e8f0; color: #64748b; }
+.gp23-dbtn.kena { background: #16a34a; border-color: #166534; color: #fff; }
+.gp23-ttd .kp-kasus { font-size: clamp(0.6rem, min(2.4cqmin, 1.7cqw), 1.3rem); }
+.gp23-cap { padding: 0.1em 0.8em; border: 3px double; border-radius: 0.3em; font-family: ui-monospace, Menlo, Consolas, monospace; font-weight: 900; transform: rotate(-5deg); }
+.gp23-cap.sah { color: #166534; border-color: #16a34a; }
+.gp23-cap.palsu { color: #991b1b; border-color: #dc2626; }
+.gp23-baki { display: flex; flex-wrap: wrap; gap: 0.5em; justify-content: center; width: 100%; max-width: 70em; min-height: 2.2em; font-size: clamp(0.6rem, min(2.4cqmin, 1.7cqw), 1.3rem); }
+.gp23-baki:empty { min-height: 0; }
+.gp23-kartu { padding: 0.3em 0.8em; border: 2px solid #94a3b8; border-bottom-width: 0.22em; border-radius: 0.5em; background: #fff; color: #111827; font: inherit; font-weight: 700; cursor: pointer; }
+.gp23-kartu.pilih { border-color: #2563eb; background: #dbeafe; box-shadow: 0 0 0 0.2em #93c5fd; }
+.gp23-wadah { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1cqmin; width: 100%; max-width: 64em; }
+.gp23-kotak { display: flex; flex-direction: column; align-items: center; gap: 0.3em; min-height: 4.5em; padding: 0.4em 0.6em; border: 3px dashed #64748b; border-radius: 0.8em; background: #f8fafc; color: #111827; font-size: clamp(0.6rem, min(2.3cqmin, 1.6cqw), 1.25rem); cursor: pointer; }
+.gp23-kotak span { padding: 0.1em 0.5em; border-radius: 0.4em; background: #e0e7ff; color: #312e81; font-weight: 700; font-size: 0.9em; }
+.gp23-skala { display: flex; flex-direction: column; align-items: center; gap: 0.2em; min-height: 3.6em; padding: 0.4em 1em; border-radius: 0.6em; background: #f1f5f9; color: #0f172a; font-size: clamp(0.6rem, min(2.4cqmin, 1.7cqw), 1.3rem); }
+.gp23-skala:empty { display: none; }
+.gp23-skala.mustahil { background: #fee2e2; color: #7f1d1d; }
+.gp23-tempel { display: block; width: 100%; padding: 0.2em 0.6em; border: 2px solid #fde68a; border-radius: 0.4em; background: #fffbeb; color: #451a03; font: inherit; font-weight: 800; cursor: pointer; }
+.gp23-tempel.tukar { border-color: #dc2626; background: #fee2e2; color: #7f1d1d; }
+.gp23-tempel.ditolak { text-decoration: line-through; opacity: 0.7; }
+.gp23-kunci-kunci { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.6em; font-size: clamp(0.55rem, min(2.2cqmin, 1.55cqw), 1.2rem); }
+.gp23-kunci-kunci:empty { display: none; }
+.gp23-gembok { display: flex; flex-direction: column; align-items: center; gap: 0.1em; padding: 0.35em 0.7em; border: 2px solid #94a3b8; border-radius: 0.6em; background: #fff; color: #111827; font: inherit; cursor: pointer; }
+.gp23-gembok[data-s="r"] { border-color: #dc2626; background: #fff1f2; }
+.gp23-gembok code { font-weight: 900; font-size: 1.2em; }
+.gp23-gembok.pilih { box-shadow: 0 0 0 0.25em #93c5fd; border-color: #2563eb; }
+.gp23-gembok.cocok { background: #dcfce7; border-color: #16a34a; }
+.gp23-pilihan { max-width: 30em; }
+@container (max-height: 520px) {
+  .gp23-main .misi-tujuan { display: none; }
+  .gp23-main { gap: 0.4cqmin; }
+  .gp23-area, .gp23-langkah2 { gap: 0.5cqmin; }
+  .gp23-kartu-kartu { gap: 2px; }
+  .gp23-kartu-kartu .kp-kartu { padding: 0.15em 0.6em; }
+}
+@container (max-aspect-ratio: 1/1) { .gp23-dua { flex-direction: column; } }
