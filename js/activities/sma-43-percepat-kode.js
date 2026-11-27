@@ -6,8 +6,10 @@
 // checked; count costs the list length; set `in`/add cost 1; sorted costs
 // n·log2(n), rounded. Times are the worksheet's fixed data, never measured.
 
-import { el, onTap, button } from '../core/util.js';
-import { say, pickTeams, scoreBar, finishBoard, rowsChoose, pyCode, pyTracer, fmtNum } from './smp-kit.js';
+import { el, onTap, button, shake } from '../core/util.js';
+import { dnd } from '../core/kit.js';
+import { say, pickTeams, scoreBar, finishBoard, pyCode, pyTracer, fmtNum } from './smp-kit.js';
+import { misiHead, fill, codeView, rowsView, fillBoard, tileSlots, layar, play } from './misi-kit.js';
 import { runPy, makePyRunner, pyRepr, PySet } from './mini-py.js';
 
 export const KODE = [4827, 1063, 7351, 2917, 6409, 3580, 8134, 5293, 9748, 6215, 2917, 3742];
@@ -85,6 +87,214 @@ export function duaSekolah() {
   return { a, b, sama: a.filter((x) => new Set(b).has(x)) };
 }
 
+// ---- Permainan: Balap Kode Pendaftaran ----
+// The team is the code-racing machine and pays one token per step; the
+// opponent is the announcement clock: 512.000 codes in one minute.
+const HEAD43 = {
+  jalan: ['Jalankan Si Bersarang', 'Jadilah mesinnya: bandingkan setiap pasangan kode, satu token per perbandingan.', '512.000 kode harus beres dalam 1 menit!'],
+  menara: ['Menara Token', 'Hitung token untuk data yang makin besar.', 'Datanya akan jauh lebih besar…'],
+  rudi: ['Bug Rudi', 'Temukan baris yang salah, ramalkan hasilnya, lalu jalankan versi Rudi.', 'Rudi mengetik ulang terburu-buru!'],
+  laci: ['Laci Ajaib set', 'Masukkan setiap kode ke laci angka terakhirnya. Satu laci, satu token.', 'Masih membuka semua kartu?'],
+  jam: ['Lawan Jam Pengumuman', 'Isi perkiraan waktu, lalu adu dengan Jam Pengumuman.', 'Waktu hanya 1 menit (60.000 ms)!'],
+  cepat: ['Komputer 10 Kali Lebih Cepat', 'Bandingkan membeli komputer baru dengan mengganti algoritma.', '"Beli komputer baru saja!"'],
+  buru: ['Buru Perulangan Tersembunyi', 'Ketuk bagian kode yang diam-diam memeriksa seluruh list.', 'Perulangan bisa bersembunyi di satu kata!'],
+  urut: ['Urutan Balapan', 'Hitung langkah potongan C dan D, lalu urutkan dari yang tercepat.', 'Siapa juara untuk 512.000 kode?'],
+  adu: ['Adu Versi Tercepat', 'Susun fungsi dua sekolah yang paling sedikit langkahnya.', 'SMA A 3.000 dan SMA B 4.000 pendaftar!'],
+  bos: ['Penghitung Kemunculan', 'Jadilah dictionary hitung: catat setiap kode dalam sekali jalan.', 'Berapa kali setiap kode muncul?'],
+};
+const msg43 = (t) => el('p', { class: 'reveal info' }, t);
+const bodyView = (id, o = {}) => codeView(BODY[id], { labels: verOf(id)[2].slice(1), ...o });
+const kartu43 = ({ hl = [], redup = [] } = {}) => el('div', { class: 'bk43-kartu-kartu' }, KODE.map((k, n) => el('div', { class: `bk43-kk ${hl.includes(n) ? 'banding' : ''} ${redup.includes(n) ? 'redup' : ''}`, 'data-n': String(n) }, el('small', null, `[${n}]`), el('b', null, String(k)))));
+export const PAIRS = []; for (let i = 0; i < KODE.length; i++) for (let j = i + 1; j < KODE.length; j++) PAIRS.push([i, j]);
+
+// Misi 1: be the nested loop; the player takes over for i = 3.
+function jalanRound(area, ctx, { oops, done }) {
+  const msg = msg43('Mesin membandingkan pasangan untuk i = 0, 1, 2. Perhatikan tokennya.');
+  const M0 = PAIRS.findIndex(([i]) => i === 3); const M1 = PAIRS.findIndex(([i]) => i === 4);
+  let k = 0; let tok = 0; const ganda = []; let manual = false;
+  const top = el('div', { class: 'bk43-kolom' }); const left = el('div', { class: 'bk43-kolom' }); const right = el('div', { class: 'bk43-kolom' });
+  const draw = () => {
+    const [i, j] = PAIRS[Math.min(k, PAIRS.length - 1)];
+    fill(top, kartu43({ hl: k < PAIRS.length ? [i, j] : [] }));
+    fill(left, bodyView('bersarang', { hl: k < PAIRS.length ? [4] : [7] }));
+    fill(right, el('div', { class: 'bk43-var' }, k < PAIRS.length ? `i = ${i}   j = ${j}` : 'selesai'), el('div', { class: 'bk43-token' }, `🪙 bandingkan = ${tok}`), el('div', { class: 'bk43-var' }, `ganda = ${pyRepr(ganda)}`),
+      manual ? el('div', { class: 'bk43-tombol', 'data-a': String(KODE[i]), 'data-b': String(KODE[j]) }, onTap(el('button', { type: 'button', class: 'bk43-pilih', 'data-v': 'beda' }, `${KODE[i]} ≠ ${KODE[j]}: lanjut`), () => tap('beda')), onTap(el('button', { type: 'button', class: 'bk43-pilih sama', 'data-v': 'sama' }, `${KODE[i]} = ${KODE[j]}: ganda.append`), () => tap('sama'))) : null);
+  };
+  const step = () => { const [i, j] = PAIRS[k]; tok++; if (KODE[i] === KODE[j]) ganda.push(KODE[i]); k++; };
+  const auto = (until, then) => { const tick = () => { if (!area.isConnected) return; if (k >= until) { then(); return; } step(); draw(); setTimeout(tick, 60); }; tick(); };
+  function tap(v) {
+    if (!manual) return; const [i, j] = PAIRS[k]; const want = KODE[i] === KODE[j] ? 'sama' : 'beda';
+    if (v !== want) { oops(); say(msg, 'bad', want === 'sama' ? 'Lihat lagi: kedua kartu sama!' : 'Kedua kode berbeda.'); return; }
+    ctx.sound.tap(); step();
+    if (want === 'sama') say(msg, 'info', `Baris 9 berjalan saat i = ${i} dan j = ${j}: perbandingan ke-${tok}!`);
+    if (k < M1) { draw(); if (want !== 'sama') say(msg, 'info', 'Tepat. Pasangan berikutnya.'); return; }
+    manual = false; draw(); say(msg, 'info', 'i = 3 selesai. Mesin menuntaskan sisanya…');
+    auto(PAIRS.length, () => { draw(); say(msg, 'info', 'Selesai! Isi papan hasil balapan.');
+      right.append(fillBoard(ctx, { oops, msg, view: rowsView([['print: [2917] ', '_'], ['2917 ketahuan di perbandingan ke-', '_'], ['token untuk n kode: ', '_']]), chips: ['66', '37', 'n(n − 1)/2', '144', '36', 'n²'], want: ['66', '37', 'n(n − 1)/2'],
+        hints: ['Hitung token di akhir.', '11 + 10 + 9 untuk i = 0, 1, 2, lalu 7 lagi.', 'Kode pertama dibandingkan n − 1 kali, kedua n − 2 kali, dan seterusnya: setengah dari n(n − 1).'],
+        done: () => { say(msg, '', '66 token untuk 12 kode. Setiap pasangan dibandingkan tepat sekali: n(n − 1)/2.'); done(); } })); });
+  }
+  draw();
+  area.append(top, el('div', { class: 'bk43-dua' }, left, right), msg);
+  auto(M0, () => { manual = true; draw(); say(msg, 'info', 'Giliranmu menjadi mesin untuk i = 3: ketuk "lanjut" bila kodenya beda, "ganda.append" bila sama.'); });
+}
+
+// Misi 1b: token towers for larger data.
+export const MENARA = ['4.950', '499.500', '4.999.950.000', '124.999.750.000'];
+function menaraRound(area, ctx, { oops, done }) {
+  const msg = msg43('Seret banyak token n(n − 1)/2 ke setiap menara, dari atas.');
+  area.append(el('div', { class: 'bk43-dua' }, bodyView('bersarang'), fillBoard(ctx, { oops, msg, view: rowsView([['n = 12 → ', '66', ' token'], ['n = 100 → ', '_'], ['n = 1.000 → ', '_'], ['n = 100.000 → ', '_'], ['n = 500.000 → ', '_']]),
+    chips: [...MENARA, '10.000', '1.000.000', '250.000.000.000', '5.050'], want: MENARA, hints: ['100 × 99 / 2.', '1.000 × 999 / 2.', '100.000 × 99.999 / 2.', '500.000 × 499.999 / 2.'],
+    done: () => { say(msg, '', 'Data 5.000 kali lebih banyak (100 → 500.000), token 25 juta kali lebih banyak. Itulah pertumbuhan kuadrat.'); done(); } })), msg);
+}
+
+// Misi 2: Rudi's range bug.
+function rudiRound(area, ctx, { oops, done }) {
+  const msg = msg43('Rudi mengetik ulang versi bersarang. Ketuk baris yang berbeda dan salah.'); const left = el('div', { class: 'bk43-kolom' }); const right = el('div', { class: 'bk43-kolom' }); const out = layar();
+  const A = runPy(linesOf('rudi'), { limit: 5000 }); const B = runPy(linesOf('rudi2'), { limit: 5000 });
+  fill(left, el('small', null, 'Kode Rudi'), bodyView('rudi', { cls: 'ketuk', onLine: (i) => {
+    if (left.dataset.ok) return;
+    if (i !== 3) { oops(); say(msg, 'bad', 'Baris ini sama dengan versi bersarang. Lihat dari mana j mulai.'); return; }
+    left.dataset.ok = '1'; ctx.sound.good(); fill(left, el('small', null, 'Kode Rudi'), bodyView('rudi', { warn: [3] }));
+    say(msg, 'info', 'Baris 6: j mulai dari 0, jadi setiap kode dibandingkan dengan semua, termasuk dirinya sendiri. Ramalkan hasilnya.');
+    fill(right, fillBoard(ctx, { oops, msg, view: rowsView([['bandingkan = ', '_'], ['isi ganda: ', '_', ' kode'], ['2917 muncul ', '_', ' kali']]), chips: ['144', '66', '14', '12', '4', '2'], want: ['144', '14', '4'],
+      hints: ['12 × 12 pasangan.', 'Setiap kode sama dengan dirinya sendiri (12), ditambah 2917 dengan pasangannya dua kali.', '2917 di [3] dan [10]: (3,3), (3,10), (10,3), (10,10).'],
+      done: () => { say(msg, 'info', 'Mesin menjalankan versi Rudi…'); fill(right, out); play(out, A.out, { end: () => {
+        say(msg, 'info', 'Rudi menambah if i != j and … di baris 8. Ramalkan lagi.');
+        right.append(fillBoard(ctx, { oops, msg, view: rowsView([['ganda = ', '_'], ['bandingkan = ', '_']]), chips: [pyRepr(B.vars.ganda), '[2917]', String(B.vars.bandingkan), '66'], want: [pyRepr(B.vars.ganda), String(B.vars.bandingkan)],
+          hints: ['Pasangan (3, 10) dan (10, 3) sama-sama tercatat.', 'Perulangannya tidak berubah: tetap 12 × 12.'],
+          done: () => { say(msg, '', 'range(i + 1, len(kode)) memeriksa setiap pasangan tepat sekali dan tidak membandingkan kode dengan dirinya: 66 token, bukan 144.'); done(); } }));
+      } }); } }));
+  } }));
+  area.append(el('div', { class: 'bk43-dua' }, left, right), msg);
+}
+
+// Misi 3: ten drawers keyed by the last digit.
+function laciRound(area, ctx, { oops, done }) {
+  const msg = msg43('Seret kartu kode, mulai dari [0], ke laci angka terakhirnya.'); let n = 0; let tok = 0; let atSecond = null; const ganda = [];
+  const cards = el('div', { class: 'bk43-kartu-kartu' }, KODE.map((k, i) => el('div', { class: 'bk43-kk bk43-tarik', 'data-drag': String(i) }, el('small', null, `[${i}]`), el('b', null, String(k)))));
+  const laci = Array.from({ length: 10 }, (_, d) => el('div', { class: 'bk43-laci', 'data-drop': String(d) }, el('small', null, `laci ${d}`), el('div', { class: 'bk43-isi' })));
+  const gBox = el('div', { class: 'bk43-ganda' }, el('small', null, 'ganda'));
+  const info = el('div', { class: 'bk43-token' }, '🪙 0'); const box = el('div', { class: 'bk43-kolom' });
+  const host = el('div', { class: 'bk43-kolom' }, cards, el('div', { class: 'bk43-laci-laci' }, laci), el('div', { class: 'bk43-tombol' }, info, gBox));
+  dnd(host, (card, d) => {
+    if (!d.classList.contains('bk43-laci')) return; const i = +card.dataset.drag;
+    if (i !== n) { say(msg, 'info', `Periksa sesuai urutan list: kartu [${n}] dulu.`); return; }
+    const want = KODE[i] % 10;
+    if (+d.dataset.drop !== want) { oops(); shake(card); say(msg, 'bad', `Lihat angka terakhir ${KODE[i]}: laci ${want}.`); return; }
+    tok++; n++; ctx.sound.tap(); const isi = d.querySelector('.bk43-isi'); const sudah = laci.reduce((s, l) => s + l.querySelectorAll('.bk43-kk').length, 0);
+    card.classList.add('locked');
+    if ([...isi.children].some((c) => c.dataset.k === String(KODE[i]))) { atSecond = sudah; ganda.push(KODE[i]); card.remove(); gBox.append(el('b', null, String(KODE[i]))); say(msg, 'info', `${KODE[i]} sudah ada di laci ${want}! Cukup buka satu laci, tanpa membandingkan semua kartu.`); }
+    else { card.dataset.k = String(KODE[i]); isi.append(card); if (n < KODE.length) say(msg, 'info', 'Tepat. Satu laci, satu token.'); }
+    fill(info, `🪙 ${tok}`);
+    if (n < KODE.length) return;
+    cards.remove(); say(msg, 'info', 'Semua kode diperiksa. Isi papan hasil.');
+    fill(box, el('div', { class: 'bk43-dua' }, bodyView('set', { hl: [3] }), fillBoard(ctx, { oops, msg, view: rowsView([['isi sudah saat 2917 kedua: ', '_', ' kode'], ['baris 6 berjalan: ', '_', ' kali'], ['yang dikorbankan: ', '_']]), chips: [String(atSecond), '11', String(tok), '66', 'memori', 'ketepatan'], want: [String(atSecond), String(tok), 'memori'],
+      hints: ['Hitung kartu di laci sebelum 2917 kedua datang.', 'Satu kali untuk setiap kode: n kali.', 'Laci-laci set butuh tempat penyimpanan tambahan.'],
+      done: () => { say(msg, '', `${tok} token, bukan 66: set langsung membuka satu laci (hash). Harganya memori tambahan.`); done(); } })));
+  });
+  fill(box, host);
+  area.append(box, msg);
+}
+
+// Misi 4: race the announcement clock with the timing table.
+export const JAM = ['4.116', '0,98', '4.214.784', '31'];
+function jamRound(area, ctx, { oops, done }) {
+  const msg = msg43('Setiap n digandakan: bersarang kira-kira 4 kali, set 2 kali. Seret perkiraannya ke tabel.'); const box = el('div', { class: 'bk43-kolom' });
+  const view = (mk) => el('table', { class: 'bk43-tabel' }, el('tr', null, ['n kode', 'bersarang (ms)', 'set (ms)'].map((h) => el('th', null, h))), WAKTU.map(([n, a, b]) => el('tr', null, el('td', null, fmtNum(n)), el('td', null, fmtNum(a, 3)), el('td', null, fmtNum(b, 3)))),
+    [16000, 512000].map((n) => el('tr', { class: 'isi' }, el('td', null, fmtNum(n)), el('td', null, mk()), el('td', null, mk()))));
+  fill(box, fillBoard(ctx, { oops, msg, view, chips: [...JAM, '2.058', '1,96', '65.856', '3,9'], want: JAM, hints: ['1.029 × 4.', '0,49 × 2.', '8.000 × 2⁶ = 512.000: 1.029 × 4⁶ = 1.029 × 4.096.', '0,49 × 2⁶ = 0,49 × 64.'],
+    done: () => { say(msg, 'info', 'Jam Pengumuman mulai berdetak: 60.000 ms!'); race(); } }));
+  area.append(box, msg);
+  function race() {
+    const bar = (nm, ms, cls) => el('div', { class: 'bk43-lintasan' }, el('span', null, nm), el('div', { class: 'bk43-jalur' }, el('div', { class: `bk43-isian ${cls}`, style: { width: '0%' } }), el('div', { class: 'bk43-garis-jam' })), el('b', null, ''));
+    const L = [bar('bersarang', 4214784, 'lambat'), bar('set', 31, 'cepat')]; box.append(el('div', { class: 'bk43-balap' }, L));
+    setTimeout(() => { if (!box.isConnected) return; L[1].querySelector('.bk43-isian').style.width = '1%'; L[1].lastChild.textContent = '31 ms ✓'; L[0].querySelector('.bk43-isian').style.width = '100%'; L[0].lastChild.textContent = '≈ 70 menit ✗';
+      setTimeout(() => { if (!box.isConnected) return; say(msg, '', 'Hanya versi set yang mengalahkan Jam Pengumuman: 31 ms, sedangkan bersarang sekitar 70 menit.'); done(); }, 1200); }, 300);
+  }
+}
+
+// Misi 4b: a faster computer against a better algorithm.
+function cepatRound(area, ctx, { oops, done }) {
+  const msg = msg43('Dodi ingin membeli komputer 10 kali lebih cepat. Seret hasilnya.');
+  area.append(fillBoard(ctx, { oops, msg, view: rowsView([['bersarang, 512.000 kode, komputer lama ≈ ', '70 menit'], ['bersarang, 512.000 kode, komputer baru ≈ ', '_'], ['set, 512.000 kode, komputer lama ≈ ', '_'], ['n digandakan: waktu bersarang × ', '_', ', waktu set × ', '_']]),
+    chips: ['7 menit', '0,03 detik', '4', '2', '70 menit', '7 detik', '8'], want: ['7 menit', '0,03 detik', '4', '2'], hints: ['70 menit dibagi 10.', '31 ms adalah 0,031 detik.', 'Pertumbuhan kuadrat.', 'Pertumbuhan linear.'],
+    done: () => { say(msg, '', 'Komputer baru: 7 menit, masih kalah oleh Jam. Algoritma set di komputer lama: 0,03 detik. Mengganti algoritma jauh lebih ampuh.'); done(); } }), msg);
+}
+
+// Misi 5: hidden loops in A and B.
+function buruRound(area, ctx, { oops, done }) {
+  const msg = msg43('Ketuk baris di setiap potongan yang diam-diam memeriksa seluruh list.'); const got = new Set();
+  const HID = { A: 3, B: 2 }; const boxes = {};
+  const draw = (id) => fill(boxes[id], el('b', null, `Potongan ${id}`), bodyView(id, { cls: got.has(id) ? '' : 'ketuk', warn: got.has(id) ? [HID[id]] : [], after: (i) => (got.has(id) && i === HID[id] ? el('span', { class: 'bk43-kaca' }, '🔍 perulangan tersembunyi') : null), onLine: got.has(id) ? null : (i) => tap(id, i) }));
+  function tap(id, i) {
+    if (got.has(id)) return;
+    if (i !== HID[id]) { oops(); say(msg, 'bad', /for /.test(BODY[id][i]) ? 'Itu perulangan yang terlihat. Cari yang tersembunyi di dalamnya.' : 'Baris ini hanya satu langkah.'); return; }
+    got.add(id); ctx.sound.good(); draw(id);
+    say(msg, 'info', id === 'A' ? 'k in sudah pada list memeriksa isi sudah satu per satu!' : 'kode.count(k) memeriksa seluruh list setiap kali!');
+    if (got.size < 2) return;
+    area.append(fillBoard(ctx, { oops, msg, view: rowsView([['langkah A (12 kode): ', '_'], ['langkah B (12 kode): ', '_']]), chips: ['59', '144', '12', '66'], want: ['59', '144'],
+      hints: ['Setiap k in sudah memeriksa sampai ketemu atau sampai habis: 0 + 1 + … + 10 + 4.', 'count memeriksa 12 kode, untuk 12 kode: 12 × 12.'],
+      done: () => { say(msg, '', 'B tampak satu perulangan, padahal count menyembunyikan perulangan kedua: kuadrat. A juga kuadrat.'); done(); } }));
+    area.append(msg);
+  }
+  boxes.A = el('div', { class: 'bk43-kolom' }); boxes.B = el('div', { class: 'bk43-kolom' }); draw('A'); draw('B');
+  area.append(el('div', { class: 'bk43-dua' }, boxes.A, boxes.B), msg);
+}
+
+// Misi 5b: C, D and the race order.
+export const URUT = ['54', '12', 'D', 'C', 'A', 'B'];
+function urutRound(area, ctx, { oops, done }) {
+  const msg = msg43('Sorted kira-kira n × log₂ n langkah (43 untuk 12 kode). Seret langkahnya, lalu urutan juara.');
+  area.append(el('div', { class: 'bk43-dua' }, el('div', { class: 'bk43-kolom' }, el('b', null, 'Potongan C'), bodyView('C', { warn: [0] })), el('div', { class: 'bk43-kolom' }, el('b', null, 'Potongan D'), bodyView('D', { warn: [0] }))),
+    fillBoard(ctx, { oops, msg, view: rowsView([['C: 43 + 11 = ', '_', ' langkah · D: ', '_', ' langkah'], ['512.000 kode, tercepat dulu: ', '_', ', ', '_', ', ', '_', ', ', '_']]), chips: [...URUT, '43', '66'], want: URUT,
+      hints: ['Pengurutan 43, ditambah 11 perbandingan tetangga.', 'set(kode) memasukkan 12 kode: 12 langkah.', 'Linear paling cepat.', 'n log n sedikit di atas linear.', 'A dan B sama-sama kuadrat, tetapi in pada list berhenti begitu ketemu.', 'count selalu memeriksa seluruh list.'],
+      done: () => { say(msg, '', `Potongan A: ${WAKTU_A.map((x) => fmtNum(x, 3)).join('; ')} ms, juga sekitar 4 kali lipat: ±10 menit untuk 512.000 kode. Ia lebih cepat daripada bersarang hanya karena in dikerjakan bagian Python yang ditulis dalam bahasa C.`); done(); } }), msg);
+}
+
+// Misi 6: build the two-schools function, then count its steps.
+function aduRound(area, ctx, { oops, done }) {
+  const msg = msg43('Susun fungsi yang mencari pendaftar di dua sekolah dengan langkah paling sedikit.'); const box = el('div', { class: 'bk43-kolom' }); const out = layar();
+  fill(box, tileSlots(ctx, { oops, msg, build: ['def di_dua_sekolah(a, b):', ['sb', 1], ['h', 1], ['for', 1], ['if', 2], ['app', 3], ['ret', 1]],
+    tiles: [['sb', 'b = set(b)'], ['h', 'hasil = []'], ['for', 'for x in a:'], ['if', 'if x in b:'], ['app', 'hasil.append(x)'], ['ret', 'return hasil'], ['sa', 'a = set(a)', 'Mengubah a menjadi set tidak mempercepat x in b, malah mengacak urutan hasil.'], ['forb', 'for x in b:', 'Telusuri a, lalu periksa ke dalam b.']],
+    order: 'Ubah b menjadi set dulu, baru siapkan hasil dan telusuri a.',
+    onFull: () => { const D = duaSekolah(); const L = cekSusun(S_CODE.slice(1), D); const S = cekSusun(['    b = set(b)', ...S_CODE.slice(1)], D);
+      fill(box, out, fillBoard(ctx, { oops, msg, view: rowsView([['versi list paling banyak 3.000 × 4.000 = ', '_'], ['versi set: 4.000 + 3.000 = ', '_']]), chips: ['12.000.000', '7.000', '12.000', '7.000.000'], want: ['12.000.000', '7.000'],
+        hints: ['Setiap x di a memeriksa seluruh b.', 'Membuat set 4.000 langkah, lalu 3.000 pemeriksaan satu langkah.'],
+        done: () => { play(out, [`versi list: ${L.msg} · ${fmtNum(L.steps)} langkah`, `versi set : ${S.msg} · ${fmtNum(S.steps)} langkah`], { end: () => { say(msg, '', `Satu baris b = set(b) memangkas ${fmtNum(L.steps)} langkah menjadi ${fmtNum(S.steps)}.`); done(); } }); } }));
+      say(msg, 'info', 'Fungsi tersusun. Berapa langkahnya?'); } }));
+  area.append(box, msg);
+}
+
+// Misi Bos: be the counting dictionary.
+function bosRound(area, ctx, { oops, done }) {
+  const msg = msg43('Kartu yang menyala sedang dibaca. Ketuk barisnya di hitung, atau "+ kunci baru" bila belum ada.'); const hit = new Map(); let n = 0; let tok = 0; let fase = 1; const printed = []; const out = layar();
+  const left = el('div', { class: 'bk43-kolom' }); const right = el('div', { class: 'bk43-kolom' }); const top = el('div', { class: 'bk43-kolom' });
+  const draw = () => {
+    fill(top, kartu43({ hl: fase === 1 && n < KODE.length ? [n] : [], redup: Array.from({ length: n }, (_, i) => i) }));
+    fill(left, codeView(TANTANGAN, { hl: fase === 1 ? [2] : [4] }));
+    fill(right, el('div', { class: 'bk43-token' }, `🪙 ${tok}`), el('div', { class: 'bk43-kamus', 'data-fase': String(fase) }, el('small', null, 'hitung = {'), [...hit].map(([k, v]) => onTap(el('button', { type: 'button', class: `bk43-entri ${printed.includes(k) ? 'on' : ''}`, 'data-k': String(k) }, `${k}: ${v}`), () => tapKey(k))), el('small', null, '}')),
+      fase === 1 ? onTap(el('button', { type: 'button', class: 'bk43-pilih', 'data-k': 'baru' }, '+ kunci baru'), () => tapKey(null)) : null, fase === 2 ? out : null);
+  };
+  function tapKey(key) {
+    if (fase === 1) {
+      const k = KODE[n]; const has = hit.has(k);
+      if (key === null ? has : key !== k) { oops(); say(msg, 'bad', has ? `${k} sudah ada di hitung: tambah nilainya.` : key === null ? 'Kunci ini belum ada.' : `${k} belum ada di hitung: buat kunci baru.`); return; }
+      hit.set(k, (hit.get(k) || 0) + 1); tok++; n++; ctx.sound.tap();
+      if (n < KODE.length) { draw(); say(msg, 'info', has ? `hitung[${k}] menjadi ${hit.get(k)}.` : 'Tepat.'); return; }
+      fase = 2; draw(); say(msg, 'info', 'Perulangan kedua: periksa setiap kunci. Ketuk kunci yang dicetak (hitung[k] >= 2).'); return;
+    }
+    if (fase !== 2 || printed.includes(key)) return;
+    if (hit.get(key) < 2) { oops(); say(msg, 'bad', `${key} hanya muncul sekali.`); return; }
+    printed.push(key); ctx.sound.good(); fase = 3; draw(); play(out, [`${key} ${hit.get(key)}`]);
+    say(msg, 'info', `Ada ${hit.size} kunci berbeda yang diperiksa. Hitung langkahnya.`);
+    right.append(fillBoard(ctx, { oops, msg, view: rowsView([['12 + ', '_', ' = ', '_', ' langkah']]), chips: [String(hit.size), String(12 + hit.size), '12', '24'], want: [String(hit.size), String(12 + hit.size)],
+      hints: ['Satu pemeriksaan untuk setiap kunci berbeda.', 'Jumlahkan.'], done: () => { say(msg, '', `Sekali lewat, ${12 + hit.size} langkah: linear. Dictionary menghitung kemunculan tanpa perulangan bersarang.`); done(); } }));
+  }
+  draw();
+  area.append(top, el('div', { class: 'bk43-dua' }, left, right), msg);
+}
+
 export default {
   id: 'sma-43-percepat-kode',
   title: 'Mempercepat Kode',
@@ -103,98 +313,31 @@ export default {
     { id: 'susun', icon: '🧩', label: 'Susun Fungsi Dua Sekolah', desc: 'Susun fungsi dari potongan kode, lalu layar memeriksa hasilnya dan menghitung langkahnya. Hasil benar dengan langkah paling sedikit menang', create: createBuild },
   ],
   create(root, ctx) {
-    const wrap = el('div', { class: 'act percepat-kode' });
+    const wrap = el('div', { class: 'act bk43-main' });
     root.append(wrap);
     function render() {
       wrap.replaceChildren();
       const r = ctx.round;
       let solved = false;
-      const next = () => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, 2400); } };
-      const then = (fn) => () => { wrap.replaceChildren(); fn(); };
-      const code = (id, extra = {}) => pyCode(linesOf(id), { labels: verOf(id)[2], cls: 'pk-kecil', ...extra });
-      if (r === 0) {
-        const T = runPy(linesOf('bersarang'), { limit: 5000 }).trace; const hit = T.find((t) => t.line === 7);
-        wrap.append(code('bersarang'));
-        rowsChoose(wrap, ctx, { prompt: 'Versi pertama: saat baris 9 dijalankan', cls: 'pk-isi', rows: [
-          ['ij', 'Nilai i dan j', [`i = ${hit.vars.i} dan j = ${hit.vars.j}`, 'i = 4 dan j = 11', 'i = 10 dan j = 3', 'i = 3 dan j = 11'], `i = ${hit.vars.i} dan j = ${hit.vars.j}`],
-          ['ke', 'Perbandingan ke-', ['37', '30', '33', '44'], String(hit.vars.bandingkan)],
-          ['why', 'Karena', ['11 + 10 + 9 perbandingan untuk i = 0, 1, 2, lalu perbandingan ketujuh untuk i = 3', '3 × 10 + 7', 'pendaftar ke-4 dibandingkan 37 kali', '12 × 3 + 1']]].map(([k, t, o, a]) => [k, t, o, a ?? o[0]]), done: next });
-      }
-      else if (r === 1) {
-        const R = runPy(linesOf('bersarang'), { limit: 5000 }); const f = (n) => fmtNum((n * (n - 1)) / 2);
-        wrap.append(code('bersarang'));
-        rowsChoose(wrap, ctx, { prompt: 'Keluaran dan rumus banyak perbandingan', cls: 'pk-isi', rows: [
-          ['o', 'Keluaran baris 10', [R.out[0], '[2917, 2917] 66', '[2917] 144', '[2917] 12'], R.out[0]],
-          ['r', 'Rumus untuk n kode', ['n(n − 1)/2', 'n²', 'n − 1', '2n'], 'n(n − 1)/2'],
-          ...[100, 1000, 100000, 500000].map((n) => [`n${n}`, `n = ${fmtNum(n)}`, [f(n), fmtNum(n * n), fmtNum((n * (n + 1)) / 2), fmtNum(n * (n - 1))], f(n)])], done: next });
-      }
-      else if (r === 2) {
-        const A = runPy(linesOf('rudi'), { limit: 5000 }); const B = runPy(linesOf('rudi2'), { limit: 5000 });
-        wrap.append(el('div', { class: 'pk-dua' }, code('rudi', { warn: [4] }), code('rudi2', { warn: [4, 6] })));
-        const g = A.vars.ganda;
-        rowsChoose(wrap, ctx, { prompt: 'Bug Rudi: baris 6 menjadi for j in range(len(kode)):', cls: 'pk-isi', rows: [
-          ['b', 'bandingkan di akhir', ['144', '66', '132', '12'], String(A.vars.bandingkan)],
-          ['g', 'Banyak isi ganda · 2917 muncul', [`${g.length} · ${g.filter((x) => x === 2917).length} kali`, '2 · 2 kali', '1 · 1 kali', '12 · 2 kali'], `${g.length} · ${g.filter((x) => x === 2917).length} kali`],
-          ['h', 'Dengan if i != j and …: ganda · perbandingan', [`${pyRepr(B.vars.ganda)} · ${B.vars.bandingkan}`, '[2917] · 66', '[2917] · 144', `${pyRepr(B.vars.ganda)} · 66`], `${pyRepr(B.vars.ganda)} · ${B.vars.bandingkan}`],
-          ['w', 'Mengapa range(i + 1, len(kode)) lebih baik?', ['setiap pasangan diperiksa tepat sekali dan kode tidak dibandingkan dengan dirinya sendiri', 'Python lebih suka angka 1', 'agar indeks tidak pernah 0', 'agar kode terakhir tidak diperiksa'], 'setiap pasangan diperiksa tepat sekali dan kode tidak dibandingkan dengan dirinya sendiri']], done: next });
-      }
-      else if (r === 3) {
-        const at = sizeAtSecond();
-        const C = runCounted(linesOf('set'));
-        wrap.append(code('set'));
-        rowsChoose(wrap, ctx, { prompt: 'Versi kedua: memakai set', cls: 'pk-isi', rows: [
-          ['a', 'Isi sudah ketika 2917 diperiksa kedua kali', ['10', '11', '3', '12'], String(at)],
-          ['b', 'Baris 6 dijalankan · untuk n kode', [`${C.steps} kali · n kali`, '66 kali · n(n − 1)/2 kali', '11 kali · n − 1 kali', '144 kali · n² kali'], `${C.steps} kali · n kali`],
-          ['c', 'Mengapa k in sudah tidak membandingkan dengan semua isi?', ['set menyimpan kode di laci yang ditentukan nilai kodenya (hash), jadi Python langsung membuka lacinya', 'set selalu terurut, jadi cukup cari biner', 'set hanya menyimpan 10 kode', 'Python menebak secara acak'], 'set menyimpan kode di laci yang ditentukan nilai kodenya (hash), jadi Python langsung membuka lacinya'],
-          ['d', 'Yang dikorbankan', ['memori: sudah menyimpan salinan setiap kode, ditambah laci kosong', 'ketepatan: kadang kode ganda terlewat', 'urutan keluaran', 'tidak ada'], 'memori: sudah menyimpan salinan setiap kode, ditambah laci kosong']], done: next });
-      }
-      else if (r === 4) {
-        wrap.append(timeTable());
-        const nest = (k) => WAKTU[3][1] * 4 ** k; const st = (k) => WAKTU[3][2] * 2 ** k;
-        rowsChoose(wrap, ctx, { prompt: 'Tabel ukuran data: bila n digandakan', cls: 'pk-isi', rows: [
-          ['a', 'Waktu bersarang · waktu set menjadi kira-kira', ['4 kali · 2 kali lipat', '2 kali · 2 kali lipat', '4 kali · 4 kali lipat', '2 kali · 1 kali lipat'], '4 kali · 2 kali lipat'],
-          ['p', 'Sesuai rumus', ['n(n − 1)/2 tumbuh kuadrat · n tumbuh linear', 'keduanya linear', 'keduanya kuadrat', 'n tumbuh kuadrat · n(n − 1)/2 linear'], 'n(n − 1)/2 tumbuh kuadrat · n tumbuh linear'],
-          ['x', '16.000 kode: bersarang · set', [`sekitar ${fmt(Math.round(nest(1) / 100) * 100)} ms · sekitar ${fmt(Math.round(st(1)))} ms`, 'sekitar 2.058 ms · sekitar 0,49 ms', 'sekitar 16.464 ms · sekitar 4 ms', 'sekitar 1.029 ms · sekitar 0,98 ms'], `sekitar ${fmt(Math.round(nest(1) / 100) * 100)} ms · sekitar ${fmt(Math.round(st(1)))} ms`],
-          ['y', '512.000 kode (8.000 × 2⁶): bersarang · set', [`sekitar ${fmt(Math.round(nest(6) / 100000) * 100000)} ms (70 menit) · sekitar ${fmt(Math.round(st(6)))} ms`, 'sekitar 65.856 ms (1 menit) · sekitar 31 ms', 'sekitar 4.200.000 ms (70 menit) · sekitar 2.007 ms', 'sekitar 6.174 ms · sekitar 3 ms'], `sekitar ${fmt(Math.round(nest(6) / 100000) * 100000)} ms (70 menit) · sekitar ${fmt(Math.round(st(6)))} ms`]], done: next });
-      }
-      else if (r === 5) {
-        wrap.append(timeTable());
-        rowsChoose(wrap, ctx, { prompt: 'Dodi: "Beli saja komputer yang 10 kali lebih cepat."', cls: 'pk-isi', rows: [
-          ['k', 'Versi bersarang, 512.000 kode, komputer baru', ['sekitar 7 menit', 'sekitar 7 detik', 'sekitar 70 menit', 'sekitar 0,03 detik'], 'sekitar 7 menit'],
-          ['s', 'Versi set, komputer lama', ['sekitar 0,03 detik', 'sekitar 7 menit', 'sekitar 3 detik', 'sekitar 31 detik'], 'sekitar 0,03 detik'],
-          ['l', 'Pelajarannya', ['memperbaiki algoritma memberi percepatan jauh lebih besar daripada membeli komputer baru', 'komputer baru selalu cukup', 'set hanya cepat di komputer lama', 'waktu tidak bergantung pada kode'], 'memperbaiki algoritma memberi percepatan jauh lebih besar daripada membeli komputer baru']], done: next });
-      }
-      else if (r === 6) {
-        const res = Object.fromEntries(['A', 'B', 'C', 'D'].map((id) => { const C = runCounted(linesOf(id)); const v = C.R.vars; return [id, { hasil: pyRepr(id === 'D' ? v.ada_ganda : v.ganda), steps: C.steps }]; }));
-        wrap.append(el('div', { class: 'pk-empat' }, ['A', 'B', 'C', 'D'].map((id) => code(id))));
-        const row = (id, wrong) => [id, `Potongan ${id}: hasil · langkah (12 kode) · pola`, [`${res[id].hasil} · ${res[id].steps} · ${verOf(id)[3]}`, ...wrong], `${res[id].hasil} · ${res[id].steps} · ${verOf(id)[3]}`];
-        rowsChoose(wrap, ctx, { prompt: 'Perulangan tersembunyi: anggota list yang diperiksa dihitung satu langkah', cls: 'pk-isi', info: 'Pengurutan sekitar n × log₂ n langkah; memasukkan satu kode ke set satu langkah.', rows: [
-          row('A', ['[2917] · 12 · linear', '[2917] · 66 · kuadrat', '[2917] · 45 · n log n']),
-          row('B', ['{2917} · 12 · linear', '{2917} · 24 · linear', '{2917} · 66 · kuadrat']),
-          row('C', ['{2917} · 11 · linear', '{2917} · 144 · kuadrat', '{2917} · 43 · kuadrat']),
-          row('D', ['True · 1 · linear', 'False · 12 · linear', 'True · 66 · kuadrat'])], done: next });
-      }
-      else if (r === 7) rowsChoose(wrap, ctx, { prompt: 'Perulangan tersembunyi dan tabel potongan A', cls: 'pk-isi', info: `Potongan A: ${WAKTU_A.map((x, i) => `${fmt(WAKTU[i][0])} kode ${fmt(x)} ms`).join(' · ')}`, rows: [
-        ['b', 'Tampak satu perulangan, padahal ada perulangan tersembunyi', ['A dan B', 'C dan D', 'B saja', 'A, B, dan C'], 'A dan B'],
-        ['c', 'Urutan dari yang paling cepat untuk 512.000 kode', ['D, C, A, B', 'A, B, C, D', 'D, A, C, B', 'C, D, B, A'], 'D, C, A, B'],
-        ['d', 'Pola waktu potongan A', ['sekitar 4 kali lipat: kuadrat', 'sekitar 2 kali lipat: linear', 'tetap', 'sekitar 8 kali lipat'], 'sekitar 4 kali lipat: kuadrat'],
-        ['e', 'Mengapa A tetap lebih cepat daripada versi bersarang?', ['pemeriksaan in dikerjakan bagian Python yang ditulis dalam bahasa C, jadi setiap langkah lebih murah', 'A memeriksa lebih sedikit kode', 'A memakai set', 'A tidak punya perulangan'], 'pemeriksaan in dikerjakan bagian Python yang ditulis dalam bahasa C, jadi setiap langkah lebih murah'],
-        ['f', 'Potongan A untuk 512.000 kode', [`sekitar ${fmt(Math.round((WAKTU_A[3] * 4096) / 60000))} menit`, 'sekitar 1 detik', 'sekitar 70 menit', 'sekitar 31 milidetik'], `sekitar ${fmt(Math.round((WAKTU_A[3] * 4096) / 60000))} menit`]], done: next });
-      else if (r === 8) {
-        wrap.append(pyCode(S_CODE, { labels: S_CODE.map((_, i) => `S${i + 1}`), cls: 'pk-kecil' }));
-        rowsChoose(wrap, ctx, { prompt: 'SMA A 3.000 pendaftar, SMA B 4.000 pendaftar', cls: 'pk-isi', rows: [
-          ['a', 'Langkah paling banyak', [fmtNum(3000 * 4000), fmtNum(3000 + 4000), fmtNum(3000), fmtNum(4000 * 4000)], fmtNum(3000 * 4000)],
-          ['b', 'Satu baris tambahan setelah S1 · langkahnya', [`b = set(b) · sekitar ${fmtNum(4000 + 3000)}`, `a = set(a) · sekitar ${fmtNum(3000 * 4000)}`, `b = sorted(b) · sekitar ${fmtNum(4000)}`, `hasil = set() · sekitar ${fmtNum(3000)}`], `b = set(b) · sekitar ${fmtNum(4000 + 3000)}`],
-          ['c', 'set(a) & set(b)', ['benar dan ringkas, tetapi urutan hasilnya tidak lagi mengikuti list mana pun', 'salah, karena & hanya untuk bilangan', 'benar dan urutannya sama dengan a', 'paling lambat'], 'benar dan ringkas, tetapi urutan hasilnya tidak lagi mengikuti list mana pun']], done: next });
-      }
-      else {
-        const C = runCounted([KL(), ...TANTANGAN]);
-        wrap.append(pyCode([KL(), ...TANTANGAN], { cls: 'pk-kecil' }));
-        rowsChoose(wrap, ctx, { prompt: 'Tantangan: menghitung kemunculan dengan dictionary', cls: 'pk-isi', rows: [
-          ['o', 'Keluaran', [C.R.out.join(' / '), '2917 1', '2917 2 / 3742 1', '{2917: 2}'], C.R.out.join(' / ')],
-          ['s', 'Langkah untuk 12 kode', [`sekitar ${C.steps}: 12 untuk menghitung dan 11 untuk memeriksa setiap kode berbeda`, 'sekitar 144: setiap kode dihitung dengan count', 'sekitar 12: hanya perulangan pertama', 'sekitar 66: seperti versi bersarang'], `sekitar ${C.steps}: 12 untuk menghitung dan 11 untuk memeriksa setiap kode berbeda`],
-          ['p', 'Pola pertumbuhan', ['linear', 'kuadrat', 'n log n', 'tetap'], 'linear']], done: next });
-      }
+      const next = (wait = 5200) => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, wait); } };
+      const area = el('div', { class: 'bk43-area' });
+      let foe = null;
+      const go = (k, no) => {
+        const [judul, tujuan, ulah] = HEAD43[k];
+        foe = el('div', { class: 'bk43-musuh' }, el('b', null, '⏱️ Jam Pengumuman'), el('span', null, ulah));
+        wrap.append(el('div', { class: 'bk43-kepala' }, misiHead(no, judul, tujuan, '🏎️'), foe), area);
+      };
+      const fin = (ms) => ({ oops: () => ctx.mistake(), done: () => { foe.classList.add('beres'); foe.lastChild.textContent = 'Jam terkalahkan ✓'; next(ms); } });
+      if (r === 0) { go('jalan', 1); jalanRound(area, ctx, fin(5500)); }
+      else if (r === 1) { go('menara', 1); menaraRound(area, ctx, fin(5500)); }
+      else if (r === 2) { go('rudi', 2); rudiRound(area, ctx, fin(6000)); }
+      else if (r === 3) { go('laci', 3); laciRound(area, ctx, fin(6000)); }
+      else if (r === 4) { go('jam', 4); jamRound(area, ctx, fin(6000)); }
+      else if (r === 5) { go('cepat', 4); cepatRound(area, ctx, fin(6000)); }
+      else if (r === 6) { go('buru', 5); buruRound(area, ctx, fin(6000)); }
+      else if (r === 7) { go('urut', 5); urutRound(area, ctx, fin(7000)); }
+      else if (r === 8) { go('adu', 6); aduRound(area, ctx, fin(6500)); }
+      else { go('bos', 'Bos'); bosRound(area, ctx, fin(7000)); }
     }
     render();
   },
@@ -203,7 +346,6 @@ export default {
 export const S_CODE = ['def di_dua_sekolah(a, b):', '    hasil = []', '    for x in a:', '        if x in b:', '            hasil.append(x)', '    return hasil'];
 export const TANTANGAN = ['hitung = {}', 'for k in kode:', '    hitung[k] = hitung.get(k, 0) + 1', 'for k in hitung:', '    if hitung[k] >= 2:', '        print(k, hitung[k])'];
 
-const timeTable = () => el('table', { class: 'pk-tabel' }, el('tr', null, ['n', 'versi bersarang', 'versi set'].map((h) => el('th', null, h))), WAKTU.map(([n, a, b]) => el('tr', null, el('td', null, fmt(n)), el('td', null, `${fmt(a)} ms`), el('td', null, `${fmt(b)} ms`))));
 
 // Step counter: 12 worksheet codes step by step, or big fictional data counted at once.
 function createCounter(root, ctx) {

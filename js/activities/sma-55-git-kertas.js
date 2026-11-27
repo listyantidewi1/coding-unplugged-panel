@@ -7,7 +7,8 @@
 // without rewriting history; and binary search over commits (git bisect).
 
 import { el, onTap, button, shake } from '../core/util.js';
-import { say, pickTeams, scoreBar, finishBoard, rowsChoose, pyCode } from './smp-kit.js';
+import { say, pickTeams, scoreBar, finishBoard, pyCode } from './smp-kit.js';
+import { misiHead, fill, codeView, rowsView, fillBoard, tileSlots, layar, play } from './misi-kit.js';
 import { runPy } from './mini-py.js';
 
 // ---- the quiz history from the worksheet ----
@@ -97,10 +98,239 @@ export const lolosUji = (isi, set) => !isi.some((x) => PENANDA.test(x)) && kelua
 
 // Binary search over a linear history: tests needed in the worst case.
 export const ujiBagiDua = (n) => Math.ceil(Math.log2(n));
-const PESAN_ACAK = ['Tambah soal kelima', 'Rapikan teks pertanyaan', 'Tambah komentar', 'Ganti nama variabel', 'Tambah soal bonus', 'Perbaiki ejaan', 'Ubah urutan soal', 'Tambah ucapan selamat datang', 'Hitung waktu pengerjaan', 'Simpan skor tertinggi', 'Tambah petunjuk', 'Batasi tiga kali coba', 'Tampilkan jawaban benar', 'Ubah nilai tiap soal', 'Tambah soal acak'];
 
-const uniq = (xs) => [...new Set(xs)];
 const lab = (n, from = 1) => Array.from({ length: n }, (_, i) => String(from + i));
+
+// ---------- Penjaga Riwayat: the hands-on missions ----------
+const PENIMPA = '🧨 Si Penimpa'; const BUG55 = '🐛 Si Bug Penyusup';
+const HEAD55 = {
+  commit: ['Kartu Commit', 'Susun isi c2 buatan Dodi, lalu lengkapi kartunya.', PENIMPA, 'Untuk apa mencatat induk? Timpa saja!'],
+  pesan: ['Pesan Commit', 'Urutkan pesan commit dari yang paling jelas sampai yang paling buruk.', PENIMPA, '"asdfgh" juga pesan, kan?'],
+  label: ['Tempel Label Cabang', 'Tempel tiga label pada commit yang tepat, lalu buat c4.', PENIMPA, 'Pindahkan semua label sekaligus!'],
+  gabung: ['Gabung Tanpa Bentrok', 'Cari leluhur bersama, gabungkan soal-tiga ke main, buat c5.', PENIMPA, 'Pilih saja yang lebih panjang.'],
+  konflik: ['Anatomi Konflik', 'Bandingkan tiga kolom, lalu baca penanda konfliknya.', PENIMPA, 'Konflik? Hapus saja salah satu!'],
+  selesai: ['Kalahkan Si Penimpa', 'Susun bagian akhir c6 yang menjaga maksud Dodi dan Rina.', PENIMPA, 'Pakai versi jawaban-rapi saja, cepat!'],
+  buru: ['Buru Si Bug Penyusup', 'Uji commit dengan jawaban 56, Jupiter, H2O. Temukan tempat bug masuk.', BUG55, 'Aku masuk lewat satu commit kecil.'],
+  revert: ['Revert atau Perbaiki Maju', 'Batalkan c3 dengan revert, lalu coba perbaikan maju.', BUG55, 'Hapus saja riwayatnya!'],
+  tim: ['Tim dan Cabang', 'Gabungkan tiga cabang fitur ke main. Selesaikan konflik yang muncul.', PENIMPA, 'Cabang terakhir menimpa semuanya!'],
+  bos: ['Pencarian Kilat', 'Temukan commit pertama yang rusak dari 16 commit dengan paling banyak 4 uji.', BUG55, '16 commit? Kau harus menguji semuanya!'],
+};
+const msg55 = (t) => el('p', { class: 'reveal info' }, t);
+const dua55 = (...k) => el('div', { class: 'pr55-dua' }, ...k);
+const kol55 = (...k) => el('div', { class: 'pr55-kolom' }, ...k);
+const ind = (x) => x.replace(/^ {4}/, '  ');
+const LABEL0 = { main: 'c1', 'soal-tiga': 'c2', 'jawaban-rapi': 'c4' };
+const kartuMeta = (c, extra = null) => el('div', { class: 'pr55-kartu', 'data-c': c }, el('b', null, `📇 ${c}`), el('small', null, `induk: ${COMMIT[c].induk.join(' dan ') || 'tidak ada'} · ${COMMIT[c].penulis}`), el('span', null, `"${COMMIT[c].pesan}"`), extra);
+// Small code window with real line numbers.
+const potong = (isi, dari, sampai, o = {}) => codeView(isi.slice(dari - 1, sampai).map(ind), { labels: lab(sampai - dari + 1, dari), ...o });
+
+// Misi 1: build c2 from line cards, then fill its card.
+function commitRound(area, ctx, { oops, done }) {
+  const msg = msg55('Dodi membuat c2 di cabang soal-tiga. Baris 1–8 sama dengan c1. Susun baris 9–12.');
+  const kiri = kol55(kartuMeta('c1', potong(C1, 6, 9))); const kanan = kol55();
+  fill(kanan, tileSlots(ctx, { oops, msg, build: ['# c2 · baris 1–8 sama dengan c1', ['a', 0], ['b', 0], ['c', 1], ['d', 0]],
+    tiles: [['a', SOAL3[0]], ['b', SOAL3[1]], ['c', ind(SOAL3[2]).trim()], ['d', C2[11]], ['x', C1[8], 'Kini ada tiga soal, jadi skornya dari 30.']],
+    order: 'Soal ketiga dulu: tanya, periksa, tambah skor. Tulisan skor paling akhir.', onFull: () => {
+      say(msg, 'info', 'Isi c2 tersusun. Sekarang lengkapi kartu commitnya.');
+      kanan.append(fillBoard(ctx, { oops, msg, view: rowsView([['📇 c2 · induk ', '_'], ['penulis ', '_', ' · ', '_', ' baris']]), chips: ['c1', 'c3', 'Dodi', 'Sari', '12', '9'], want: ['c1', 'Dodi', '12'],
+        hints: ['c2 dibuat dari c1. Induk menunjuk ke commit sebelumnya.', 'Dodi yang menambah soal ketiga.', '8 baris dari c1 ditambah 4 baris baru.'],
+        done: () => { say(msg, '', 'Commit menyimpan seluruh isi berkas, penulis, pesan, dan induk. Dengan induk, riwayat bisa ditelusuri ke belakang dan perubahan bisa dihitung.'); done(); } }));
+    } }));
+  area.append(dua55(kiri, kanan), msg);
+}
+
+// Misi 1b: rank the commit messages.
+function pesanRound(area, ctx, { oops, done }) {
+  const P = ['Tambah soal ketiga tentang rumus kimia air', 'perbaikan', 'update', 'asdfgh'];
+  const msg = msg55('Tiga bulan lagi, pesan mana yang menolong orang membaca riwayat? Urutkan dari paling jelas.');
+  const log = codeView(['$ git log --oneline', 'c2 ???', 'c1 Kuis dua soal']);
+  area.append(dua55(kol55(kartuMeta('c2'), log), kol55(fillBoard(ctx, { oops, msg, view: rowsView([['1 paling jelas: ', '_'], ['2: ', '_'], ['3: ', '_'], ['4 paling buruk: ', '_']]), chips: P, want: P,
+    hints: ['Pesan terbaik menyebut apa yang berubah.', '"perbaikan" masih memberi arah: ada yang diperbaiki.', '"update" hampir tidak memberi tahu apa pun.', '"asdfgh" tidak bermakna sama sekali.'],
+    done: () => { say(msg, '', 'Pesan yang baik singkat, menyebut apa yang berubah, dan bila perlu mengapa. Si Penimpa senang dengan riwayat yang tidak bisa dibaca.'); done(); } }))), msg);
+}
+
+// Misi 2: place the branch labels by tapping a label, then a commit; then make c4.
+function labelRound(area, ctx, { oops, done }) {
+  const msg = msg55('Dodi membuat c2 di soal-tiga, Rina membuat c3 di jawaban-rapi. main belum berubah. Ketuk label, lalu ketuk commitnya.');
+  const want = { main: 'c1', 'soal-tiga': 'c2', 'jawaban-rapi': 'c3' }; const pasang = {}; let pilih = null; let tahap = 1;
+  const graf = el('div', { class: 'pr55-graf' }); const baki = el('div', { class: 'pr55-baki' });
+  const draw = () => {
+    fill(graf, grafSvg(tahap === 1 ? 3 : 4, { label: pasang, onPilih: tahap === 1 ? tempel : null, onLabel: tahap === 2 ? geser : null }));
+    fill(baki, Object.keys(want).filter((l) => !(l in pasang)).map((l) => onTap(el('button', { class: `pr55-label ${l === 'main' ? 'utama' : ''} ${pilih === l ? 'on' : ''}`, type: 'button', 'data-l': l }, `🏷️ ${l}`), () => { pilih = l; ctx.sound.tap(); draw(); })));
+  };
+  function tempel(c) {
+    if (!pilih) { say(msg, 'info', 'Ketuk label dulu, lalu commitnya.'); return; }
+    if (want[pilih] !== c) { oops(); say(msg, 'bad', pilih === 'main' ? 'main tidak ikut berpindah saat orang lain membuat commit di cabangnya.' : `Label cabang menempel pada commit terbaru di cabang itu.`); return; }
+    pasang[pilih] = c; pilih = null; ctx.sound.tap();
+    if (Object.keys(pasang).length < 3) { draw(); say(msg, 'info', 'Tepat. Tempel label berikutnya.'); return; }
+    tahap = 2; draw(); say(msg, 'info', 'Rina membuat c4 di cabang jawaban-rapi. Ketuk label yang ikut berpindah ke c4.');
+  }
+  function geser(l) {
+    if (tahap !== 2) return;
+    if (l !== 'jawaban-rapi') { oops(); say(msg, 'bad', `Label ${l} tidak berpindah: commit baru hanya menggeser label cabang tempat commit itu dibuat.`); return; }
+    tahap = 3; pasang['jawaban-rapi'] = 'c4'; ctx.sound.tap(); draw();
+    say(msg, '', 'Hanya jawaban-rapi yang berpindah ke c4. main tetap di c1, jadi kelas lain aman memakai main selama fitur baru belum diuji.'); done();
+  }
+  draw();
+  area.append(graf, baki, msg);
+}
+
+// Misi 3: a clean merge. Ancestor, the three columns, then c5's parents.
+function gabungRound(area, ctx, { oops, done }) {
+  const msg = msg55('Sari ingin menggabungkan soal-tiga ke main. Ketuk leluhur bersama keduanya di graf.');
+  const graf = el('div', { class: 'pr55-graf' }); const kanan = kol55();
+  const drawGraf = (n, label, onPilih = null) => fill(graf, grafSvg(n, { label, onPilih }));
+  drawGraf(4, LABEL0, (c) => {
+    if (kanan.childElementCount) return;
+    if (c !== 'c1') { oops(); say(msg, 'bad', 'Leluhur bersama adalah commit terakhir yang dimiliki kedua cabang. Telusuri panah induk dari c1 (main) dan c2 (soal-tiga).'); return; }
+    ctx.sound.tap(); say(msg, 'info', 'c1. Bandingkan bagian akhir: leluhur, main, dan soal-tiga.');
+    fill(kanan, el('div', { class: 'pr55-tiga' }, kol55(el('small', null, 'leluhur c1'), potong(C1, 9, 9)), kol55(el('small', null, 'main (c1)'), potong(C1, 9, 9)), kol55(el('small', null, 'soal-tiga (c2)'), potong(C2, 9, 12, { hl: [0, 1, 2, 3] }))),
+      fillBoard(ctx, { oops, msg, view: rowsView([['bagian akhir → ambil dari ', '_']]), chips: ['soal-tiga', 'main', 'konflik!'], want: ['soal-tiga'], hints: ['main sama dengan leluhur. Hanya soal-tiga yang berubah, jadi perubahannya diambil.'], done: induk }));
+  });
+  function induk() {
+    say(msg, 'info', 'Isi c5 sama dengan c2. Sekarang lengkapi kartu c5.');
+    kanan.append(fillBoard(ctx, { oops, msg, view: rowsView([['📇 c5 · induk ', '_', ' dan ', '_']]), chips: ['c1', 'c2', 'c3', 'c4'], want: ['c1', 'c2'], hints: ['Induk pertama: commit tempat main berada.', 'Induk kedua: ujung cabang yang digabungkan.'],
+      done: () => { drawGraf(5, { ...LABEL0, main: 'c5' }); say(msg, '', 'c5 punya dua induk, c1 dan c2, dan label main pindah ke c5. Tidak ada bentrok karena hanya satu pihak yang berubah.'); done(); } }));
+  }
+  area.append(dua55(graf, kanan), msg);
+}
+
+// Misi 4a: three columns for jawaban-rapi into main, then read the conflict markers.
+function konflikRound(area, ctx, { oops, done }) {
+  const msg = msg55('Sari menggabungkan jawaban-rapi ke main (c5). Leluhur bersama c1. Bandingkan baris 6 dan bagian akhir.');
+  const C5 = COMMIT.c5.isi; const kiri = kol55(); const kanan = kol55();
+  fill(kiri, el('div', { class: 'pr55-tiga' }, kol55(el('small', null, 'leluhur c1'), potong(C1, 6, 9)), kol55(el('small', null, 'main (c5)'), potong(C5, 6, 12, { hl: [3, 4, 5, 6] })), kol55(el('small', null, 'jawaban-rapi (c4)'), potong(C4, 6, 9, { hl: [0, 3] }))));
+  fill(kanan, fillBoard(ctx, { oops, msg, view: rowsView([['baris 6 → ', '_'], ['bagian akhir → ', '_']]), chips: ['ambil jawaban-rapi', 'ambil main', 'konflik!'], want: ['ambil jawaban-rapi', 'konflik!'],
+    hints: ['Di baris 6 hanya Rina yang berubah dari leluhur, jadi otomatis.', 'Bagian akhir diubah oleh kedua pihak dengan cara berbeda.'], done: tanda }));
+  function tanda() {
+    say(msg, 'info', 'Git menulis kedua versi di antara penanda konflik. Dari mana asal setiap bagian?');
+    fill(kiri, codeView(M6.hasil.slice(8).map(ind), { labels: lab(8, 9), warn: [0, 5, 7] }));
+    fill(kanan, fillBoard(ctx, { oops, msg, view: rowsView([['baris 10–13 → ', '_'], ['baris 15 → ', '_']]), chips: ['main (Dodi)', 'jawaban-rapi (Rina)', 'leluhur c1'], want: ['main (Dodi)', 'jawaban-rapi (Rina)'],
+      hints: ['HEAD adalah cabang tempat kita berada: main.', 'Setelah ======= datang cabang yang digabungkan.'], done: () => { say(msg, '', 'Konflik bukan kesalahan Git: dua orang mengubah bagian yang sama, dan manusia yang harus memutuskan maksudnya.'); done(); } }));
+  }
+  area.append(dua55(kiri, kanan), msg);
+}
+
+// Misi 4b: resolve the conflict by both people's intent, and see what Si Penimpa's shortcut loses.
+function selesaiRound(area, ctx, { oops, done }) {
+  const msg = msg55('Susun bagian akhir c6: soal ketiga dari Dodi tetap ada, tulisan "Skor akhir" dari Rina dipakai.');
+  const kiri = kol55(codeView(M6.hasil.slice(8).map(ind), { labels: lab(8, 9), warn: [0, 5, 7] })); const kanan = kol55();
+  const BENAR = 'print("Skor akhir:", skor, "dari 30")';
+  fill(kanan, tileSlots(ctx, { oops, msg, build: ['# baris 1–8 tergabung otomatis', ['a', 0], ['b', 0], ['c', 1], ['d', 0]],
+    tiles: [['a', SOAL3[0]], ['b', SOAL3[1]], ['c', SOAL3[2].trim()], ['d', BENAR], ['x', C2[11], 'Rina mengganti tulisan menjadi "Skor akhir".'], ['y', C4[8], 'Kini ada tiga soal, jadi skornya dari 30.'], ['z', '<<<<<<< HEAD', 'Semua penanda konflik harus dihapus.']],
+    order: 'Soal ketiga dulu, tulisan skor paling akhir.', onFull: () => {
+      say(msg, 'info', 'Bandingkan dengan usul Rudi: pakai versi jawaban-rapi saja.');
+      const rudi = [...M6.hasil.slice(0, 8), C4[8]]; const sari = [...M6.hasil.slice(0, 8), ...SOAL3, BENAR];
+      const a = layar(); const b = layar();
+      fill(kiri, kol55(el('small', null, '🧨 versi Rudi'), a), kol55(el('small', null, '✅ penyelesaianmu'), b));
+      play(a, ['Hasil 7 x 8? 56', 'Planet terbesar? Jupiter', jalankan(rudi)], { gap: 380 });
+      play(b, ['Hasil 7 x 8? 56', 'Planet terbesar? Jupiter', 'Rumus kimia air? H2O', jalankan(sari)], { gap: 380, end: () => { say(msg, '', 'Versi Rudi diam-diam menghapus soal ketiga Dodi: itulah ulah Si Penimpa. Penyelesaianmu tidak sama dengan versi mana pun, karena memadukan maksud keduanya. Tetapi skornya 20, bukan 30…'); done(); } });
+    } }));
+  area.append(dua55(kiri, kanan), msg);
+}
+
+// Misi 5: test commits on the graph, then accuse the commit that let the bug in.
+const lolos55 = (id) => Number((keluaran(id).match(/: (\d+)/) || [])[1]) === 10 * COMMIT[id].isi.filter((l) => l.startsWith('if jawab')).length;
+function buruRound(area, ctx, { oops, done }) {
+  const msg = msg55('Pak Guru menjawab 56, Jupiter, H2O di c6 dan mendapat 20. Ketuk commit di graf untuk mengujinya.');
+  const uji = new Set(); const graf = el('div', { class: 'pr55-graf' }); const hasil = el('div', { class: 'pr55-hasil-uji' }); const tuduh = el('div', { class: 'pr55-baki' }); const kanan = kol55(hasil, tuduh); let tertangkap = false;
+  const LBL = { main: 'c6', 'soal-tiga': 'c2', 'jawaban-rapi': 'c4' };
+  const draw = () => {
+    fill(graf, grafSvg(6, { label: LBL, onPilih: (c) => { if (tertangkap) return; uji.add(c); ctx.sound.tap(); draw(); } }));
+    fill(hasil, ID.slice(0, 6).filter((c) => uji.has(c)).map((c) => el('div', { class: `pr55-uji ${lolos55(c) ? 'lolos' : 'gagal'}`, 'data-c': c }, el('b', null, c), el('code', null, keluaran(c)), el('span', null, lolos55(c) ? '✓' : '✗'))));
+    fill(tuduh, el('small', null, '🐛 bug masuk di:'), ID.slice(0, 6).map((c) => onTap(el('button', { class: 'pr55-tuduh', type: 'button', 'data-c': c }, c), () => tunjuk(c))));
+  };
+  function tunjuk(c) {
+    if (tertangkap) return;
+    if (!uji.has(c) || COMMIT[c].induk.some((p) => !uji.has(p))) { say(msg, 'info', `Uji dulu ${c} dan induknya, supaya buktinya lengkap.`); return; }
+    if (c !== 'c3') { oops(); say(msg, 'bad', lolos55(c) ? `${c} lolos uji, jadi bug belum ada di sana.` : `${c} memang gagal, tetapi induknya juga gagal. Bug masuk lebih awal.`); return; }
+    tertangkap = true; ctx.sound.good(); draw();
+    say(msg, 'info', 'c3 gagal, padahal induknya c1 lolos. Apa yang dilakukan c3?');
+    fill(kanan, codeView([C3[5].replace('").strip', '")\n  .strip'), C3[6]].join('\n').split('\n'), { labels: ['6', '', '7'], warn: [0, 1, 2] }),
+      fillBoard(ctx, { oops, msg, view: rowsView([['baris 6 mengubah jawaban menjadi ', '_'], ['baris 7 membandingkan dengan ', '_']]), chips: ['huruf kecil', 'huruf besar', '"Jupiter"', '"jupiter"'], want: ['huruf kecil', '"Jupiter"'],
+        hints: ['.lower() membuat semua huruf kecil.', 'Lihat teks di baris 7.'], done: () => { say(msg, '', 'Si Bug Penyusup masuk lewat c3: "jupiter" tidak pernah sama dengan "Jupiter". Bug ini seharusnya ketahuan saat Rina menguji cabangnya, sebelum digabungkan.'); done(); } }));
+  }
+  draw();
+  area.append(dua55(graf, kanan), msg);
+}
+
+// Misi 5b: revert c3, then the forward fix with answer cards.
+function revertRound(area, ctx, { oops, done }) {
+  const msg = msg55('Revert membuat commit baru yang membalik perubahan c3. Bagaimana baris 6 di c7?');
+  const kiri = kol55(el('small', null, 'perubahan c3 (baris 6)'), codeView([C1[5], C3[5]], { labels: ['−', '+'], cls: 'pr55-diff' })); const kanan = kol55();
+  fill(kanan, fillBoard(ctx, { oops, msg, view: rowsView([['c7 = revert c3 → baris 6:'], ['_']]), chips: [C1[5], C3[5]], want: [C1[5]], hints: ['Revert membalik: baris yang ditambah c3 dibuang, baris lama dikembalikan.'],
+    done: () => { const scr = layar(); kanan.append(scr); play(scr, ['>>> kuis c7: 56, Jupiter, H2O', keluaran('c7')], { end: maju }); } }));
+  function maju() {
+    say(msg, 'info', 'c7 lolos, tetapi fitur Rina ikut hilang. Coba perbaikan maju di c6: ganti baris 7.');
+    fill(kiri, el('small', null, 'riwayat: c3 tetap ada, c7 mencatat pembatalannya'), potong(C6, 6, 6));
+    fill(kanan, tileSlots(ctx, { oops, msg, build: ['jawab = input("Planet terbesar? ")', '  .strip().lower()', ['f', 0], '  skor = skor + 10'],
+      tiles: [['f', 'if jawab == "jupiter":'], ['x', 'if jawab == "Jupiter":', 'Itu baris yang lama: jawaban sudah huruf kecil.'], ['y', 'if jawab == "JUPITER":', 'Setelah .lower() tidak ada huruf besar lagi.']], onFull: kartuJawab }));
+  }
+  function kartuJawab() {
+    const F = C6.map((x, i) => (i === 6 ? 'if jawab == "jupiter":' : x)); const coba = new Set(); const JW = ['Jupiter', 'JUPITER', ' jupiter '];
+    say(msg, 'info', 'Ketuk setiap kartu jawaban untuk menguji perbaikanmu.');
+    const out = el('div', { class: 'pr55-hasil-uji' });
+    const draw = () => fill(out, JW.filter((j) => coba.has(j)).map((j) => el('div', { class: 'pr55-uji lolos' }, el('b', null, `"${j}"`), el('code', null, jalankan(F, ['56', j, 'H2O'])))));
+    kanan.append(el('div', { class: 'pr55-baki' }, JW.map((j) => onTap(el('button', { class: 'pr55-jawab', type: 'button', 'data-v': j }, `"${j}"`), () => {
+      if (coba.has(j)) return; coba.add(j); ctx.sound.tap(); draw();
+      if (coba.size < JW.length) return;
+      say(msg, 'info', 'Semua diterima, dan fitur Rina tetap ada. Bolehkah jawaban kimia juga diberi .lower()?');
+      kanan.append(fillBoard(ctx, { oops, msg, view: rowsView([['H2O juga diberi .lower()? ', '_']]), chips: ['tidak', 'ya'], want: ['tidak'], hints: ['Rumus kimia peka huruf besar: Co (kobalt) berbeda dengan CO (karbon monoksida).'],
+        done: () => { say(msg, '', 'Tepat. Revert membatalkan tanpa menghapus riwayat, perbaikan maju menjaga fiturnya. Rumus kimia peka huruf besar, jadi tidak diberi .lower().'); done(); } }));
+    }))), out);
+  }
+  area.append(dua55(kiri, kanan), msg);
+}
+
+// Misi 6: three feature branches from c5, merged one by one; the second of soal-4 / pesan conflicts.
+const FITUR55 = { 1: '4️⃣ Soal keempat', 2: '🎉 Pesan skor penuh', 3: '🏫 Judul baru' };
+function timRound(area, ctx, { oops, done }) {
+  const msg = msg55('Tiga tim membuat cabang dari c5. Ketuk kartu fitur untuk menggabungkannya ke main, satu per satu.');
+  const set = new Set(); let main = [...C2]; const kiri = kol55(); const kanan = kol55();
+  const drawKiri = () => fill(kiri, el('small', null, `main: ${set.size ? [...set].map((k) => FITUR55[k]).join(' + ') : 'c5'}`), codeView(main.slice(-6).map(ind), { labels: lab(6, main.length - 5) }));
+  const kartu = () => fill(kanan, el('div', { class: 'pr55-baki' }, [1, 2, 3].map((k) => onTap(el('button', { class: `pr55-fitur ${set.has(k) ? 'masuk' : ''}`, type: 'button', 'data-k': String(k) }, FITUR55[k], set.has(k) ? ' ✓' : ''), () => gabung(k)))));
+  function gabung(k) {
+    if (set.has(k) || kanan.querySelector('.mk-susun')) return;
+    const r = gabung3(C2, main, FITUR[k].isi); set.add(k); ctx.sound.tap();
+    if (!r.konflik.length) { main = r.hasil; drawKiri(); kartu(); say(msg, 'info', `${FITUR55[k]} tergabung otomatis ${lolosUji(main, set) ? 'dan lolos uji' : ''}.`); return cek(); }
+    say(msg, 'info', `⚠ ${FITUR55[k]} berkonflik di bagian akhir berkas! Susun akhir berkas yang menjaga kedua fitur.`);
+    const K = r.konflik[0];
+    fill(kiri, el('small', null, '⚠ konflik di akhir berkas'), el('div', { class: 'pr55-tiga pr55-konflik-tim' }, kol55(el('small', null, '<<<<<<< HEAD (main)'), codeView(K.kita.map(ind), { cls: 'pr55-kita' })), kol55(el('small', null, '>>>>>>> cabang'), codeView(K.mereka.map(ind), { cls: 'pr55-mereka' }))));
+    const ekor = harapan(set).slice(11);
+    fill(kanan, tileSlots(ctx, { oops, msg, build: ['# baris 1–11 tetap', ...ekor.map((x, i) => [`e${i}`, x.startsWith('    ') ? 1 : 0])],
+      tiles: [...ekor.map((x, i) => [`e${i}`, x.trim()]), ['x', 'if skor == 30:', 'Dengan soal keempat, skor penuh menjadi 40.']],
+      order: 'Soal keempat dulu, lalu tulisan skor, baru pesan skor penuh.', onFull: () => { main = harapan(set); drawKiri(); kartu(); say(msg, 'info', `Konflik selesai${lolosUji(main, set) ? ' dan lolos uji' : ''}: skor penuh kini 40.`); cek(); } }));
+  }
+  function cek() { if (set.size === 3 && lolosUji(main, set)) { say(msg, '', 'Ketiga fitur ada di main dan lolos uji. Judul baru tergabung otomatis; soal keempat dan pesan skor penuh bentrok di akhir berkas, dan maksud keduanya digabungkan: if skor == 40.'); done(); } }
+  drawKiri(); kartu();
+  area.append(dua55(kiri, kanan), msg);
+}
+
+// Misi Bos: binary search over 16 commits, then match the Git commands.
+function bosRound55(area, ctx, { oops, done }) {
+  const N = 16; const bug = 2 + Math.floor(ctx.rand.next() * (N - 1)); const hasil = { 1: true, [N]: false }; let n = 0; let fin = false;
+  const msg = msg55(`c1 lolos uji, c${N} gagal. Ketuk commit untuk mengujinya. Paling banyak 4 uji!`);
+  const pita = el('div', { class: 'pr55-pita' }); const kanan = kol55(); const hitung = el('p', { class: 'pr55-tally' });
+  const batas = () => { const lo = Math.max(...Object.keys(hasil).filter((k) => hasil[k]).map(Number)); const hi = Math.min(...Object.keys(hasil).filter((k) => !hasil[k]).map(Number)); return [lo, hi]; };
+  const draw = () => { const [lo, hi] = batas(); hitung.textContent = `🔍 uji: ${n} dari 4 · kemungkinan: c${lo + 1}–c${hi}`;
+    fill(pita, Array.from({ length: N }, (_, i) => i + 1).map((k) => onTap(el('button', { class: `pr55-c ${k in hasil ? (hasil[k] ? 'lolos' : 'gagal') : k <= lo || k >= hi ? 'redup' : ''} ${fin && k === hi ? 'bug' : ''}`, type: 'button', 'data-n': String(k) }, `c${k}`, el('small', null, k in hasil ? (hasil[k] ? '✓' : '✗') : '·')), () => tes(k)))); };
+  function tes(k) {
+    if (fin || k in hasil) return; const [lo, hi] = batas();
+    if (k < lo || k > hi) { oops(); say(msg, 'bad', `c${k} sudah pasti ${k < lo ? 'lolos' : 'gagal'}. Uji di antara c${lo} dan c${hi}.`); return; }
+    n++; hasil[k] = k < bug; ctx.sound.tap();
+    if (n > 4) oops();
+    const [a, b] = batas(); draw();
+    if (b - a > 1) { say(msg, n > 4 ? 'bad' : 'info', `c${k} ${hasil[k] ? 'lolos' : 'gagal'}. ${n > 4 ? 'Sudah lebih dari 4 uji. ' : ''}Uji di tengah sisa kemungkinan.`); return; }
+    fin = true; draw();
+    say(msg, 'info', `Commit pertama yang rusak: c${b}, ditemukan dengan ${n} uji. Itulah cara kerja git bisect. Sekarang pasangkan perintah Git.`);
+    kanan.append(fillBoard(ctx, { oops, msg, view: rowsView([['simpan commit → ', '_'], ['gabungkan cabang → ', '_'], ['batalkan commit lama → ', '_'], ['cari commit bug → ', '_'], ['100 commit, paling banyak ', '_', ' uji']]),
+      chips: ['git commit', 'git merge', 'git revert', 'git bisect', 'git switch', '7', '50'], want: ['git commit', 'git merge', 'git revert', 'git bisect', '7'],
+      hints: ['Commit menyimpan potret berkas.', 'Merge menggabungkan cabang.', 'Revert membuat commit pembalik.', 'Bisect membagi dua riwayat.', '2⁷ = 128 ≥ 100: setiap uji membuang separuh kemungkinan.'],
+      done: () => { say(msg, '', 'Si Bug Penyusup tertangkap. Membagi dua: 100 commit cukup 7 uji, karena 2⁷ = 128.'); done(); } }));
+  }
+  draw();
+  area.append(dua55(kol55(hitung, pita), kanan), msg);
+}
 
 export default {
   id: 'sma-55-git-kertas',
@@ -120,116 +350,27 @@ export default {
     { id: 'giliran', icon: '🤝', label: 'Cabang Tim', desc: 'Setiap tim memilih fitur di cabangnya sendiri dari c5, lalu cabang digabungkan satu per satu; penggabungan yang lolos uji mendapat poin', create: createTeams },
   ],
   create(root, ctx) {
-    const wrap = el('div', { class: 'act git-kertas' });
-    root.append(wrap);
+    const wrap = el('div', { class: 'act git-kertas pr55-main' }); root.append(wrap);
     function render() {
-      wrap.replaceChildren();
-      const r = ctx.round;
-      let solved = false;
-      const next = () => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, 2400); } };
-      if (r === 0) {
-        wrap.append(pyCode(C1, { labels: lab(9), cls: 'gk-kode' }));
-        const P = ['"Tambah soal ketiga tentang rumus kimia air"', '"perbaikan"', '"update"', '"asdfgh"'];
-        rowsChoose(wrap, ctx, { prompt: 'Commit c1 (Sari, main, "Kuis dua soal"). Dodi membuat c2.', cls: 'gk-isi', rows: [
-          ['n', 'Banyak baris isi c2', ['9', '10', '12', '13'], String(C2.length)],
-          ['i', 'Induk c2', ['c1', 'tidak ada', 'c3', 'main'], COMMIT.c2.induk[0]],
-          ['w', 'Kartu commit mencatat induknya, supaya', ['riwayat bisa ditelusuri ke belakang, perubahan bisa dihitung, dan leluhur bersama bisa dicari saat menggabungkan', 'berkasnya lebih kecil', 'penulisnya tidak bisa diganti', 'Git tahu jam pembuatannya'], 'riwayat bisa ditelusuri ke belakang, perubahan bisa dihitung, dan leluhur bersama bisa dicari saat menggabungkan'],
-          ['p', 'Pesan commit paling berguna', P, P[0]],
-          ['q', 'Pesan commit paling tidak berguna', P, P[3]],
-        ], done: next, info: 'Pesan yang baik itu singkat, menyebut apa yang berubah, dan bila perlu mengapa.' });
-      }
-      else if (r === 1) {
-        wrap.append(grafSvg(4, { label: { main: 'c1', 'soal-tiga': 'c2', 'jawaban-rapi': 'c4' }, sembunyiLabel: true }));
-        const C = ['c1', 'c2', 'c3', 'c4'];
-        rowsChoose(wrap, ctx, { prompt: 'Graf c1–c4. Tempel label cabang pada commit yang tepat.', cls: 'gk-isi', rows: [
-          ['m', 'Label main', C, 'c1'],
-          ['s', 'Label soal-tiga', C, 'c2'],
-          ['j', 'Label jawaban-rapi', C, 'c4'],
-          ['b', 'Saat Rina membuat c4', ['jawaban-rapi berpindah dari c3 ke c4; main dan soal-tiga tetap', 'semua label berpindah ke c4', 'main berpindah ke c4', 'tidak ada label yang berpindah'], 'jawaban-rapi berpindah dari c3 ke c4; main dan soal-tiga tetap'],
-          ['c', 'Kelas lain aman memakai main, karena', ['commit di cabang tidak mengubah main; fitur yang belum diuji tetap di cabang', 'main dikunci kata sandi', 'cabang menghapus main sementara', 'Git menyalin kuis ke setiap kelas'], 'commit di cabang tidak mengubah main; fitur yang belum diuji tetap di cabang'],
-        ], done: next });
-      }
-      else if (r === 2) {
-        const same = M5.hasil.join('\n') === C2.join('\n') && !M5.konflik.length;
-        rowsChoose(wrap, ctx, { prompt: 'Sari menggabungkan soal-tiga ke main → c5', cls: 'gk-isi', rows: [
-          ['l', 'Leluhur bersama main dan soal-tiga', ['c1', 'c2', 'c3', 'tidak ada'], 'c1'],
-          ['h', 'Isi c5', ['sama dengan isi c2 (12 baris)', 'sama dengan isi c1 (9 baris)', 'gabungan c1 dan c2 (21 baris)', 'konflik di baris 9'], same ? 'sama dengan isi c2 (12 baris)' : '?'],
-          ['w', 'Alasannya', ['hanya soal-tiga yang berubah dari c1, jadi perubahan itu diambil', 'Git selalu memilih cabang yang lebih baru', 'Sari memilih versi Dodi', 'c2 lebih panjang'], 'hanya soal-tiga yang berubah dari c1, jadi perubahan itu diambil'],
-          ['i', 'Induk c5', ['c1 dan c2', 'c2 saja', 'c1 saja', 'c2 dan c4'], COMMIT.c5.induk.join(' dan ')],
-          ['b', 'Label main sesudahnya', ['c5', 'c1', 'c2', 'c4'], 'c5'],
-        ], done: next });
-      }
-      else if (r === 3) {
-        wrap.append(pyCode(M6.hasil, { labels: lab(M6.hasil.length), cls: 'gk-kode', warn: M6.hasil.map((x, i) => (PENANDA.test(x) ? i : -1)).filter((i) => i >= 0) }));
-        const K = M6.konflik[0];
-        rowsChoose(wrap, ctx, { prompt: 'Menggabungkan jawaban-rapi ke main: konflik', cls: 'gk-isi', rows: [
-          ['l', 'Leluhur bersama', ['c1', 'c3', 'c4', 'c5'], 'c1'],
-          ['o', 'Baris 6 digabung otomatis, karena', ['hanya Rina yang mengubahnya; main tidak menyentuhnya', 'kedua pihak mengubahnya dengan sama', 'baris 6 tidak penting', 'Git selalu memilih cabang'], 'hanya Rina yang mengubahnya; main tidak menyentuhnya'],
-          ['k', 'Bagian akhir berkas konflik, karena', ['kedua pihak mengubah baris skor dengan cara berbeda', 'Dodi menghapus baris 9', 'Rina menambah soal', 'Git tidak bisa membaca print'], 'kedua pihak mengubah baris skor dengan cara berbeda'],
-          ['h', `Baris ${K.mulai + 2}–${K.mulai + 1 + K.kita.length} (antara <<<<<<< HEAD dan =======) berasal dari`, ['main (perubahan Dodi)', 'jawaban-rapi', 'leluhur c1', 'Sari'], 'main (perubahan Dodi)'],
-          ['j', 'Bagian antara ======= dan >>>>>>> jawaban-rapi berasal dari', ['cabang jawaban-rapi (perubahan Rina)', 'main', 'leluhur c1', 'Dodi'], 'cabang jawaban-rapi (perubahan Rina)'],
-        ], done: next });
-      }
-      else if (r === 4) {
-        const ok = 'jawab = input("Rumus kimia air? ") … print("Skor akhir:", skor, "dari 30")';
-        rowsChoose(wrap, ctx, { prompt: 'Menyelesaikan konflik untuk c6', cls: 'gk-isi gk-mono', rows: [
-          ['c', 'Bagian akhir yang benar', [ok, 'jawab = input("Rumus kimia air? ") … print("Skor kamu:", skor, "dari 30")', 'print("Skor akhir:", skor, "dari 20")', 'print("Skor akhir:", skor, "dari 30")'], ok],
-          ['m', 'Penanda <<<<<<<, =======, dan >>>>>>>', ['dihapus semua', 'dibiarkan sebagai komentar', 'hanya ======= yang dihapus', 'diganti #'], 'dihapus semua'],
-          ['d', 'Usul Rudi: pakai versi jawaban-rapi saja', ['soal ketiga buatan Dodi hilang tanpa ada yang sadar', 'tidak ada akibatnya', 'program galat', 'baris 6 hilang'], !C4.includes(SOAL3[0]) ? 'soal ketiga buatan Dodi hilang tanpa ada yang sadar' : '?'],
-          ['s', 'Hasil yang benar itu', ['tidak sama dengan versi mana pun: memadukan maksud kedua pihak', 'sama dengan versi main', 'sama dengan versi jawaban-rapi', 'sama dengan leluhur c1'], 'tidak sama dengan versi mana pun: memadukan maksud kedua pihak'],
-        ], done: next });
-      }
-      else if (r === 5) {
-        const opsi = uniq(ID.slice(0, 6).map(keluaran));
-        rowsChoose(wrap, ctx, { prompt: `Jawaban ${JAWAB.join(', ')}. Keluaran baris terakhir tiap commit`, cls: 'gk-isi gk-mono', rows: ID.slice(0, 6).map((id) => [id, `${id} · ${COMMIT[id].pesan}`, opsi, keluaran(id)]), done: next, info: 'Commit yang hanya punya dua soal mengabaikan jawaban ketiga.' });
-      }
-      else if (r === 6) {
-        const pertama = ID.slice(0, 6).find((id) => !skorPenuh(id));
-        rowsChoose(wrap, ctx, { prompt: 'Mencari bug dan membatalkannya', cls: 'gk-isi', rows: [
-          ['c', 'Commit pertama yang memunculkan bug', ['c1', 'c2', 'c3', 'c4', 'c6'], pertama],
-          ['p', 'Penyebabnya', ['baris 6 mengubah jawaban menjadi huruf kecil, tetapi baris 7 masih membandingkan dengan "Jupiter"', 'konflik yang salah diselesaikan', 'soal ketiga salah kunci', 'skor tidak dimulai dari 0'], 'baris 6 mengubah jawaban menjadi huruf kecil, tetapi baris 7 masih membandingkan dengan "Jupiter"'],
-          ['r', 'c7 = revert c3: baris 6 dan keluarannya', uniq([`${C7[5]} → ${keluaran('c7')}`, `${C6[5]} → ${keluaran('c6')}`, `${C7[5]} → ${keluaran('c6')}`, `${C6[5]} → ${keluaran('c7')}`]), `${C7[5]} → ${keluaran('c7')}`],
-          ['h', 'c3 tidak dihapus dari riwayat, karena', ['c4 dan c6 dibangun di atasnya dan tim sudah punya salinannya; revert mencatat kesalahan dan pembatalannya', 'Git tidak bisa menghapus apa pun', 'c3 masih benar', 'supaya bug tetap ada'], 'c4 dan c6 dibangun di atasnya dan tim sudah punya salinannya; revert mencatat kesalahan dan pembatalannya'],
-        ], done: next });
-      }
-      else if (r === 7) {
-        const maju = C6.map((x, i) => (i === 6 ? 'if jawab == "jupiter":' : x));
-        rowsChoose(wrap, ctx, { prompt: 'Memperbaiki maju', cls: 'gk-isi', rows: [
-          ['d', 'Baris 7 yang benar', ['if jawab == "jupiter":', 'if jawab == "Jupiter":', 'if jawab == "JUPITER":', 'if jawab.lower() == "Jupiter":'], ['if jawab == "jupiter":', 'if jawab == "Jupiter":', 'if jawab == "JUPITER":'].find((b) => jalankan(C6.map((x, i) => (i === 6 ? b : x))) === 'Skor akhir: 30 dari 30')],
-          ['j', 'Dengan perbaikan itu, jawaban " JUPITER "', ['diterima', 'ditolak'], jalankan(maju, ['56', ' JUPITER ', 'H2O']) === 'Skor akhir: 30 dari 30' ? 'diterima' : 'ditolak'],
-          ['k', 'Kelebihan dibandingkan revert', ['fitur Rina tetap ada; revert membuang fitur bersama bug-nya', 'riwayatnya lebih pendek', 'tidak perlu commit baru', 'c3 terhapus'], 'fitur Rina tetap ada; revert membuang fitur bersama bug-nya'],
-          ['e', 'Jawaban rumus kimia juga diberi .lower()?', ['tidak: rumus kimia peka huruf besar, misalnya Co (kobalt) dan CO (karbon monoksida)', 'ya, supaya seragam', 'ya, karena h2o sama dengan H2O', 'tidak, karena Python tidak bisa'], 'tidak: rumus kimia peka huruf besar, misalnya Co (kobalt) dan CO (karbon monoksida)'],
-          ['f', 'Bug Rina seharusnya ketahuan', ['saat Rina menguji cabangnya, misalnya di c3 atau c4, sebelum digabungkan', 'saat Pak Guru menguji c6', 'tidak mungkin ketahuan', 'saat c7 dibuat'], 'saat Rina menguji cabangnya, misalnya di c3 atau c4, sebelum digabungkan'],
-        ], done: next });
-      }
-      else if (r === 8) {
-        const G = [['commit', 'Membuat commit'], ['branch', 'Membuat cabang'], ['switch', 'Pindah ke cabang lain'], ['merge', 'Menggabungkan'], ['log --graph', 'Melihat graf riwayat'], ['revert', 'Membalik commit']];
-        const perintah = G.map(([c]) => `git ${c}`);
-        rowsChoose(wrap, ctx, { prompt: 'Tantangan: perintah Git dan pencarian biner', cls: 'gk-isi gk-mono', rows: [
-          ...G.map(([c, t]) => [c, t, perintah, `git ${c}`]),
-          ['b', '100 commit: paling banyak berapa uji dengan membagi dua?', ['6', '7', '10', '50'], String(ujiBagiDua(100))],
-        ], done: next, info: '100, 50, 25, 13, 7, 4, 2, lalu 1: setiap uji membuang separuh kemungkinan. Git menyediakan git bisect untuk ini.' });
-      }
-      else {
-        // Bisect a seeded 16-commit history: c1 passes, c16 fails.
-        const N = 16; const bug = 2 + Math.floor(ctx.rand.next() * (N - 1));
-        let lo = 1; let hi = N; const rows = []; let k = 1;
-        while (hi - lo > 1) {
-          const mid = Math.floor((lo + hi) / 2); const lolos = mid < bug;
-          const opsi = uniq([`c${mid}`, `c${lo + 1}`, `c${hi - 1}`, `c${lo}`, `c${hi}`]).slice(0, 4);
-          rows.push([`u${k}`, `Uji ke-${k}: di antara c${lo} (lolos) dan c${hi} (gagal), uji`, opsi, `c${mid}`, `c${mid} ${lolos ? 'lolos' : 'gagal'} diuji.`]);
-          if (lolos) lo = mid; else hi = mid; k++;
-        }
-        rows.push(['p', `Hasil uji: ${rows.map((x) => x[4].replace(' diuji.', '')).join(', ')}. Commit pertama yang mengandung bug`, uniq([`c${hi}`, `c${lo}`, `c${Math.min(N, hi + 1)}`, `c${Math.max(1, lo - 1)}`]), `c${hi}`]);
-        wrap.append(el('div', { class: 'gk-pita' }, ...Array.from({ length: N }, (_, i) => el('span', { class: i === 0 ? 'lolos' : i === N - 1 ? 'gagal' : '' }, `c${i + 1}`, el('small', null, i === 0 ? 'Kuis dua soal' : i === N - 1 ? 'skor salah' : PESAN_ACAK[(i + bug) % PESAN_ACAK.length])))));
-        rowsChoose(wrap, ctx, { prompt: `Riwayat ${N} commit: c1 lolos uji, c${N} gagal. Cari dengan membagi dua.`, cls: 'gk-isi', rows, done: next });
-      }
+      wrap.replaceChildren(); const r = ctx.round; let solved = false;
+      const next = (wait = 5200) => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, wait); } };
+      const area = el('div', { class: 'pr55-area' }); let foe = null;
+      const go = (k, no) => { const [judul, tujuan, siapa, ulah] = HEAD55[k]; foe = el('div', { class: 'pr55-musuh' }, el('b', null, siapa), el('span', null, ulah)); wrap.append(el('div', { class: 'pr55-kepala' }, misiHead(no, judul, tujuan, '🌿'), foe), area); };
+      const fin = (ms) => ({ oops: () => ctx.mistake(), done: () => { foe.classList.add('beres'); foe.lastChild.textContent = foe.firstChild.textContent === PENIMPA ? 'Riwayat aman ✓' : 'Bug tertangkap ✓'; next(ms); } });
+      if (r === 0) { go('commit', 1); commitRound(area, ctx, fin(5500)); }
+      else if (r === 1) { go('pesan', 1); pesanRound(area, ctx, fin(5500)); }
+      else if (r === 2) { go('label', 2); labelRound(area, ctx, fin(6000)); }
+      else if (r === 3) { go('gabung', 3); gabungRound(area, ctx, fin(6000)); }
+      else if (r === 4) { go('konflik', 4); konflikRound(area, ctx, fin(6000)); }
+      else if (r === 5) { go('selesai', 4); selesaiRound(area, ctx, fin(7000)); }
+      else if (r === 6) { go('buru', 5); buruRound(area, ctx, fin(6500)); }
+      else if (r === 7) { go('revert', 5); revertRound(area, ctx, fin(6500)); }
+      else if (r === 8) { go('tim', 6); timRound(area, ctx, fin(6500)); }
+      else { go('bos', 'Bos'); bosRound55(area, ctx, fin(7000)); }
     }
     render();
   },
 };
-// Full marks for every right answer: 10 points per question in that version.
-const skorPenuh = (id) => Number((keluaran(id).match(/: (\d+)/) || [])[1]) === 10 * COMMIT[id].isi.filter((l) => l.startsWith('if jawab')).length;
 
 // ---- views ----
 // Commit graph in three lanes; n = commits shown (in order c1..c7).
@@ -247,14 +388,14 @@ function grafSvg(n, { label = {}, pilih = null, onPilih = null, sembunyiLabel = 
     svg.append(s('line', { x1: x1 + (dx / L) * 22, y1: y1 + (dy / L) * 22, x2: x2 - (dx / L) * 24, y2: y2 - (dy / L) * 24, class: 'gk-garis', 'marker-end': 'url(#gk-panah)' }));
   }
   for (const c of ids) {
-    const g = s('g', { class: `gk-simpul ${pilih === c ? 'on' : ''} ${COMMIT[c].induk.length > 1 ? 'gabung' : ''}`, tabindex: '0' }, s('circle', { cx: X(c), cy: Y(c), r: 20 }), s('text', { x: X(c), y: Y(c) + 6, 'text-anchor': 'middle' }, c));
+    const g = s('g', { class: `gk-simpul ${pilih === c ? 'on' : ''} ${COMMIT[c].induk.length > 1 ? 'gabung' : ''}`, tabindex: '0', 'data-c': c }, s('circle', { cx: X(c), cy: Y(c), r: 20 }), s('text', { x: X(c), y: Y(c) + 6, 'text-anchor': 'middle' }, c));
     if (onPilih) g.addEventListener('click', () => onPilih(c));
     svg.append(g);
   }
   if (!sembunyiLabel) {
     const per = {};
     for (const [nama, c] of Object.entries(label)) { if (!ids.includes(c)) continue; const k = (per[c] = (per[c] || 0) + 1) - 1; const lebar = nama.length * 8.4 + 12; const x = X(c) - lebar / 2; const y = Y(c) + (POS[c][1] === 0 ? -48 - k * 22 : 26 + k * 22);
-      const g = s('g', { class: `gk-label ${nama === 'main' ? 'utama' : ''} ${labelPilih === nama ? 'on' : ''}` }, s('rect', { x, y, width: lebar, height: 20, rx: 4 }), s('text', { x: X(c), y: y + 15, 'text-anchor': 'middle' }, nama));
+      const g = s('g', { class: `gk-label ${nama === 'main' ? 'utama' : ''} ${labelPilih === nama ? 'on' : ''}`, 'data-l': nama }, s('rect', { x, y, width: lebar, height: 20, rx: 4 }), s('text', { x: X(c), y: y + 15, 'text-anchor': 'middle' }, nama));
       if (onLabel) g.addEventListener('click', (e) => { e.stopPropagation(); onLabel(nama); });
       svg.append(g); }
   }

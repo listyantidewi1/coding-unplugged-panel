@@ -5,7 +5,9 @@
 // the worksheet program in mini-py with the commands fed to input().
 
 import { el, onTap, button } from '../core/util.js';
-import { say, pickTeams, scoreBar, finishBoard, rowsChoose, pyCode, pyTracer } from './smp-kit.js';
+import { dnd } from '../core/kit.js';
+import { say, pickTeams, scoreBar, finishBoard, pyTracer } from './smp-kit.js';
+import { misiHead, fill, codeView, codeFill, rowsView, fillBoard, tileSlots, layar, play } from './misi-kit.js';
 import { runPy, pyRepr, PyError } from './mini-py.js';
 
 export const V1 = ['transisi = {', '    "pos": {"utara": "persemaian"},', '    "persemaian": {"selatan": "pos", "utara": "gua", "timur": "sungai"},', '    "gua": {"selatan": "persemaian"},', '    "sungai": {"barat": "persemaian", "utara": "bukit", "timur": "air terjun"},', '    "air terjun": {},', '    "bukit": {"selatan": "sungai"},', '}', 'barang = {"persemaian": "bibit", "gua": "senter"}', 'ruang = "pos"', 'tas = []', 'while True:', '    print("Kamu di", ruang)', '    if ruang == "bukit" and "bibit" in tas:', '        print("Bibit tertanam. Kamu menang!")', '        break', '    perintah = input("> ")', '    if perintah in transisi[ruang]:', '        ruang = transisi[ruang][perintah]', '    elif perintah == "ambil" and ruang in barang:', '        tas.append(barang[ruang])', '        del barang[ruang]', '    else:', '        print("Tidak bisa.")'];
@@ -83,7 +85,224 @@ export function diagram(m, { kini = null, sorot = [], cls = '' } = {}) {
   return el('div', { class: `tx-diagram ${cls}`, style: { aspectRatio: `${Math.max(1.4, W * 1.25)} / ${H}` } }, svg, ...m.ruang.map(node));
 }
 const legenda = () => el('p', { class: 'tx-ket' }, '🟥 ruang buntu · 🟧 tidak bisa mencapai tujuan · ⭐ tujuan');
-const opsi = (right, pool) => [right, ...[...new Set(pool)].filter((x) => x !== right)].slice(0, 4);
+
+// ---- Permainan: Ekspedisi Bibit ----
+// The team is the program and the player at once: a pawn walks the forest
+// map, the bag fills, and every answer is checked by running the worksheet
+// program in mini-py. Careless designers Dodi, Riska and Rudi leave bugs, trap
+// rooms and a key behind its own gate.
+const HEAD49 = {
+  peta: ['Peta dari Kode', 'Ketuk ruang tujuan yang ditulis dictionary transisi.', 'Petanya kusimpan di dalam kode, hihi.'],
+  jalan1: ['Jalan-Jalan di Hutan: 1–6', 'Ramalkan setiap perintah: ketuk ruang tujuan, atau tombol hasilnya.', 'Ayo tersesat!'],
+  jalan2: ['Jalan-Jalan di Hutan: 7–12', 'Lanjutkan sampai bibit tertanam di bukit.', 'Ada perintah berhuruf besar, lho.'],
+  dodi: ['Bug Dodi dan Kebun Kopi', 'Jalankan versi Dodi, tunjuk bugnya, lalu tambah kebun kopi lewat data saja.', 'Dodi: ruang = perintah, beres!'],
+  jebak: ['Ruang Jebakan', 'Masuk ke air terjun, lalu coba keluar.', 'Riska: air terjun tanpa pintu keluar!'],
+  buntu: ['Buru Ruang Buntu', 'Lengkapi ruang_buntu, lalu periksa peta Riska.', 'Rawa dan semakku lolos pemeriksaan!'],
+  gerbang: ['Gerbang Berkunci', 'Lengkapi pemeriksaan gerbang, lalu jalankan rute lama.', 'Gerbang bukit kukunci!'],
+  cepat: ['Rute Tercepat', 'Menangkan versi 2 dengan perintah sesedikit mungkin.', 'Kuncinya jauh di air terjun!'],
+  rudi: ['Taklukkan Peta Rudi', 'Temukan masalah peta Rudi, lalu pindahkan kuncinya.', 'Rudi: kunci di bukit, aman!'],
+  bos: ['Berlomba dengan Matahari', 'Susun pemeriksaan menang dan kalah, lalu jalankan 15 perintah.', 'Matahari terbenam setelah 15 perintah!'],
+};
+const msg49 = (t) => el('p', { class: 'reveal info' }, t);
+
+// The forest map with tappable rooms (data-r) and the current room.
+function peta49(m, { kini = null, barang = null, onRoom = null, drop = false, cls = '' } = {}) {
+  const mm = barang ? { ...m, barang } : m; const d = diagram(mm, { kini, cls: `ek49-peta ${cls}` });
+  d.querySelectorAll('.tx-ruang').forEach((n, i) => { const r = m.ruang[i]; n.dataset.r = r; if (drop) n.dataset.drop = r; if (onRoom) { n.classList.add('ketuk'); onTap(n, () => onRoom(r)); } });
+  return d;
+}
+const state49 = (kode, cmds) => { const R = jalankan(kode, cmds); const b = R.vars.barang; return { R, ruang: R.vars.ruang, tas: [...(R.vars.tas || [])], barang: b ? Object.fromEntries(b) : {} }; };
+const layarText = (R, n = 5) => [...R.out.slice(-n), ...(R.error ? [`${R.error.type}: ${R.error.message}`] : [])].join('\n');
+
+// Predict mode: for each scripted command, tap the room reached or the result button.
+function ramalKonsol(ctx, { oops, msg, m, kode, cmds, from, to, onEnd }) {
+  let i = from; const kiri = el('div', { class: 'ek49-kolom' }); const kanan = el('div', { class: 'ek49-kolom' });
+  const want = (k) => { const a = state49(kode, cmds.slice(0, k)); const b = state49(kode, cmds.slice(0, k + 1)); const o = b.R.out.slice(a.R.out.length).join(' ');
+    if (o.includes('Gerbang terkunci')) return 'gerbang'; if (o.includes('Tidak bisa')) return 'tidak'; if (b.ruang !== a.ruang) return `r:${b.ruang}`; if (b.tas.length > a.tas.length) return 'ambil'; return 'tidak'; };
+  const draw = () => {
+    const S = state49(kode, cmds.slice(0, i)); const w = i < to ? want(i) : '';
+    fill(kiri, peta49(m, { kini: S.ruang, barang: S.barang, onRoom: i < to ? (r) => jawab(`r:${r}`) : null }));
+    fill(kanan, el('div', { class: 'ek49-skrip' }, cmds.slice(from, to).map((c, k) => el('code', { class: from + k === i ? 'aktif' : from + k < i ? 'beres' : '' }, `${from + k + 1}. > ${c}`))),
+      el('p', { class: 'ek49-tas' }, `🎒 tas = ${pyRepr(S.tas)}`), el('pre', { class: 'mk-layar ek49-layar' }, layarText(S.R)),
+      i < to ? el('div', { class: 'ek49-tombol', 'data-want': w }, [['ambil', '🎒 ambil berhasil'], ['tidak', '🚫 Tidak bisa.'], ...(kode === V2 ? [['gerbang', '🔒 Gerbang terkunci']] : [])].map(([v, t]) => onTap(el('button', { type: 'button', class: 'ek49-pilih', 'data-v': v }, t), () => jawab(v)))) : null);
+  };
+  function jawab(v) {
+    if (i >= to) return; const w = want(i); const S = state49(kode, cmds.slice(0, i)); const c = cmds[i];
+    if (v !== w) { oops(); say(msg, 'bad', w === 'tidak' ? (c !== c.toLowerCase() ? `"${c}" berhuruf besar: tidak ada di transisi[ruang], jadi Tidak bisa.` : `Di ${S.ruang} tidak ada jalan "${c}" dan tidak ada barang: Tidak bisa.`) : w === 'ambil' ? `Ada ${S.barang[S.ruang]} di ${S.ruang}: ambil berhasil.` : w === 'gerbang' ? 'Bukit dikunci, dan kunci belum ada di tas.' : `Ikuti panah "${c}" dari ${S.ruang}.`); return; }
+    i++; ctx.sound.tap(); draw();
+    if (i < to) { say(msg, 'info', 'Tepat.'); return; }
+    onEnd();
+  }
+  draw();
+  return el('div', { class: 'ek49-dua' }, kiri, kanan);
+}
+
+// Free play: the player taps commands; the program runs them.
+const sisi49 = (box) => box.querySelector('.ek49-dua > .ek49-kolom:last-child') || box;
+const dua49 = (...k) => el('div', { class: 'ek49-dua' }, ...k);
+function bebasKonsol(ctx, { msg, m, kode, tombol, onStep }) {
+  const cmds = []; const kiri = el('div', { class: 'ek49-kolom' }); const kanan = el('div', { class: 'ek49-kolom' });
+  const api = { cmds, reset: () => { cmds.length = 0; draw(); }, draw: () => draw() };
+  const draw = () => { const S = state49(kode, cmds); api.S = S;
+    fill(kiri, peta49(m, { kini: S.ruang, barang: S.barang }));
+    fill(kanan, el('p', { class: 'ek49-tas' }, `🎒 tas = ${pyRepr(S.tas)} · perintah: ${cmds.length}`), el('pre', { class: 'mk-layar ek49-layar' }, layarText(S.R)),
+      S.R.menunggu ? el('div', { class: 'ek49-tombol arah' }, tombol.map((c) => onTap(el('button', { type: 'button', class: 'ek49-pilih', 'data-v': c }, `> ${c}`), () => { if (!api.S.R.menunggu) return; cmds.push(c); ctx.sound.tap(); draw(); onStep(api); }))) : null);
+  };
+  draw();
+  api.node = el('div', { class: 'ek49-dua' }, kiri, kanan);
+  return api;
+}
+
+// Misi 1: read the map from the dictionary.
+const TANYA49 = [['transisi["sungai"]["utara"]', 'bukit'], ['transisi["persemaian"]["timur"]', 'sungai'], ['transisi["gua"]["selatan"]', 'persemaian'], ['ruang tanpa panah keluar', 'air terjun']];
+function petaRound(area, ctx, { oops, done }) {
+  const msg = msg49('Ketuk ruang yang dihasilkan setiap ekspresi.'); const box = el('div', { class: 'ek49-kolom' }); let k = 0; const kanan = el('div', { class: 'ek49-kolom' }); const kiri = el('div', { class: 'ek49-kolom' });
+  const tabel = el('div', { class: 'ek49-tabel' }, PETA.v1.ruang.map((r) => el('div', null, el('b', null, r), el('span', null, Object.entries(PETA.v1.jalan[r]).map(([a, t]) => `${a}→${t}`).join(', ') || '{ }'))));
+  const draw = () => { fill(kiri, peta49(PETA.v1, { onRoom: k < TANYA49.length ? tap : null }));
+    fill(kanan, el('small', null, 'transisi (baris 1–8)'), tabel, k < TANYA49.length ? el('code', { class: 'ek49-soal' }, TANYA49[k][0]) : null); };
+  function tap(r) {
+    if (k >= TANYA49.length) return; const [e, w] = TANYA49[k];
+    if (r !== w) { oops(); say(msg, 'bad', k === 3 ? 'Cari ruang yang dictionary jalannya kosong: {}.' : `Buka ${e.split('"')[1]} di tabel, lalu ambil arah "${e.split('"')[3]}".`); return; }
+    k++; ctx.sound.tap(); draw();
+    if (k < TANYA49.length) { say(msg, 'info', `${e} → ${w}.`); return; }
+    say(msg, 'info', 'Air terjun tidak punya jalan keluar. Dua ekspresi lagi.');
+    kanan.append(fillBoard(ctx, { oops, msg, view: rowsView([['"barat" in transisi["pos"] → ', '_'], ['len(transisi["persemaian"]) → ', '_']]), chips: ['False', 'True', '3', '1'], want: ['False', '3'],
+      hints: ['pos hanya punya jalan utara.', 'persemaian punya selatan, utara, dan timur.'], done: () => { say(msg, '', 'Peta adalah data. Keadaan permainan: ruang, isi tas, dan barang yang tersisa.'); done(); } }));
+  }
+  draw(); fill(box, el('div', { class: 'ek49-dua' }, kiri, kanan));
+  area.append(box, msg);
+}
+
+// Misi 2: the session of 12 commands, in two halves.
+function jalanRound(area, ctx, { oops, done }, from) {
+  const msg = msg49(from ? 'Lanjutkan dari persemaian. Perhatikan perintah berhuruf besar.' : 'Kamu di pos. Ramalkan setiap perintah sebelum program menjalankannya.'); const box = el('div', { class: 'ek49-kolom' });
+  fill(box, ramalKonsol(ctx, { oops, msg, m: PETA.v1, kode: V1, cmds: SESI, from, to: from + 6, onEnd: () => {
+    if (!from) { say(msg, 'info', 'Enam perintah beres.'); sisi49(box).append(fillBoard(ctx, { oops, msg, view: rowsView([['senter masuk tas di perintah ', '_']]), chips: ['3', '2', '9'], want: ['3'], hints: ['Lihat kapan tas berubah.'], done: () => { say(msg, '', 'Tas bertambah hanya saat ambil di ruang yang punya barang.'); done(); } })); return; }
+    const n = sesi(V1, SESI).reduce((s, e) => s + e.out.filter((x) => x.startsWith('Kamu di')).length, 0);
+    say(msg, 'info', 'Bibit tertanam. Kamu menang!');
+    sisi49(box).append(fillBoard(ctx, { oops, msg, view: rowsView([['"Kamu di" tercetak ', '_', ' kali'], ['agar "Timur" diterima: input("> ")', '_']]), chips: [String(n), '12', '.strip().lower()', '.upper()'], want: [String(n), '.strip().lower()'],
+      hints: ['Sekali sebelum perintah pertama, lalu sekali setelah setiap perintah.', 'Buang spasi, lalu ubah menjadi huruf kecil.'], done: () => { say(msg, '', `Rute terpendek versi 1 hanya ${terpendek(PETA.v1).length} perintah: ${terpendek(PETA.v1).join(', ')}.`); done(); } }));
+  } }));
+  area.append(box, msg);
+}
+
+// Misi 3: Dodi's bug, then the coffee garden added as data only.
+export const DODI = V1.map((x, i) => (i === 18 ? '        ruang = perintah' : x));
+function dodiRound(area, ctx, { oops, done }) {
+  const msg = msg49('Versi Dodi. Ketik utara, lalu ambil.'); const box = el('div', { class: 'ek49-kolom' }); const urut = ['utara', 'ambil'];
+  const ribbon = () => codeView(DODI.slice(16, 24).map((x) => x.replace(/^ {4}/, '').replace(/ {4}/g, '  ')), { labels: lab(17, 8), cls: 'ketuk', onLine: (k, row) => tunjuk(k, row) });
+  let siap = false; let ketemu = false; let pita = null;
+  const K = bebasKonsol(ctx, { msg, m: PETA.v1, kode: DODI, tombol: ['utara', 'ambil'], onStep: (api) => {
+    const n = api.cmds.length; if (api.cmds[n - 1] !== urut[n - 1]) { api.cmds.pop(); ctx.mistake(); api.draw(); say(msg, 'bad', `Ketik ${urut[n - 1]}.`); return; }
+    if (api.S.R.error) { siap = true; say(msg, 'info', `Kamu di ${api.S.ruang}?! Program berhenti. Ketuk baris yang salah.`); pita = ribbon(); fill(box, dua49(pita, K.node.lastChild)); } } });
+  function tunjuk(k, row) {
+    if (!siap || ketemu) return;
+    if (k !== 2) { oops(); say(msg, 'bad', 'Baris ini benar. Cari baris yang mengisi ruang dengan arah, bukan nama ruang.'); return; }
+    ketemu = true; row.classList.add('warn'); ctx.sound.tap(); say(msg, 'info', 'ruang berisi "utara". Perbaiki baris 19.');
+    fill(box, dua49(pita, fillBoard(ctx, { oops, msg, view: codeFill([['    ruang = ', '_']], { labels: ['19'] }), chips: ['transisi[ruang][perintah]', 'transisi[perintah]', 'perintah'], want: ['transisi[ruang][perintah]'], hints: ['Ambil dictionary jalan dari ruang sekarang, lalu tujuan untuk arah itu.'], done: kopi })));
+  }
+  function kopi() {
+    say(msg, 'info', 'Bu guru minta kebun kopi di barat persemaian, berisi caping. Ubah datanya saja.');
+    const papan = fillBoard(ctx, { oops, msg, view: rowsView([['baris 3 ditambah ', '_'], ['transisi ditambah ', '_'], ['baris 9 ditambah ', '_'], ['baris 12–24: ', '_']]), chips: ['"barat": "kebun kopi"', '"kebun kopi": {"timur": "persemaian"}', '"kebun kopi": "caping"', 'tidak berubah', 'ditambah if baru'],
+      want: ['"barat": "kebun kopi"', '"kebun kopi": {"timur": "persemaian"}', '"kebun kopi": "caping"', 'tidak berubah'], hints: ['Persemaian mendapat jalan baru ke barat.', 'Ruang baru dengan jalan pulang ke timur.', 'Barangnya ditulis di dictionary barang.', 'Perulangan hanya membaca data.'],
+      done: () => { const m = salin(PETA.v1); m.ruang.push('kebun kopi'); m.jalan.persemaian.barat = 'kebun kopi'; m.jalan['kebun kopi'] = { timur: 'persemaian' }; m.barang['kebun kopi'] = 'caping';
+        fill(box, dua49(papan, peta49(m, { cls: 'kecil' }))); say(msg, '', 'Kebun kopi muncul tanpa mengubah satu baris pun di perulangan permainan.'); done(); } });
+    fill(box, papan);
+  }
+  fill(box, K.node);
+  area.append(box, msg);
+}
+
+// Misi 4: the trap room.
+export const JEBAK49 = ['utara', 'timur', 'timur', 'barat', 'selatan'];
+function jebakRound(area, ctx, { oops, done }) {
+  const msg = msg49('Riska merancang air terjun. Ramalkan setiap perintah.'); const box = el('div', { class: 'ek49-kolom' });
+  fill(box, ramalKonsol(ctx, { oops, msg, m: PETA.v1, kode: V1, cmds: JEBAK49, from: 0, to: JEBAK49.length, onEnd: () => {
+    say(msg, 'info', 'Terjebak selamanya! Beri air terjun jalan keluar.');
+    box.append(fillBoard(ctx, { oops, msg, view: codeFill([['    "air terjun": {', '_', '},']], { labels: ['6'] }), chips: ['"barat": "sungai"', '"timur": "sungai"', '"barat": "bukit"'], want: ['"barat": "sungai"'], hints: ['Air terjun ada di timur sungai, jadi jalan pulangnya ke barat.'],
+      done: () => { say(msg, '', 'Versi 2 memakai baris ini: setiap ruang selain tujuan punya jalan keluar.'); done(); } }));
+  } }));
+  area.append(box, msg);
+}
+
+// Misi 4b: ruang_buntu, then Riska's swamp.
+function buntuRound(area, ctx, { oops, done }) {
+  const msg = msg49('Lengkapi pemeriksa ruang buntu.'); const box = el('div', { class: 'ek49-kolom' }); const out = layar(); const R = PETA.riska; const T = tidakSampai(R); const got = [];
+  const hasil = runPy([...V1.slice(0, 8), ...BUNTU]).out[0]; const hasilR = runPy([...kodePeta(R).slice(0, R.ruang.length + 2), ...BUNTU]).out[0];
+  const riska = () => { say(msg, 'info', `Peta Riska lolos: ruang_buntu memberi ${hasilR}. Tetapi ketuk ruang yang tidak bisa mencapai bukit.`);
+    const kanan = el('div', { class: 'ek49-kolom' }); const draw = () => fill(kanan, peta49(R, { onRoom: got.length < T.length ? tap : null, cls: 'riska' }), el('p', { class: 'ek49-tas' }, `tertangkap: ${got.join(', ') || '-'}`));
+    function tap(r) { if (got.includes(r)) return; if (!T.includes(r)) { oops(); say(msg, 'bad', `Dari ${r} masih ada jalan ke bukit.`); return; } got.push(r); ctx.sound.tap(); draw(); if (got.length < T.length) { say(msg, 'info', `${r}: berputar tanpa jalan ke bukit. Masih ada satu.`); return; }
+      say(msg, '', `${T.join(' dan ')} punya jalan keluar, tetapi tidak pernah sampai ke bukit. Perlu BFS, bukan hanya len(...) == 0.`); done(); }
+    draw(); box.append(kanan); };
+  fill(box, fillBoard(ctx, { oops, msg, view: codeFill(['def ruang_buntu(transisi, tujuan):', '  hasil = []', '  for r in transisi:', ['    if (', '_'], '        and r != tujuan):', '      hasil.append(r)', '  return hasil'], { labels: ['P1', 'P2', 'P3', 'P4', '', 'P5', 'P6'] }),
+    chips: ['len(transisi[r]) == 0', 'len(transisi) == 0', 'r == tujuan'], want: ['len(transisi[r]) == 0'], hints: ['Ruang buntu: dictionary jalannya kosong.'],
+    done: () => { box.append(out); play(out, [`peta versi 1 → ${hasil}`], { end: () => setTimeout(() => { fill(box); riska(); }, 1300) }); } }));
+  area.append(box, msg);
+}
+
+// Misi 5: the locked gate.
+function gerbangRound(area, ctx, { oops, done }) {
+  const msg = msg49('Versi 2 punya gerbang di bukit. Lengkapi baris 21.'); const box = el('div', { class: 'ek49-kolom' }); const out = layar(); const L = sesi(V2, SESI);
+  const lines = []; L.forEach((e, k) => { if (k) lines.push(`> ${e.cmd}`); lines.push(...e.out); });
+  fill(box, fillBoard(ctx, { oops, msg, view: codeFill(['  if perintah in transisi[ruang]:', '    tujuan = transisi[ruang][perintah]', '    if (tujuan in terkunci', ['        and ', '_', '):'], '      print("Gerbang terkunci.",', '            terkunci[tujuan])', '    else:', '      ruang = tujuan'], { labels: ['19', '20', '21', '', '22', '', '23', '24'] }),
+    chips: ['terkunci[tujuan] not in tas', 'terkunci[tujuan] in tas', 'tujuan not in tas'], want: ['terkunci[tujuan] not in tas'], hints: ['Gerbang menahan bila barang kuncinya belum ada di tas.'],
+    done: () => { say(msg, 'info', 'Rute lama dijalankan di versi 2…'); const kn = el('div', { class: 'ek49-kolom' }, out); fill(box, dua49(box.firstChild, kn)); play(out, lines.slice(-7), { gap: 350, end: () => {
+      kn.append(fillBoard(ctx, { oops, msg, view: rowsView([['rute lama tertahan di ', '_'], ['kunci ada di ', '_']]), chips: ['sungai', 'bukit', 'air terjun', 'gua'], want: ['sungai', 'air terjun'], hints: ['Perintah 6 (utara dari sungai) ditolak gerbang.', 'Lihat baris 9 versi 2.'],
+        done: () => { say(msg, '', 'Kunci harus diambil dulu di air terjun. Sekarang cari rute tercepat!'); done(); } })); } }); } }));
+  area.append(box, msg);
+}
+
+// Misi 5b: win version 2 with the fewest commands.
+function cepatRound(area, ctx, { oops, done }) {
+  const best = terpendek(PETA.v2).length; const msg = msg49(`Menangkan versi 2. Target: ${best} perintah.`); const box = el('div', { class: 'ek49-kolom' });
+  const K = bebasKonsol(ctx, { msg, m: PETA.v2, kode: V2, tombol: ['utara', 'selatan', 'timur', 'barat', 'ambil'], onStep: (api) => {
+    const R = api.S.R; const n = api.cmds.length;
+    if (!R.menunggu && R.out.some((x) => x.includes('menang'))) {
+      if (n <= best) { say(msg, '', `Menang dalam ${n} perintah: ${api.cmds.join(', ')}. Rute tercepat!`); done(); return; }
+      oops(); say(msg, 'bad', `Menang dalam ${n} perintah, tetapi bisa ${best}. Mulai lagi dari pos.`); setTimeout(() => api.reset(), 1600); return; }
+    if (n >= best) { oops(); say(msg, 'bad', `Sudah ${n} perintah dan belum menang. Mulai lagi: ambil bibit dulu, lalu jemput kunci.`); setTimeout(() => api.reset(), 1600); return; }
+    say(msg, 'info', R.out.at(-1)); } });
+  fill(box, K.node);
+  area.append(box, msg);
+}
+
+// Misi 6: Rudi's unwinnable map; move the key.
+function rudiRound(area, ctx, { oops, done }) {
+  const msg = msg49('Pemeriksa layar: peta Rudi tidak bisa dimenangkan. Ketuk ruang penyebabnya.'); const box = el('div', { class: 'ek49-kolom' }); const m = salin(PETA.rudi); let fase = 'tunjuk';
+  const kanan = el('div', { class: 'ek49-kolom' });
+  const draw = () => { const host = el('div', { class: 'ek49-kolom' }, peta49(m, { onRoom: fase === 'tunjuk' ? tunjuk : null, drop: fase === 'pindah' }), fase === 'pindah' ? el('div', { class: 'ek49-baki' }, el('span', { class: 'ek49-barang', 'data-drag': 'kunci' }, '🔑 kunci')) : null);
+    if (fase === 'pindah') dnd(host, (c, t) => pindah(t.dataset.drop)); fill(box, el('div', { class: 'ek49-dua' }, host, kanan)); };
+  fill(kanan, el('p', { class: 'ek49-tas' }, `terpendek(peta Rudi) → ${pyRepr(terpendek(m))}`));
+  function tunjuk(r) { if (r !== 'bukit') { oops(); say(msg, 'bad', 'Lihat di mana kunci disimpan dan ruang mana yang digembok.'); return; }
+    fase = 'pindah'; ctx.sound.tap(); say(msg, 'info', 'Kunci ada di balik gerbangnya sendiri! Seret kunci ke ruang lain yang bisa dicapai.'); delete m.barang.bukit; draw(); }
+  function pindah(r) { if (fase !== 'pindah' || !r) return;
+    if (m.barang[r]) { oops(); say(msg, 'bad', `${r} sudah berisi ${m.barang[r]}. Satu ruang satu barang.`); return; }
+    if (r === 'bukit') { oops(); say(msg, 'bad', 'Itu masalah yang sama.'); return; }
+    m.barang[r] = 'kunci'; const t = terpendek(m); fase = 'beres'; ctx.sound.good(); fill(kanan, el('p', { class: 'ek49-tas' }, `terpendek → ${t.length} perintah`), el('code', { class: 'ek49-soal' }, t.join(', '))); draw();
+    say(msg, '', `Kunci di ${r}: peta bisa dimenangkan dalam ${t.length} perintah. Tim lain siap menaklukkannya!`); done(); }
+  draw();
+  area.append(box, msg);
+}
+
+// Misi Bos: racing the sunset. The win check must come before the lose check.
+export function programMatahari(menangDulu) {
+  const menang = ['    if ruang == "bukit" and "bibit" in tas:', '        print("Bibit tertanam. Kamu menang!")', '        break'];
+  const kalah = ['    if langkah == 15:', '        print("Matahari terbenam. Kamu kalah.")', '        break'];
+  return [...V2.slice(0, 12), 'langkah = 0', 'while True:', '    print("Kamu di", ruang)', ...(menangDulu ? [...menang, ...kalah] : [...kalah, ...menang]), V2[17], '    langkah = langkah + 1', ...V2.slice(18)];
+}
+export const SALAH8 = Array(8).fill('barat');
+function bosRound(area, ctx, { oops, done }) {
+  const msg = msg49('Matahari terbenam setelah 15 perintah. Susun urutan pemeriksaannya.'); const box = el('div', { class: 'ek49-kolom' }); const out = layar();
+  const cmds = [...SALAH8, ...terpendek(PETA.v2)]; const A = jalankan(programMatahari(true), cmds); const B = jalankan(programMatahari(false), cmds);
+  fill(box, tileSlots(ctx, { oops, msg, build: ['while True:', '  print("Kamu di", ruang)', ['m', 1], '    print("Bibit tertanam…"); break', ['k', 1], '    print("Matahari terbenam…"); break', '  perintah = input("> ")…', ['l', 1]],
+    tiles: [['m', 'if ruang == "bukit" and "bibit" in tas:'], ['k', 'if langkah == 15:'], ['l', 'langkah = langkah + 1'], ['x', 'if langkah > 15:', 'Setelah perintah ke-15 matahari sudah terbenam: pakai == 15.']],
+    order: 'Periksa kemenangan dulu: pemain yang tiba di perintah ke-15 tetap menang.',
+    onFull: () => { say(msg, 'info', `Rina salah ketik 8 kali (barat di pos), lalu rute ${terpendek(PETA.v2).length} perintah…`); const kn = el('div', { class: 'ek49-kolom' }, out); fill(box, dua49(box.firstChild, kn));
+      play(out, [`> barat ×8 → Tidak bisa.`, `> ${terpendek(PETA.v2).join(', ')}`, ...A.out.slice(-2)], { gap: 600, end: () => {
+        kn.append(fillBoard(ctx, { oops, msg, view: rowsView([['bila pemeriksaan kalah ditaruh lebih dulu: ', '_']]), chips: [B.out.at(-1), A.out.at(-1)], want: [B.out.at(-1)], hints: ['Di perintah ke-15 langkah sudah 15 sebelum sempat diperiksa menang.'],
+          done: () => { say(msg, '', 'Urutan pemeriksaan menentukan pemenang di detik terakhir. Ekspedisi selesai!'); done(); } })); } }); } }));
+  area.append(box, msg);
+}
 
 export default {
   id: 'sma-49-petualangan-teks',
@@ -102,93 +321,31 @@ export default {
     { id: 'giliran', icon: '🎲', label: 'Main Peta Tim Lain', desc: 'Satu tim merancang peta, tim lain memainkannya dengan perintah sesedikit mungkin', create: createTeams },
   ],
   create(root, ctx) {
-    const wrap = el('div', { class: 'act petualangan' });
+    const wrap = el('div', { class: 'act petualangan ek49-main' });
     root.append(wrap);
-    const LOG = sesi(V1, SESI);
-    const step = (i) => { const e = LOG[i + 1]; const R = jalankan(V1, SESI.slice(0, i + 1)); return { ruang: R.vars.ruang, tas: pyRepr(R.vars.tas), lain: e.out.filter((x) => !x.startsWith('Kamu di')).join(' ') || '—' }; };
-    const rowFor = (i) => { const s = step(i); const right = `${s.ruang} · ${s.tas} · ${s.lain}`; const p = i ? step(i - 1) : { ruang: 'pos', tas: '[]' };
-      const alt = [`${p.ruang} · ${s.tas} · ${s.lain}`, `${s.ruang} · ${p.tas} · ${s.lain}`, `${s.ruang} · ${s.tas} · ${s.lain === '—' ? 'Tidak bisa.' : '—'}`, `${PETA.v1.jalan[s.ruang] ? Object.values(PETA.v1.jalan[s.ruang])[0] : s.ruang} · ${s.tas} · ${s.lain}`];
-      return [`p${i}`, `${i + 1}. ${SESI[i]}`, opsi(right, alt), right]; };
     function render() {
       wrap.replaceChildren();
       const r = ctx.round;
       let solved = false;
-      const next = () => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, 2400); } };
-      if (r === 0) {
-        const R = runPy([...V1.slice(0, 11), 'a = transisi["sungai"]["utara"]', 'b = transisi["gua"]', 'c = "barat" in transisi["pos"]', 'd = len(transisi["persemaian"])']).vars;
-        wrap.append(el('div', { class: 'tx-dua' }, pyCode(V1.slice(0, 11), { labels: lab(1, 11), cls: 'tx-kecil' }), diagram(PETA.v1)));
-        rowsChoose(wrap, ctx, { prompt: 'Membaca peta dari kode', cls: 'tx-isi tx-mono', rows: [
-          ['a', 'transisi["sungai"]["utara"]', opsi(pyRepr(R.a, true), ["'air terjun'", "'persemaian'", "KeyError: 'utara'"]), pyRepr(R.a, true)],
-          ['b', 'transisi["gua"]', opsi(pyRepr(R.b, true), ["{'utara': 'persemaian'}", "'persemaian'", '{}']), pyRepr(R.b, true)],
-          ['c', '"barat" in transisi["pos"]', ['True', 'False'], pyRepr(R.c)],
-          ['d', 'len(transisi["persemaian"])', ['1', '2', '3', '4'], pyRepr(R.d)]], done: next });
-      }
-      else if (r === 1) {
-        wrap.append(diagram(PETA.v1, { kini: 'pos' }));
-        rowsChoose(wrap, ctx, { prompt: 'Permainan sebagai mesin keadaan (seperti automata sma-17)', cls: 'tx-isi', rows: [
-          ['awal', 'Keadaan awal', ['pos', 'bukit', 'persemaian', 'tas kosong'], 'pos'],
-          ['masuk', 'Masukan', ['perintah yang diketik', 'isi tas', 'nama ruang', 'barang'], 'perintah yang diketik'],
-          ['tabel', 'Tabel transisi', ['dictionary transisi', 'list tas', 'dictionary barang', 'perulangan while'], 'dictionary transisi'],
-          ['terima', 'Keadaan terima', ['bukit dengan bibit di tas', 'bukit', 'persemaian', 'air terjun'], 'bukit dengan bibit di tas'],
-          ['cukup', 'Apakah ruang saja cukup?', ['tidak: keadaan lengkapnya ruang, isi tas, dan barang yang tersisa', 'ya, ruang sudah cukup', 'tidak: perlu jam juga', 'ya, karena tas selalu kosong'], 'tidak: keadaan lengkapnya ruang, isi tas, dan barang yang tersisa']], done: next });
-      }
-      else if (r === 2 || r === 3) {
-        const idx = r === 2 ? [2, 3, 4, 5, 6] : [7, 8, 9, 10, 11]; const n = LOG.reduce((a, e) => a + e.out.filter((x) => x.startsWith('Kamu di')).length, 0);
-        wrap.append(el('div', { class: 'tx-dua' }, pyCode(V1.slice(11), { labels: lab(12, 13), cls: 'tx-kecil' }), diagram(PETA.v1)));
-        rowsChoose(wrap, ctx, { prompt: `Sesi 12 perintah (versi 1): ruang · tas · keluaran selain "Kamu di …"${r === 2 ? '. Putaran 1–2: persemaian, gua, tas [].' : ''}`, cls: 'tx-isi tx-mono', rows: [...idx.map(rowFor), ...(r === 3 ? [['n', 'Berapa kali "Kamu di …" tercetak?', ['12', '13', '14', '11'], String(n)]] : [])], done: next });
-      }
-      else if (r === 4) {
-        const best = terpendek(PETA.v1).join(', ');
-        wrap.append(pyCode(V1.slice(11, 19), { labels: lab(12, 8), cls: 'tx-kecil', hl: [2, 5] }));
-        rowsChoose(wrap, ctx, { prompt: 'Syarat menang dan masukan pemain', cls: 'tx-isi', rows: [
-          ['b', 'Perintah 6 sudah di bukit. Mengapa belum menang?', ['bibit belum ada di tas; baru diambil pada perintah 9', 'karena bukit bukan tujuan', 'karena senter belum diambil', 'karena break belum dijalankan'], 'bibit belum ada di tas; baru diambil pada perintah 9'],
-          ['c', 'Mengapa Timur ditolak?', ['kunci dictionary membedakan huruf besar dan kecil', 'karena timur tidak ada di persemaian', 'karena perintah ke-10 selalu ditolak', 'karena spasi'], 'kunci dictionary membedakan huruf besar dan kecil'],
-          ['f', 'Perbaikan baris 17', ['perintah = input("> ").strip().lower()', 'perintah = input("> ").upper()', 'perintah = input("> ").split()', 'perintah = input("> ").title()'], 'perintah = input("> ").strip().lower()'],
-          ['d', 'Urutan paling pendek untuk menang', opsi(best, ['utara, utara, ambil, timur, utara', 'utara, timur, utara', 'utara, ambil, timur, timur, utara']), best]], done: next });
-      }
-      else if (r === 5) {
-        const dodi = V1.map((x, i) => (i === 18 ? '        ruang = perintah' : x)); const D = jalankan(dodi, ['utara', 'ambil']); const tercetak = D.out.join(' / ');
-        wrap.append(el('div', { class: 'tx-dua' }, pyCode(dodi.slice(11), { labels: lab(12, 13), cls: 'tx-kecil', warn: [7] }), el('pre', { class: 'tx-layar' }, `${D.out.join('\n')}\n⚠ Baris ${D.error.line + 1} · ${D.error.type}: ${D.error.message}`)));
-        rowsChoose(wrap, ctx, { prompt: 'Versi Dodi: ruang = perintah, lalu utara dan ambil', cls: 'tx-isi', rows: [
-          ['o', 'Yang tercetak', opsi(tercetak, ['Kamu di pos / Kamu di persemaian', 'Kamu di pos / Tidak bisa.', 'Kamu di utara']), tercetak],
-          ['e', 'Galat dan barisnya', opsi(`baris ${D.error.line + 1} · ${D.error.type}: ${D.error.message}`, ["baris 19 · KeyError: 'utara'", "baris 20 · KeyError: 'ambil'", 'baris 13 · NameError: utara']), `baris ${D.error.line + 1} · ${D.error.type}: ${D.error.message}`],
-          ['k', 'Mengapa transisi[ruang][perintah]?', ['yang pertama mengambil dictionary jalan keluar ruang itu, yang kedua mengambil ruang tujuan', 'agar program lebih cepat', 'karena perintah berupa list', 'tidak ada alasan'], 'yang pertama mengambil dictionary jalan keluar ruang itu, yang kedua mengambil ruang tujuan'],
-          ['c', 'Menambah kebun kopi berisi caping', ['tambah "barat" di baris 3, satu ruang baru di transisi, dan caping di barang; baris 12–24 tetap', 'ubah perulangan while', 'tambah if baru untuk kebun kopi', 'buat program baru'], 'tambah "barat" di baris 3, satu ruang baru di transisi, dan caping di barang; baris 12–24 tetap']], done: next });
-      }
-      else if (r === 6) {
-        const B = runPy([...V1.slice(0, 8), ...BUNTU]).out[0]; const R = PETA.riska;
-        wrap.append(el('div', { class: 'tx-dua' }, el('div', null, diagram(PETA.v1), legenda()), el('div', null, diagram(R, { cls: 'kecil' }), el('p', { class: 'tx-ket' }, 'Peta Riska'))));
-        rowsChoose(wrap, ctx, { prompt: 'Ruang jebakan', cls: 'tx-isi', rows: [
-          ['a', 'Ruang yang tidak bisa ditinggalkan', ['air terjun: setiap perintah dijawab "Tidak bisa." selamanya', 'gua', 'bukit', 'pos'], 'air terjun: setiap perintah dijawab "Tidak bisa." selamanya'],
-          ['b', 'Perbaikan baris 6', ['"air terjun": {"barat": "sungai"},', '"air terjun": {"timur": "sungai"},', '"air terjun": {"barat": "bukit"},', '"air terjun": None,'], '"air terjun": {"barat": "sungai"},'],
-          ['p', 'Baris P4', ['len(transisi[r]) == 0', 'transisi[r] == r', 'r not in transisi', 'len(transisi) == 0'], 'len(transisi[r]) == 0'],
-          ['h', 'ruang_buntu(transisi, "bukit")', opsi(B, ["['air terjun', 'bukit']", '[]', "['gua']"]), B],
-          ['d', 'Peta Riska: apakah pemain aman?', [`tidak: ${tidakSampai(R).filter((x) => !buntu(R).includes(x)).join(' dan ')} punya jalan keluar, tetapi tidak bisa mencapai bukit`, 'aman, karena ruang_buntu kosong', 'tidak, karena sungai punya 4 arah', 'aman, karena ada semak'], `tidak: ${tidakSampai(R).filter((x) => !buntu(R).includes(x)).join(' dan ')} punya jalan keluar, tetapi tidak bisa mencapai bukit`]], done: next });
-      }
-      else if (r === 7) {
-        const S = sesi(V2, terpendek(PETA.v1)); const akhir = S.at(-1); const R = jalankan(V2, terpendek(PETA.v1));
-        wrap.append(el('div', { class: 'tx-dua' }, pyCode(V2_KOSONG.slice(12), { labels: lab(13, 17), cls: 'tx-kecil', warn: [8] }), diagram(PETA.v2)));
-        rowsChoose(wrap, ctx, { prompt: 'Gerbang berkunci', cls: 'tx-isi tx-mono', rows: [
-          ['l', 'Baris 21', ['terkunci[tujuan] not in tas', 'terkunci[tujuan] in tas', 'tujuan not in tas', 'ruang in terkunci'], 'terkunci[tujuan] not in tas'],
-          ['o', `Urutan ${terpendek(PETA.v1).join(', ')}: keluaran perintah terakhir`, opsi(akhir.out.filter((x) => !x.startsWith('Kamu di')).join(' ') || '—', ['Bibit tertanam. Kamu menang!', 'Tidak bisa.', 'Kamu di bukit']), akhir.out.filter((x) => !x.startsWith('Kamu di')).join(' ') || '—'],
-          ['r', 'Ruang sesudahnya', ['sungai', 'bukit', 'air terjun', 'persemaian'], R.vars.ruang]], done: next });
-      }
-      else if (r === 8) {
-        const best = terpendek(PETA.v2); const rudi = terpendek(PETA.rudi); const cek = jalankan(V2, best);
-        wrap.append(el('div', { class: 'tx-dua' }, diagram(PETA.v2, { sorot: ['air terjun'] }), el('div', null, diagram(PETA.rudi, { cls: 'kecil' }), el('p', { class: 'tx-ket' }, 'Kunci dipindah ke bukit'))));
-        rowsChoose(wrap, ctx, { prompt: 'Rute terpendek dengan gerbang', cls: 'tx-isi', rows: [
-          ['c', 'Urutan paling pendek', opsi(`${best.join(', ')} (${best.length} perintah)${cek.selesai ? '' : ' ?'}`, ['utara, ambil, timur, utara (4 perintah)', 'utara, timur, timur, ambil, barat, utara (6 perintah)', 'utara, utara, ambil, selatan, timur, timur, ambil, barat, utara (9 perintah)']), `${best.join(', ')} (${best.length} perintah)${cek.selesai ? '' : ' ?'}`],
-          ['d', 'Mengapa jebakan harus diperbaiki dulu?', ['pemain yang mengambil kunci akan terjebak di air terjun, jadi tidak mungkin menang', 'agar petanya simetris', 'karena kunci terlalu berat', 'tidak perlu diperbaiki'], 'pemain yang mengambil kunci akan terjebak di air terjun, jadi tidak mungkin menang'],
-          ['e', 'Rudi memindahkan kunci ke bukit', [rudi ? 'tetap bisa menang' : 'tidak mungkin menang: kunci ada di balik gerbangnya sendiri', 'bisa menang lebih cepat', 'galat KeyError', 'gerbang terbuka sendiri'], rudi ? 'tetap bisa menang' : 'tidak mungkin menang: kunci ada di balik gerbangnya sendiri']], done: next });
-      }
-      else {
-        const sisa = 15 - terpendek(PETA.v2).length; const T = tidakSampai(PETA.riska).join(', ');
-        wrap.append(diagram(PETA.riska, { cls: 'kecil' }), legenda());
-        rowsChoose(wrap, ctx, { prompt: 'Tantangan: kalah setelah 15 perintah, dan bisa_sampai', cls: 'tx-isi', rows: [
-          ['p', 'Letak pemeriksaan kalah', ['sesudah pemeriksaan menang, sebelum input', 'sebelum pemeriksaan menang', 'di akhir perulangan setelah else', 'di luar perulangan'], 'sesudah pemeriksaan menang, sebelum input'],
-          ['s', 'Rute terpendek 7 perintah: boleh salah berapa kali?', ['6', '7', '8', '15'], String(sisa)],
-          ['b', 'Ruang di peta Riska yang tidak bisa mencapai bukit', opsi(T, ['air terjun', 'rawa', 'semak, sungai']), T]], done: next });
-      }
+      const next = (wait = 5200) => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, wait); } };
+      const area = el('div', { class: 'ek49-area' });
+      let foe = null;
+      const go = (k, no) => {
+        const [judul, tujuan, ulah] = HEAD49[k];
+        foe = el('div', { class: 'ek49-musuh' }, el('b', null, '🙈 Perancang Ceroboh'), el('span', null, ulah));
+        wrap.append(el('div', { class: 'ek49-kepala' }, misiHead(no, judul, tujuan, '🧭'), foe), area);
+      };
+      const fin = (ms) => ({ oops: () => ctx.mistake(), done: () => { foe.classList.add('beres'); foe.lastChild.textContent = 'Petualangan aman ✓'; next(ms); } });
+      if (r === 0) { go('peta', 1); petaRound(area, ctx, fin(5500)); }
+      else if (r === 1) { go('jalan1', 2); jalanRound(area, ctx, fin(5500), 0); }
+      else if (r === 2) { go('jalan2', 2); jalanRound(area, ctx, fin(6000), 6); }
+      else if (r === 3) { go('dodi', 3); dodiRound(area, ctx, fin(6000)); }
+      else if (r === 4) { go('jebak', 4); jebakRound(area, ctx, fin(6000)); }
+      else if (r === 5) { go('buntu', 4); buntuRound(area, ctx, fin(6000)); }
+      else if (r === 6) { go('gerbang', 5); gerbangRound(area, ctx, fin(6000)); }
+      else if (r === 7) { go('cepat', 5); cepatRound(area, ctx, fin(6000)); }
+      else if (r === 8) { go('rudi', 6); rudiRound(area, ctx, fin(6000)); }
+      else { go('bos', 'Bos'); bosRound(area, ctx, fin(7000)); }
     }
     render();
   },

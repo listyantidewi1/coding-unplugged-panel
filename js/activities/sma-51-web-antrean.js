@@ -7,7 +7,9 @@
 // runs in a sandboxed iframe with a console that shows Chromium-style messages.
 
 import { el, onTap, button } from '../core/util.js';
-import { say, pickTeams, scoreBar, finishBoard, rowsChoose } from './smp-kit.js';
+import { dnd } from '../core/kit.js';
+import { say, pickTeams, scoreBar, finishBoard } from './smp-kit.js';
+import { misiHead, fill, codeView, codeFill, rowsView, fillBoard, tileSlots } from './misi-kit.js';
 
 export const HTML1 = ['<!DOCTYPE html>', '<html lang="id">', '<head>', '  <meta charset="utf-8">', '  <title>Antrean Kantor Desa</title>', '</head>', '<body>', '  <h1>Antrean Pelayanan Kantor Desa Sukamaju</h1>', '  <p>Nomor Anda: <span id="nomor-anda">-</span></p>', '  <button id="tombol-ambil">Ambil nomor</button>', '  <p>Sedang dipanggil: <span id="nomor-dipanggil">-</span></p>', '  <script src="antrean.js"></script>', '</body>', '</html>'];
 export const HTML2 = [...HTML1.slice(0, 11), '  <button id="tombol-panggil">Panggil berikutnya</button>', ...HTML1.slice(11)];
@@ -102,6 +104,298 @@ export const BUG = [
 ];
 const FIXES = BUG.map((b) => b.fix);
 
+// ---- Permainan: Teater Peramban ----
+// The team plays the browser running the Desa Sukamaju queue page: it builds
+// the DOM tree, clicks the live page, predicts what the handler writes, moves
+// the script tag, reloads, and fights Si Null, who is handed over silently by
+// getElementById and only explodes when used.
+const HEAD51 = {
+  pohon: ['Bangun Pohon DOM', 'Jadilah peramban: baca HTML dari atas dan tempelkan kartu elemen menjadi pohon.', 'Aku bersembunyi di balik id yang salah…'],
+  klik: ['Tiga Klik Pertama', 'Buka halaman, lalu klik Ambil nomor tiga kali.', 'getElementById menyerahkanku tanpa protes!'],
+  tangkap: ['Tangkap Si Null', 'Cari baris yang menghasilkan null, lalu perbaiki id-nya.', 'Garis bawah atau tanda hubung? Hihi.'],
+  petugas: ['Tombol Petugas', 'Pasang tombol Panggil, lalu jalankan kejadian 1–5.', 'Panggil terus, walau antrean kosong!'],
+  sisa: ['Antrean Habis', 'Jalankan kejadian 6–9, lalu uji versi Dodi.', 'Dodi menulis true, aku senang!'],
+  bangun: ['Kapan Kode Bangun?', 'Pindahkan script ke head, lalu muat ulang halaman.', 'Tombolnya belum lahir saat kode jalan!'],
+  ulang: ['Tombol Muat Ulang', 'Ambil nomor sampai A5, lalu muat ulang halaman.', 'Muat ulang, semua lupa!'],
+  uji: ['Penulis lawan Penguji', 'Susun penangan Ulangi panggilan, lalu ujilah.', 'Ulangi sebelum ada panggilan? Coba saja!'],
+  bug: ['Bug Tersembunyi', 'Halaman ini rusak. Temukan baris penyebabnya.', 'Satu huruf saja sudah cukup.'],
+  bos: ['Nomor yang Tak Terlupa', 'Simpan nomor di localStorage agar selamat dari muat ulang.', 'Muat ulang menghapus semuanya!'],
+};
+const msg51 = (t) => el('p', { class: 'reveal info' }, t);
+const dua51 = (...k) => el('div', { class: 'tp51-dua' }, ...k);
+const kol51 = (...k) => el('div', { class: 'tp51-kolom' }, ...k);
+const ID51 = { Ambil: 'tombol-ambil', Panggil: 'tombol-panggil', Ulangi: 'tombol-ulang' };
+
+// Long JavaScript lines broken inside the statement (about 40 characters per row).
+function pecah(lines, dari = 1) {
+  const teks = []; const labels = []; const asal = [];
+  lines.forEach((x, i) => {
+    const ind = x.match(/^ */)[0]; let parts = [x];
+    if (x.length > 44) {
+      const d = x.indexOf(' = document'); const p = x.indexOf('('); const s = x.indexOf(' = ');
+      if (d > 0) parts = [x.slice(0, d + 2), `${ind}  ${x.slice(d + 3)}`];
+      else if (p > 0 && x.indexOf(' = ') < 0) parts = [x.slice(0, p + 1), `${ind}  ${x.slice(p + 1)}`];
+      else if (s > 0) parts = [x.slice(0, s + 2), `${ind}  ${x.slice(s + 3)}`];
+    }
+    parts.forEach((t, j) => { teks.push(t); labels.push(j ? '' : String(dari + i)); asal.push(dari + i); });
+  });
+  return { teks, labels, asal };
+}
+function jsView(lines, { dari = 1, hl = [], warn = [], onLine = null, cls = '' } = {}) {
+  const P = pecah(lines, dari); const idx = (ns) => P.asal.map((a, r) => (ns.includes(a) ? r : -1)).filter((r) => r >= 0);
+  return codeView(P.teks, { labels: P.labels, hl: idx(hl), warn: idx(warn), cls: `${cls} ${onLine ? 'ketuk' : ''}`, onLine: onLine ? (r, row) => onLine(P.asal[r], row) : null });
+}
+function varKartu(S, keys) {
+  const v = S.vars();
+  return el('div', { class: 'tp51-vars' }, keys.map((k) => { const x = v[k]; return el('span', { class: `tp51-var ${x === null ? 'null' : ''}` }, el('b', null, k), x === null ? '👻 null' : x === undefined ? '?' : nilai(x)); }));
+}
+const konsol51 = (S, n = 2) => konsolView(S.konsol.slice(-n));
+const halaman51 = (S, onKlik) => halamanView(S, onKlik ? { onKlik } : { pasif: true });
+const muatBtn = (f) => button('🔄 Muat Ulang', f, 'tp51-muat');
+
+// Misi 1: build the DOM tree, then answer getElementById as the tree keeper.
+const NODE51 = [['html', '<html>', 0, 2], ['head', '<head>', 1, 3], ['meta', '<meta>', 2, 4], ['title', '<title>', 2, 5], ['body', '<body>', 1, 7], ['h1', '<h1>', 2, 8], ['p1', '<p> Nomor Anda:', 2, 9], ['sa', '<span id="nomor-anda">', 3, 9], ['btn', '<button id="tombol-ambil">', 2, 10], ['p2', '<p> Sedang dipanggil:', 2, 11], ['sd', '<span id="nomor-dipanggil">', 3, 11], ['script', '<script>', 2, 12]];
+const IDS51 = { sa: 'nomor-anda', btn: 'tombol-ambil', sd: 'nomor-dipanggil' };
+function pohonRound(area, ctx, { oops, done }) {
+  const msg = msg51('Baca HTML dari atas. Tempelkan setiap kartu elemen ke tempatnya di pohon.'); const kiri = kol51(); const kanan = kol51(); const got = new Set();
+  const htmlWin = (line) => { const s = Math.max(0, Math.min(HTML1.length - 8, line - 3)); return codeView(HTML1.slice(s, s + 8), { labels: lab(s + 1, 8), hl: [line - 1 - s], cls: 'html' }); };
+  const susun = tileSlots(ctx, { oops, msg, build: NODE51.map(([id, , ind]) => [id, ind]), tiles: NODE51.map(([id, t]) => [id, t]), order: 'Peramban membaca HTML dari atas ke bawah: kartu ini muncul lebih belakang.',
+    onFull: () => { say(msg, 'info', 'Pohon jadi! Sekarang jadilah Penjaga Pohon: ketuk elemen yang bisa ditemukan getElementById.'); fill(kiri, halaman51(muat(HTML1, JS2))); fill(kanan, pohonTap()); } });
+  susun.classList.add('tp51-susun');
+  new MutationObserver(() => { const n = susun.querySelectorAll('.mk-slot.isi').length; if (n < NODE51.length) fill(kiri, htmlWin(NODE51[n][3])); }).observe(susun, { subtree: true, childList: true });
+  const pohonTap = () => el('div', { class: 'tp51-pohon' }, NODE51.map(([id, t, ind]) => onTap(el('button', { type: 'button', class: `tp51-node ${got.has(id) ? 'dapat' : ''}`, 'data-id': id, style: { marginLeft: `${ind * 1.4}em` } }, t), () => tap(id))));
+  function tap(id) {
+    if (got.size >= 3 || got.has(id)) return;
+    if (!IDS51[id]) { oops(); say(msg, 'bad', `${NODE51.find((n) => n[0] === id)[1]} tidak punya id: getElementById tidak bisa menemukannya.`); return; }
+    got.add(id); ctx.sound.tap(); fill(kanan, pohonTap());
+    if (got.size < 3) { say(msg, 'info', `getElementById("${IDS51[id]}") → ketemu.`); return; }
+    say(msg, '', 'Hanya dua span dan tombol yang punya id, karena hanya mereka yang diubah atau diklik kode. Si Null muncul bila id-nya salah tulis.'); done();
+  }
+  fill(kiri, htmlWin(2)); fill(kanan, susun);
+  area.append(dua51(kiri, kanan), msg);
+}
+
+// Misi 2: open the page, then three clicks with Si Null inside layarNomor.
+function klikRound(area, ctx, { oops, done }) {
+  const msg = msg51('Halaman dibuka: baris 1–4 berjalan. Apa isi layarNomor?'); const S = muat(HTML1, JS1); let n = 0; let siap = false; let last = S.kejadian[0];
+  const kiri = kol51(); const kanan = kol51();
+  const draw = () => { fill(kiri, jsView(JS1.slice(2), { dari: 3, hl: last.langkah.map((x) => x.baris), warn: last.galat ? [last.galat.baris] : [] }), varKartu(S, siap ? ['terakhir', 'tombolAmbil', 'layarNomor'] : ['terakhir', 'tombolAmbil']));
+    fill(kanan, halaman51(S, siap && n < 3 ? klik : null), siap ? konsol51(S) : null); };
+  function klik(id) {
+    if (id !== 'tombol-ambil' || n >= 3) return; last = S.klik(id); n++; ctx.sound.tap(); draw();
+    if (n < 3) { say(msg, 'info', `Klik ${n}: terakhir menjadi ${S.vars().terakhir}, lalu baris 6 meledak. Klik lagi.`); return; }
+    say(msg, 'info', 'Tiga klik. Apa yang terlihat?');
+    fill(kanan, halaman51(S), fillBoard(ctx, { oops, msg, view: rowsView([['terakhir = ', '_'], ['Nomor Anda: ', '_'], ['galat di baris ', '_']]), chips: ['3', '0', '"-"', '"A3"', '6', '5'], want: ['3', '"-"', '6'],
+      hints: ['Baris 5 tetap berjalan sebelum galat.', 'Baris 6 gagal, jadi tulisannya tidak pernah diganti.', 'Lihat baris merah dan konsol.'],
+      done: () => { say(msg, '', 'Galat hanya menghentikan satu klik: terakhir terus bertambah, layar tetap "-". Si Null menang ronde ini!'); done(); } }));
+  }
+  draw();
+  kanan.append(fillBoard(ctx, { oops, msg, view: rowsView([['layarNomor = ', '_']]), chips: ['null', '<span#nomor-anda>', '"-"'], want: ['null'], hints: ['Cari "nomor_anda" di HTML: tidak ada. getElementById mengembalikan null tanpa galat.'],
+    done: () => { siap = true; draw(); say(msg, 'info', '👻 Si Null masuk ke layarNomor tanpa galat. Sekarang klik Ambil nomor tiga kali.'); } }));
+  area.append(dua51(kiri, kanan), msg);
+}
+
+// Misi 3: find the null line, fix the id, then Sari's "A" + terakhir + 1.
+function tangkapRound(area, ctx, { oops, done }) {
+  const msg = msg51('Baris mana yang menyerahkan Si Null ke layarNomor? Ketuk.'); const kiri = kol51(); const kanan = kol51(); let fase = 0; let n = 0; let S = null;
+  const sari = urutan(HTML1, JS_SARI, ['Ambil', 'Ambil']).rows; const jawabSari = `${sari[0].anda} dan ${sari[1].anda}`;
+  const draw = () => {
+    fill(kiri, jsView(JS1.slice(1, 6), { dari: 2, warn: fase > 0 ? [3] : [], onLine: fase === 0 ? jsTap : null }));
+    fill(kanan, codeView(HTML1.slice(7, 11), { labels: lab(8, 4), cls: `html ${fase === 1 ? 'ketuk' : ''}`, hl: fase > 1 ? [1] : [], onLine: fase === 1 ? htmlTap : null }));
+  };
+  function jsTap(no) {
+    if (fase !== 0) return;
+    if (no !== 3) { oops(); say(msg, 'bad', no === 6 ? 'Baris 6 hanya tempat Si Null meledak. Dari mana layarNomor mendapat null?' : 'Baris ini tidak menghasilkan null.'); return; }
+    fase = 1; ctx.sound.tap(); draw(); say(msg, 'info', 'Baris 3 mencari "nomor_anda". Ketuk baris HTML yang memuat id sebenarnya.');
+  }
+  function htmlTap(i) {
+    if (fase !== 1) return;
+    if (i !== 1) { oops(); say(msg, 'bad', i === 2 ? 'Itu id tombol. Cari span untuk Nomor Anda.' : 'Baris ini tidak memuat id untuk Nomor Anda.'); return; }
+    fase = 2; ctx.sound.tap(); draw(); say(msg, 'info', 'Garis bawah lawan tanda hubung! Perbaiki baris 3.');
+    kanan.append(fillBoard(ctx, { oops, msg, view: codeFill(['const layarNomor =', ['  document.getElementById(', '_', ');']], { labels: ['3', ''] }), chips: ['"nomor-anda"', '"nomor_anda"', 'nomor-anda', '"#nomor-anda"'], want: ['"nomor-anda"'], hints: ['Tulis id persis seperti di HTML, sebagai teks dalam tanda kutip, tanpa #.'],
+      done: () => { fase = 3; S = muat(HTML1, JS2); say(msg, 'info', 'Si Null tertangkap. Klik Ambil nomor dua kali.'); live(); } }));
+  }
+  const live = () => { fill(kiri, jsView(JS2.slice(1, 6), { dari: 2, hl: [3] }), varKartu(S, ['terakhir', 'layarNomor'])); fill(kanan, halaman51(S, n < 2 ? klik : null)); };
+  function klik(id) {
+    if (fase !== 3 || id !== 'tombol-ambil' || n >= 2) return; S.klik(id); n++; ctx.sound.tap(); live();
+    if (n < 2) { say(msg, 'info', `Nomor Anda: ${S.teks['nomor-anda']}. Klik sekali lagi.`); return; }
+    say(msg, 'info', `Berhasil: ${S.teks['nomor-anda']}. Sari mencoba versinya sendiri…`);
+    fill(kiri, jsView(JS_SARI.slice(3), { dari: 4, warn: [5] }));
+    kanan.append(fillBoard(ctx, { oops, msg, view: rowsView([['versi Sari, klik 1 dan klik 2: ', '_']]), chips: [jawabSari, 'A1 dan A2', 'A01 dan A02', 'A11 dan A21'], want: [jawabSari],
+      hints: ['Sari tidak menaikkan terakhir, dan "A" + 0 sudah menjadi teks sebelum + 1 disambung.'], done: () => { say(msg, '', `"A" + terakhir + 1 menyambung teks: ${sari[0].anda} selamanya. Tulis "A" + (terakhir + 1) bila perlu menjumlah dulu.`); done(); } }));
+  }
+  draw();
+  area.append(dua51(kiri, kanan), msg);
+}
+
+// Click events on the live page: predict what the handler writes, then click.
+function acara51(ctx, { oops, msg, html, js, seq, from = 0, to = seq.length, ramal, pool, hint, layarId = 'nomor-dipanggil', kode = null, onEnd }) {
+  const S = muat(html, js); for (let j = 0; j < from; j++) S.klik(ID51[seq[j]], seq[j]);
+  let k = from; let tebak = false; let last = null; const kiri = kol51(); const kanan = kol51();
+  const want = () => { const T = muat(html, js); for (let j = 0; j <= k; j++) T.klik(ID51[seq[j]], seq[j]); return T.teks[layarId]; };
+  const antre = () => { const v = S.vars(); const a = v.terakhir || 0; const d = Math.min(v.dipanggil || 0, a);
+    return el('div', { class: 'tp51-antre' }, el('b', null, 'menunggu'), a > d ? Array.from({ length: a - d }, (_, i) => el('span', { class: 'tp51-warga' }, `🧍A${d + i + 1}`)) : el('span', { class: 'tp51-kosong' }, 'kosong')); };
+  const draw = () => {
+    fill(kiri, kode ? kode(last) : null, varKartu(S, ['terakhir', 'dipanggil']), antre());
+    const w = k < to && ramal(seq[k]) && !tebak ? want() : null;
+    fill(kanan, el('div', { class: 'tp51-strip', 'data-tombol': k < to ? seq[k] : '' }, seq.slice(from, to).map((b, j) => el('code', { class: from + j === k ? 'aktif' : from + j < k ? 'beres' : '' }, `${from + j + 1}. ${b}`))),
+      halaman51(S, k < to ? klik : null),
+      w !== null ? el('div', { class: 'tp51-ramal', 'data-want': w }, el('b', null, 'Sedang dipanggil sesudah klik ini?'), el('div', { class: 'tp51-tombol' }, pool.map((o) => onTap(el('button', { type: 'button', class: 'tp51-pilih', 'data-v': o }, o), () => jawab(o, w))))) : null);
+  };
+  function jawab(o, w) { if (tebak) return; if (o !== w) { oops(); say(msg, 'bad', hint(S)); return; } tebak = true; ctx.sound.tap(); draw(); say(msg, 'info', `Ramalan dicatat: ${w}. Sekarang klik tombolnya.`); }
+  function klik(id) {
+    if (k >= to) return;
+    if (id !== ID51[seq[k]]) { oops(); say(msg, 'bad', `Kejadian ${k + 1} adalah klik ${seq[k]}.`); return; }
+    if (ramal(seq[k]) && !tebak) { say(msg, 'info', 'Ramalkan dulu tulisannya, baru klik.'); return; }
+    last = S.klik(id, seq[k]); k++; tebak = false; ctx.sound.tap(); draw();
+    if (k < to) { say(msg, 'info', `Kejadian ${k + 1}: ${seq[k]}.`); return; }
+    onEnd(S);
+  }
+  draw();
+  return dua51(kiri, kanan);
+}
+const POOL51 = ['A1', 'A2', 'A3', 'A4', 'A5', 'Tidak ada antrean'];
+const hintPanggil = (S) => { const v = S.vars(); return v.dipanggil < v.terakhir ? 'Masih ada yang menunggu: dipanggil bertambah 1 dan nomornya tampil.' : 'dipanggil < terakhir bernilai false: antrean kosong.'; };
+const kodePanggil = (last) => jsView(JS3.slice(11, 16), { dari: 12, hl: last ? last.langkah.map((x) => x.baris) : [] });
+
+// Misi 4: wire the Panggil button, then events 1–5.
+function petugasRound(area, ctx, { oops, done }) {
+  const msg = msg51('HTML baris 12 sudah punya <button id="tombol-panggil">. Lengkapi kodenya.'); const box = kol51();
+  fill(box, fillBoard(ctx, { oops, msg, view: codeFill(['let dipanggil = 0;', 'const tombolPanggil =', ['  document.getElementById(', '_', ');'], ['tombolPanggil.addEventListener(', '_', ','], '  function () {', ['  if (', '_', ') {'], '    dipanggil = dipanggil + 1; …', '  } else { … "Tidak ada antrean" }'], { labels: ['8', '9', '', '11', '', '12', '13', '15'] }),
+    chips: ['"tombol-panggil"', '"tombolPanggil"', '"click"', '"klik"', 'dipanggil < terakhir', 'dipanggil <= terakhir'], want: ['"tombol-panggil"', '"click"', 'dipanggil < terakhir'],
+    hints: ['id persis seperti di HTML: tombol-panggil.', 'Nama kejadiannya click.', 'Panggil hanya bila masih ada yang menunggu: dipanggil harus lebih kecil.'],
+    done: () => { say(msg, 'info', 'Tombol terpasang. Jalankan kejadian 1: Ambil.');
+      fill(box, acara51(ctx, { oops, msg, html: HTML2, js: JS3, seq: SEMBILAN, from: 0, to: 5, ramal: (b) => b === 'Panggil', pool: POOL51, hint: hintPanggil, kode: kodePanggil,
+        onEnd: () => { say(msg, '', 'Lima kejadian beres. Penangan Panggil hanya menaikkan dipanggil bila ada yang menunggu.'); done(); } })); } }));
+  area.append(box, msg);
+}
+
+// Misi 4b: events 6–9, then Dodi's if (true).
+function sisaRound(area, ctx, { oops, done }) {
+  const msg = msg51('Lanjut dari kejadian 6. Antrean mulai habis.'); const box = kol51(); const dodi = urutan(HTML2, JS_DODI, SEMBILAN).rows;
+  fill(box, acara51(ctx, { oops, msg, html: HTML2, js: JS3, seq: SEMBILAN, from: 5, to: 9, ramal: (b) => b === 'Panggil', pool: POOL51, hint: hintPanggil, kode: kodePanggil,
+    onEnd: () => { say(msg, 'info', 'Sembilan kejadian beres. Dodi mengganti baris 12 menjadi if (true). Ramalkan!');
+      fill(box, dua51(jsView(JS_DODI.slice(11, 15), { dari: 12, warn: [12] }), fillBoard(ctx, { oops, msg, view: rowsView([['versi Dodi, kejadian 7 → ', '_'], ['versi Dodi, kejadian 9 → ', '_']]),
+        chips: uniq([dodi[6].panggil, dodi[8].panggil, 'Tidak ada antrean', 'A3']), want: [dodi[6].panggil, dodi[8].panggil], hints: ['true selalu benar: dipanggil naik walau antrean kosong.', 'Nomor yang belum diambil siapa pun ikut dipanggil.'],
+        done: () => { say(msg, '', 'Dodi memanggil nomor hantu. Syarat dipanggil < terakhir menjaga antrean tetap jujur.'); done(); } }))); } }));
+  area.append(box, msg);
+}
+
+// Misi 5: script in head, reload, then defer.
+function bangunRound(area, ctx, { oops, done }) {
+  const msg = msg51('Seret kartu script ke dalam head, lalu tekan Muat Ulang.'); const kiri = kol51(); const kanan = kol51(); let fase = 0; let S = muat(HTML1, JS2);
+  const kartu = el('div', { class: 'tp51-script', 'data-drag': 'script' }, '<script src="antrean.js">');
+  const zona = (id, t) => el('div', { class: 'tp51-zona', 'data-drop': id }, el('b', null, t));
+  const zH = zona('head', '⬇ di dalam head'); const zB = zona('body', '⬇ akhir body'); zB.append(kartu);
+  const outline = el('div', { class: 'tp51-outline' }, el('code', null, '<head>'), el('code', { class: 'in' }, '<meta charset="utf-8">'), el('code', { class: 'in' }, '<title>…</title>'), zH, el('code', null, '</head>'), el('code', null, '<body>'), el('code', { class: 'in' }, '<h1>, <p>, <button>, <p>'), zB, el('code', null, '</body>'));
+  dnd(outline, (c, z) => { if (fase !== 0 || z.dataset.drop !== 'head') return; zH.append(c); c.classList.add('locked'); fase = 1; ctx.sound.tap(); say(msg, 'info', 'Script sekarang di head. Tekan Muat Ulang.'); kanan_(); });
+  const kanan_ = (extra = null) => fill(kanan, muatBtn(muatUlang), extra ? null : halaman51(S, fase === 2 || fase === 5 ? klik : null), konsol51(S), extra);
+  function muatUlang() {
+    if (fase === 1) { S = muat(HTML_HEAD, JS2); fase = 2; ctx.sound.tap(); kanan_(); say(msg, 'info', 'Konsol merah saat halaman dibuka! Coba klik Ambil nomor.'); return; }
+    if (fase === 4) { S = muat(HTML_DEFER, JS2); fase = 5; ctx.sound.tap(); kanan_(); say(msg, 'info', 'Tidak ada galat. Klik Ambil nomor.'); return; }
+    say(msg, 'info', fase === 0 ? 'Pindahkan script ke head dulu.' : 'Selesaikan langkah ini dulu.');
+  }
+  function klik(id) {
+    if (id !== 'tombol-ambil') return;
+    if (fase === 2) { S.klik(id); fase = 3; ctx.sound.tap(); say(msg, 'info', 'Tidak terjadi apa-apa! Saat kode jalan di head, tombol belum dibuat, jadi addEventListener gagal. Tunda kodenya.');
+      kanan_(fillBoard(ctx, { oops, msg, view: codeFill([['<script src="antrean.js" ', '_', '>']]), chips: ['defer', 'lang="id"', 'hidden'], want: ['defer'], hints: ['Atribut yang menunda skrip sampai seluruh HTML selesai dibaca.'],
+        done: () => { fase = 4; say(msg, 'info', 'defer ditambahkan. Tekan Muat Ulang lagi.'); } })); return; }
+    if (fase === 5) { S.klik(id); fase = 6; ctx.sound.tap(); kanan_(); say(msg, '', `Nomor Anda: ${S.teks['nomor-anda']}. defer menunda kode sampai seluruh HTML dibaca, jadi tombol sudah ada saat kode bangun.`); done(); }
+  }
+  fill(kiri, outline); kanan_();
+  area.append(dua51(kiri, kanan), msg);
+}
+
+// Misi 5b: reload forgets everything; each device runs its own copy.
+function ulangRound(area, ctx, { oops, done }) {
+  const msg = msg51('Pagi di kantor desa. Klik Ambil nomor sampai A5.'); const kiri = kol51(); const kanan = kol51(); let fase = 0; let S = muat(HTML1, JS2); let hp = null;
+  const draw = (extra = null) => { fill(kiri, varKartu(S, ['terakhir']), muatBtn(muatUlang), el('small', null, '📟 tablet petugas'), halaman51(S, fase === 0 || fase === 3 ? klik : null));
+    fill(kanan, hp ? el('small', null, '📱 ponsel warga') : null, hp ? halaman51(hp, fase === 5 ? klikHp : null) : null, extra); };
+  function klik(id) {
+    if (id !== 'tombol-ambil') return; S.klik(id); ctx.sound.tap();
+    if (fase === 0) { draw(); if (S.vars().terakhir < 5) return; fase = 1; say(msg, 'info', 'Sudah A5. Listrik berkedip: tekan Muat Ulang.'); return; }
+    if (fase === 3) { fase = 4; say(msg, 'info', `${S.teks['nomor-anda']} lagi: nomor ganda! Bu Rina membuka alamat yang sama di ponselnya.`); hp = muat(HTML1, JS2);
+      draw(fillBoard(ctx, { oops, msg, view: rowsView([['ponsel Bu Rina, klik pertama → ', '_'], ['nomor bersama harus disimpan di ', '_']]), chips: ['A1', 'A2', 'server', 'tablet petugas'], want: ['A1', 'server'],
+        hints: ['Ponsel menjalankan salinan kodenya sendiri, mulai dari terakhir = 0.', 'Satu tempat yang dibaca semua perangkat.'], done: () => { fase = 5; say(msg, 'info', 'Buktikan: klik Ambil nomor di ponsel.'); draw(); } })); }
+  }
+  function klikHp(id) { if (fase !== 5 || id !== 'tombol-ambil') return; hp.klik(id); fase = 6; ctx.sound.tap(); draw(); say(msg, '', `Ponsel menampilkan ${hp.teks['nomor-anda']}. Variabel hidup di satu tab saja: muat ulang atau perangkat lain mulai dari nol.`); done(); }
+  function muatUlang() {
+    if (fase !== 1) { say(msg, 'info', fase === 0 ? 'Ambil nomor sampai A5 dulu.' : 'Halaman sudah dimuat ulang.'); return; }
+    S = muat(HTML1, JS2); fase = 2; ctx.sound.tap(); say(msg, 'info', 'Halaman dimuat ulang. Ramalkan nomor warga keenam.');
+    draw(fillBoard(ctx, { oops, msg, view: rowsView([['warga keenam mendapat ', '_']]), chips: ['A6', 'A1', 'A0'], want: ['A1'], hints: ['Muat ulang menjalankan kode dari baris 1 lagi: let terakhir = 0.'], done: () => { fase = 3; say(msg, 'info', 'Buktikan: klik Ambil nomor di tablet.'); draw(); } }));
+  }
+  draw();
+  area.append(dua51(kiri, kanan), msg);
+}
+
+// Misi 6: write the Ulangi handler, then test it.
+const UJI51 = [['Ulangi'], ['Ambil', 'Ambil', 'Panggil', 'Ulangi']];
+function ujiRound(area, ctx, { oops, done }) {
+  const msg = msg51('Susun penangan tombol Ulangi panggilan.'); const box = kol51(); const { html, js } = pasangTugas('ulang', []); let t = 0;
+  const ujian = () => { const seq = UJI51[t]; say(msg, 'info', `Uji ${t + 1}: ${seq.join(', ')}. Klik sesuai urutan.`);
+    fill(box, acara51(ctx, { oops, msg, html, js, seq, ramal: (b) => b === 'Ulangi', pool: ['-', 'Panggilan ulang: A0', 'Panggilan ulang: A1', 'Panggilan ulang: A2'],
+      hint: (S) => (S.vars().dipanggil > 0 ? 'Ulangi menampilkan nomor yang terakhir dipanggil.' : 'dipanggil masih 0: syarat if salah, jadi tulisan tidak berubah.'),
+      onEnd: () => { t++; if (t < UJI51.length) { setTimeout(ujian, 900); return; } say(msg, '', 'Kedua uji lolos. Penguji menang bila menemukan urutan yang membuat penangan salah.'); done(); } })); };
+  fill(box, tileSlots(ctx, { oops, msg, build: ['const tombolUlang =', '  document.getElementById("tombol-ulang");', 'tombolUlang.addEventListener(', '  "click", function () {', ['c', 1], ['t', 2], '  }', '});'],
+    tiles: [['c', 'if (dipanggil > 0) {'], ['t', 'layarPanggil.textContent =\n  "Panggilan ulang: A" + dipanggil;'], ['x1', 'if (dipanggil >= 0) {', 'Sebelum ada panggilan, dipanggil masih 0: belum ada yang bisa diulang.'], ['x2', 'layarPanggil.textContent =\n  "Panggilan ulang: A" + terakhir;', 'Yang diulang nomor yang terakhir dipanggil, bukan yang terakhir diambil.']],
+    onFull: () => setTimeout(ujian, 700) }));
+  area.append(box, msg);
+}
+
+// Misi 6b: a hidden bug; tap the line, name the cause and the fix.
+function bugRound(area, ctx, { oops, done }) {
+  const B = BUG[Math.floor(ctx.rand.next() * BUG.length)]; const S = muat(B.html, B.js); S.klik('tombol-ambil'); S.klik('tombol-ambil');
+  const msg = msg51('Tombol sudah diklik dua kali dan Nomor Anda tetap "-". Ketuk baris penyebabnya.'); const kiri = kol51(); const kanan = kol51(); let ketemu = false;
+  const jsT = B.js.findIndex((x, i) => x !== JS2[i]) + 1;
+  const htT = B.html.length !== HTML1.length ? B.html.findIndex((x) => x.includes('<script')) + 1 : B.html.findIndex((x, i) => x !== HTML1[i]) + 1;
+  const s = htT ? Math.max(0, htT - 3) : 7;
+  kanan.dataset.target = jsT ? `js:${jsT}` : `html:${htT}`;
+  const draw = () => fill(kanan, codeView(B.html.slice(s, s + 4), { labels: lab(s + 1, 4), cls: `html ${ketemu ? '' : 'ketuk'}`, warn: ketemu && htT ? [htT - 1 - s] : [], onLine: ketemu ? null : (i) => tap('html', s + i + 1) }),
+    jsView(B.js.slice(1, 6), { dari: 2, warn: ketemu && jsT ? [jsT] : [], onLine: ketemu ? null : (n) => tap('js', n) }));
+  function tap(kind, n) {
+    if (ketemu) return;
+    if (!((kind === 'js' && n === jsT) || (kind === 'html' && n === htT))) { oops(); say(msg, 'bad', 'Baris ini benar. Bandingkan id, nama kejadian, nama properti, dan letak script.'); return; }
+    ketemu = true; ctx.sound.tap(); draw(); say(msg, 'info', 'Ketemu! Apa penyebabnya?');
+    kiri.hidden = true;
+    const merah = jsT ? jsView(B.js.slice(jsT - 1, jsT), { dari: jsT, warn: [jsT] }) : codeView(B.html.slice(htT - 1, htT), { labels: lab(htT, 1), cls: 'html', warn: [0] });
+    const akhir = () => { const F = muat(HTML1, JS2); kiri.hidden = false; kanan.hidden = true; say(msg, 'info', 'Halaman diperbaiki. Klik Ambil nomor.'); fill(kiri, halaman51(F, (id) => { if (id !== 'tombol-ambil' || F.teks['nomor-anda'] !== '-') return; F.klik(id); ctx.sound.tap(); fill(kiri, halaman51(F)); say(msg, '', `Nomor Anda: ${F.teks['nomor-anda']}. Satu huruf bisa membuat Si Null lolos, dan konsol menunjukkan jejaknya.`); done(); })); };
+    const perbaikan = () => { say(msg, 'info', 'Penyebabnya tepat. Sekarang pilih perbaikannya.'); fill(kanan, merah, fillBoard(ctx, { oops, msg, view: rowsView([['perbaikan: ', '_']]), chips: rand2(B.fix, FIXES.find((f) => f !== B.fix && !f.startsWith(B.fix.split(' ')[0]))), want: [B.fix], hints: ['Perbaikan yang mengubah baris merah itu.'], done: akhir })); };
+    fill(kanan, merah, fillBoard(ctx, { oops, msg, view: rowsView([['penyebab: ', '_']]), chips: [...SEBAB], want: [B.sebab], hints: ['Bandingkan baris merah dengan pasangannya di HTML atau JavaScript.'], done: perbaikan }));
+  }
+  const rand2 = (a, b) => (ctx.rand.next() < 0.5 ? [a, b] : [b, a]);
+  fill(kiri, halaman51(S), konsol51(S)); draw();
+  area.append(dua51(kiri, kanan), msg);
+}
+
+// Misi Bos: localStorage keeps the number through a reload.
+function bosRound(area, ctx, { oops, done }) {
+  const msg = msg51('Susun penangan yang menyimpan nomor di localStorage.'); const box = kol51(); let fase = 0; let mem = 0; let store = null; let tampil = '-';
+  const pad = (n) => `A${String(n).padStart(3, '0')}`;
+  const kiri = kol51(); const kanan = kol51();
+  const page = () => el('div', { class: 'wa-peramban' }, el('div', { class: 'wa-tab' }, '🗂 Antrean Kantor Desa'), el('div', { class: 'wa-hal' }, el('h1', { class: 'wa-h1' }, 'Antrean Pelayanan Kantor Desa Sukamaju'), el('p', { class: 'wa-p' }, 'Nomor Anda: ', el('span', { class: 'wa-span' }, tampil)),
+    onTap(el('button', { class: 'wa-btn', type: 'button' }, 'Ambil nomor'), ambil)));
+  const draw = (extra = null) => { fill(kiri, el('div', { class: 'tp51-vars' }, el('span', { class: 'tp51-var' }, el('b', null, 'terakhir'), String(mem)), el('span', { class: 'tp51-var simpan' }, el('b', null, 'localStorage'), store === null ? '{ }' : `{"terakhir": "${store}"}`)), muatBtn(muatUlang), page());
+    fill(kanan, codeView(['function perbaruiLayar() {', '  layarNomor.textContent =', '    "A" + String(terakhir)', '      .padStart(3, "0");', '}']), extra); };
+  function ambil() {
+    if (fase === 0 || fase === 2) { mem++; store = String(mem); tampil = pad(mem); ctx.sound.tap(); }
+    else { say(msg, 'info', fase === 1 ? 'Sudah tiga. Tekan Muat Ulang.' : 'Ramalkan dulu.'); return; }
+    if (fase === 0) { draw(); if (mem === 3) { fase = 1; say(msg, 'info', 'Tiga nomor diambil. Tekan Muat Ulang.'); } return; }
+    fase = 3; say(msg, 'info', `${tampil}! Nomornya selamat. Satu pertanyaan tentang padStart.`);
+    draw(fillBoard(ctx, { oops, msg, view: rowsView([['String(7).padStart(3, "0") → ', '_'], ['String(1234).padStart(3, "0") → ', '_']]), chips: ['"007"', '"1234"', '"234"', '"700"'], want: ['"007"', '"1234"'],
+      hints: ['padStart menambah "0" di depan sampai panjangnya 3.', 'Teks yang sudah 4 karakter dibiarkan, tidak dipotong.'], done: () => { say(msg, '', 'Nomor selamat dari muat ulang dan selalu tiga angka. Antar-perangkat tetap perlu server.'); done(); } }));
+  }
+  function muatUlang() {
+    if (fase !== 1) { say(msg, 'info', fase === 0 ? 'Ambil tiga nomor dulu.' : 'Halaman sudah dimuat ulang.'); return; }
+    mem = Number(store || 0); tampil = '-'; fase = 4; ctx.sound.tap(); say(msg, 'info', 'Dimuat ulang. Baris 1 membaca localStorage. Ramalkan nomor berikutnya.');
+    draw(fillBoard(ctx, { oops, msg, view: rowsView([['Ambil berikutnya → ', '_']]), chips: ['A004', 'A001', 'A4', 'A0031'], want: ['A004'], hints: ['terakhir dibaca lagi dari localStorage, lalu ditambah 1 dan diberi nol di depan.'],
+      done: () => { fase = 2; say(msg, 'info', 'Buktikan: klik Ambil nomor.'); draw(); } }));
+  }
+  fill(box, tileSlots(ctx, { oops, msg, build: ['let terakhir = Number(', '  localStorage.getItem("terakhir") || 0);', 'tombolAmbil.addEventListener(', '  "click", function () {', ['t', 1], ['s', 1], ['p', 1], '});'],
+    tiles: [['t', 'terakhir = terakhir + 1;'], ['s', 'localStorage.setItem("terakhir", terakhir);'], ['p', 'perbaruiLayar();'], ['x', 'terakhir = 0;', 'Itu menghapus nomor yang baru dibaca dari localStorage.']],
+    order: 'Naikkan dulu, simpan, baru tampilkan.', onFull: () => { say(msg, 'info', 'Penangan siap. Klik Ambil nomor tiga kali.'); fill(box, dua51(kiri, kanan)); draw(); } }));
+  area.append(box, msg);
+}
+
 export default {
   id: 'sma-51-web-antrean',
   title: 'Aplikasi Web Nomor Antrean',
@@ -119,94 +413,23 @@ export default {
     { id: 'giliran', icon: '🧪', label: 'Penulis dan Penguji', desc: 'Satu tim menyusun penangan tombol baru, tim lain menyusun urutan klik untuk mengujinya', create: createTeams },
   ],
   create(root, ctx) {
-    const wrap = el('div', { class: 'act web-antrean' });
-    root.append(wrap);
+    const wrap = el('div', { class: 'act web-antrean tp51-main' }); root.append(wrap);
     function render() {
-      wrap.replaceChildren();
-      const r = ctx.round;
-      let solved = false;
-      const next = () => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, 2400); } };
-      if (r === 0) {
-        wrap.append(el('div', { class: 'wa-dua' }, kode(HTML1, { cls: 'html' }), halamanView(muat(HTML1, JS1), { pasif: true })));
-        rowsChoose(wrap, ctx, { prompt: 'Membaca halaman sebelum tombol diklik', cls: 'wa-isi', rows: [
-          ['t', 'Tulisan di tab peramban', ['Antrean Kantor Desa', 'Antrean Pelayanan Kantor Desa Sukamaju', 'antrean.html', 'tidak ada'], 'Antrean Kantor Desa'],
-          ['a', 'Nomor Anda', ['-', 'A0', 'A1', 'kosong'], '-'],
-          ['i', 'Elemen yang punya id', ['span#nomor-anda, button#tombol-ambil, span#nomor-dipanggil', 'h1, button, script', 'semua elemen di body', 'hanya button#tombol-ambil'], 'span#nomor-anda, button#tombol-ambil, span#nomor-dipanggil'],
-          ['h', 'Mengapa <h1> tidak perlu id', ['judul tidak pernah berubah dan tidak diklik, jadi tidak perlu dicari kode', 'h1 tidak boleh diberi id', 'id hanya untuk tombol', 'h1 sudah punya id otomatis'], 'judul tidak pernah berubah dan tidak diklik, jadi tidak perlu dicari kode'],
-        ], done: next });
-      }
-      else if (r === 1) {
-        wrap.append(el('div', { class: 'wa-dua' }, kode(HTML1, { cls: 'html' }), pohon(HTML1)));
-        const opsi = ['html', 'head', 'body', 'p', 'button'];
-        rowsChoose(wrap, ctx, { prompt: 'Pohon DOM: induk setiap elemen', cls: 'wa-isi wa-mono', rows: [['title', 'title'], ['meta', 'meta'], ['h1', 'h1'], ['span#nomor-anda', 'span#nomor-anda'], ['button#tombol-ambil', 'button#tombol-ambil'], ['script', 'script'], ['body', 'body']].map(([k, t]) => [k, t, opsi, induk(HTML1, k)]), done: next });
-      }
-      else if (r === 2) {
-        const { S, rows } = urutan(HTML1, JS1, ['Ambil', 'Ambil', 'Ambil']); const buka = S.kejadian[0];
-        const fmt = (k) => `baris ${k.langkah.map((x) => x.baris).join(', ')}${k.galat ? ` (galat di ${k.galat.baris})` : ''}`;
-        wrap.append(el('div', { class: 'wa-dua' }, kode(JS1, { warn: [3, 6] }), kode(HTML1.slice(8, 11), { cls: 'html', dari: 9 })));
-        rowsChoose(wrap, ctx, { prompt: 'Halaman dibuka, lalu "Ambil nomor" diklik tiga kali', cls: 'wa-isi wa-mono', rows: [
-          ['b', 'Halaman dibuka', uniq([`${fmt(buka)} · terakhir 0 · "-"`, 'baris 1, 2, 3, 4, 5, 6 · terakhir 1 · "A1"', 'baris 1, 2, 3 · terakhir 0 · "-"', 'baris 1, 2, 3, 4 · terakhir 0 · "A0"']), `${fmt(buka)} · terakhir 0 · "-"`],
-          ...rows.map((x, i) => { const right = `${fmt(S.kejadian[i + 1])} · terakhir ${x.terakhir} · "${x.anda}"`; return [`k${i}`, `Klik ${i + 1}`, uniq([right, `baris 5, 6 · terakhir ${x.terakhir} · "A${x.terakhir}"`, `baris 5, 6 (galat di 6) · terakhir 0 · "-"`, `baris 4, 5, 6 · terakhir ${x.terakhir - 1} · "-"`]), right]; }),
-        ], done: next });
-      }
-      else if (r === 3) {
-        const { S } = urutan(HTML1, JS1, ['Ambil']); const g = S.kejadian[1].galat;
-        wrap.append(el('div', { class: 'wa-dua' }, kode(JS1, { warn: [g.baris] }), konsolView(S.konsol)));
-        rowsChoose(wrap, ctx, { prompt: 'Konsol: tombolnya tampak rusak', cls: 'wa-isi', rows: [
-          ['n', 'Yang bernilai null', ['layarNomor', 'tombolAmbil', 'terakhir', 'textContent'], 'layarNomor'],
-          ['l', 'Baris galat', ['3', '4', '5', '6'], String(g.baris)],
-          ['m', 'Pesan galat', uniq([g.pesan, "Uncaught TypeError: Cannot read properties of null (reading 'addEventListener')", 'Uncaught ReferenceError: layarNomor is not defined', "Uncaught TypeError: Cannot set properties of undefined (setting 'textContent')"]), g.pesan],
-          ['t', 'Mengapa terakhir tetap bertambah', ['baris 5 berhasil lebih dulu; galat di baris 6 hanya menghentikan penangan pada klik itu', 'peramban mengulang klik otomatis', 'galat membuat terakhir bertambah dua kali', 'terakhir tidak bertambah'], 'baris 5 berhasil lebih dulu; galat di baris 6 hanya menghentikan penangan pada klik itu'],
-        ], done: next });
-      }
-      else if (r === 4) {
-        const sari = urutan(HTML1, JS_SARI, ['Ambil', 'Ambil']).rows;
-        wrap.append(el('div', { class: 'wa-dua' }, kode(JS1.slice(2, 3), { dari: 3, warn: [3] }), kode(HTML1.slice(8, 9), { cls: 'html', dari: 9 })));
-        rowsChoose(wrap, ctx, { prompt: 'Menemukan bug', cls: 'wa-isi wa-mono', rows: [
-          ['f', 'Baris 3 yang benar', ['const layarNomor = document.getElementById("nomor-anda");', 'const layarNomor = document.getElementById("nomor anda");', 'const layarNomor = document.getElementById(nomor-anda);', 'const layar_nomor = document.getElementById("nomor_anda");'], 'const layarNomor = document.getElementById("nomor-anda");'],
-          ['w', 'Mengapa galat baru muncul saat klik', ['getElementById diam-diam mengembalikan null; null baru dipakai di baris 6 saat tombol diklik', 'peramban menunda semua galat', 'baris 3 tidak pernah dijalankan', 'tombol belum dibuat saat halaman dibuka'], 'getElementById diam-diam mengembalikan null; null baru dipakai di baris 6 saat tombol diklik'],
-          ['c', 'Pemeriksaan sesudah baris 3', ['if (layarNomor === null) { console.log("Elemen nomor-anda tidak ditemukan."); }', 'if (layarNomor === "nomor-anda") { ... }', 'if (terakhir === null) { ... }', 'layarNomor = "nomor-anda";'], 'if (layarNomor === null) { console.log("Elemen nomor-anda tidak ditemukan."); }'],
-          ['s', 'Versi Sari: klik 1 dan klik 2', uniq([`${sari[0].anda} dan ${sari[1].anda}`, 'A1 dan A2', 'A1 dan A1', 'A01 dan A02']), `${sari[0].anda} dan ${sari[1].anda}`],
-        ], done: next, info: 'Begitu ada teks di sebelah kiri, tanda + menyambung, bukan menjumlahkan: "A" + 0 + 1 menjadi "A01".' });
-      }
-      else if (r === 5) {
-        wrap.append(kode(PANGGIL_KOSONG, { dari: 8, warn: [9, 11, 12] }));
-        rowsChoose(wrap, ctx, { prompt: 'Tombol "Panggil berikutnya" untuk petugas', cls: 'wa-isi wa-mono', rows: [
-          ['h', 'HTML sesudah baris 11', ['<button id="tombol-panggil">Panggil berikutnya</button>', '<button>tombol-panggil</button>', '<button id="tombolPanggil">Panggil berikutnya</button>', '<span id="tombol-panggil">Panggil berikutnya</span>'], '<button id="tombol-panggil">Panggil berikutnya</button>'],
-          ['l9', 'Baris 9', ['"tombol-panggil"', 'tombol-panggil', '"tombolPanggil"', '"#tombol-panggil"'], '"tombol-panggil"'],
-          ['l11', 'Baris 11', ['"click"', '"klik"', 'click', '"onclick"'], '"click"'],
-          ['l12', 'Baris 12', ['dipanggil < terakhir', 'dipanggil <= terakhir', 'terakhir < dipanggil', 'dipanggil > 0'], 'dipanggil < terakhir'],
-        ], done: next });
-      }
-      else if (r === 6 || r === 7) {
-        const { rows } = urutan(HTML2, JS3, SEMBILAN); const part = r === 6 ? [0, 1, 2, 3, 4] : [5, 6, 7, 8];
-        const sel = (x) => `${x.terakhir} · ${x.dipanggil} · ${x.anda} · ${x.panggil}`;
-        const dodi = urutan(HTML2, JS_DODI, SEMBILAN).rows;
-        wrap.append(el('div', { class: 'wa-dua' }, kode(JS3, { cls: 'kecil', warn: [12] }), el('p', { class: 'wa-ket' }, 'Kolom: terakhir · dipanggil · Nomor Anda · Sedang dipanggil')));
-        const extra = r === 7 ? [['d', 'Dodi (syarat true): kejadian 7, 8, 9', uniq([`${dodi[6].panggil}, ${dodi[7].anda}, ${dodi[8].panggil}`, 'Tidak ada antrean, A4, A4', 'A3, A4, A4', 'A4, A5, A6']), `${dodi[6].panggil}, ${dodi[7].anda}, ${dodi[8].panggil}`],
-          ['s', 'Sisa antrean (terakhir − dipanggil) untuk 9 kejadian', uniq([rows.map((x) => x.terakhir - x.dipanggil).join(', '), '1, 2, 1, 2, 1, 0, 1, 1, 0', '1, 2, 1, 2, 1, 0, 0, 0, 0', '1, 1, 1, 2, 1, 0, 0, 1, 0']), rows.map((x) => x.terakhir - x.dipanggil).join(', ')]] : [];
-        rowsChoose(wrap, ctx, { prompt: r === 6 ? 'Sembilan kejadian: 1–5' : 'Sembilan kejadian: 6–9, lalu versi Dodi', cls: 'wa-isi wa-mono', rows: [...part.map((i) => { const x = rows[i]; const p = rows[i - 1] || { terakhir: 0, dipanggil: 0, anda: '-', panggil: '-' };
-          const salah = [sel({ ...x, dipanggil: x.dipanggil + (x.b === 'Ambil' ? 1 : -1) }), sel({ ...p }), sel({ ...x, panggil: x.panggil === 'Tidak ada antrean' ? `A${x.dipanggil + 1}` : 'Tidak ada antrean' }), sel({ ...x, anda: `A${x.terakhir + 1}` })];
-          return [`k${i}`, `${i + 1}. ${x.b}`, uniq([sel(x), ...salah]).slice(0, 4), sel(x)]; }), ...extra], done: next });
-      }
-      else if (r === 8) {
-        const B = BUG[Math.floor(ctx.rand.next() * BUG.length)]; const S = muat(B.html, B.js); S.klik('tombol-ambil'); S.klik('tombol-ambil');
-        wrap.append(el('div', { class: 'wa-tiga' }, kode(B.html.slice(2, 14).filter((x) => !x.includes('meta')), { cls: 'html kecil', dari: 3, lewati: B.html.findIndex((x) => x.includes('meta')) + 1 }), kode(B.js, { cls: 'kecil' }), el('div', null, el('p', { class: 'wa-ket' }, 'Tombol sudah diklik dua kali:'), halamanView(S, { pasif: true }), konsolView(S.konsol))));
-        rowsChoose(wrap, ctx, { prompt: 'Bug tersembunyi: perbaiki halaman ini', cls: 'wa-isi', rows: [
-          ['s', 'Penyebab', SEBAB, B.sebab],
-          ['f', 'Perbaikan', [B.fix, ...FIXES.filter((f) => f !== B.fix)].slice(0, 4), B.fix],
-        ], done: next });
-      }
-      else {
-        const H = urutan(HTML_HEAD, JS2, ['Ambil']); const D = urutan(HTML_DEFER, JS2, ['Ambil']);
-        rowsChoose(wrap, ctx, { prompt: 'Kapan kode dijalankan, dan di mana nomor disimpan?', cls: 'wa-isi', rows: [
-          ['h', '<script> di <head> tanpa defer', uniq([`${H.S.konsol[0]?.s} · klik tidak berbuat apa-apa`, "Uncaught TypeError: Cannot set properties of null (setting 'textContent') · nomor tidak tampil", 'tidak ada galat · nomor tampil A1', 'Uncaught ReferenceError: tombolAmbil is not defined · halaman kosong']), `${H.S.konsol[0]?.s} · klik tidak berbuat apa-apa`],
-          ['d', 'Dengan defer, klik pertama', uniq([D.rows[0].anda, '-', 'A0', 'A2']), D.rows[0].anda],
-          ['r', 'A23 sudah diambil, halaman dimuat ulang', ['warga berikutnya mendapat A1, jadi ada nomor ganda A1–A23', 'warga berikutnya mendapat A24', 'tombol tidak bisa diklik lagi', 'nomor berlanjut dari server'], 'warga berikutnya mendapat A1, jadi ada nomor ganda A1–A23'],
-          ['p', 'Ponsel warga membuka alamat yang sama', ['setiap perangkat menjalankan salinan kodenya sendiri; nomor bersama perlu disimpan di server', 'nomornya otomatis sama dengan tablet', 'ponsel tidak bisa menjalankan JavaScript', 'ponsel memakai nomor B'], 'setiap perangkat menjalankan salinan kodenya sendiri; nomor bersama perlu disimpan di server'],
-          ['z', 'String(7).padStart(3, "0") dan String(1234).padStart(3, "0")', [`${String(7).padStart(3, '0')} dan ${String(1234).padStart(3, '0')}`, '007 dan 234', '700 dan 1234', '7 dan 123'], `${String(7).padStart(3, '0')} dan ${String(1234).padStart(3, '0')}`],
-        ], done: next });
-      }
+      wrap.replaceChildren(); const r = ctx.round; let solved = false;
+      const next = (wait = 5200) => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, wait); } };
+      const area = el('div', { class: 'tp51-area' }); let foe = null;
+      const go = (k, no) => { const [judul, tujuan, ulah] = HEAD51[k]; foe = el('div', { class: 'tp51-musuh' }, el('b', null, '👻 Si Null'), el('span', null, ulah)); wrap.append(el('div', { class: 'tp51-kepala' }, misiHead(no, judul, tujuan, '🌐'), foe), area); };
+      const fin = (ms) => ({ oops: () => ctx.mistake(), done: () => { foe.classList.add('beres'); foe.lastChild.textContent = 'Antrean jalan ✓'; next(ms); } });
+      if (r === 0) { go('pohon', 1); pohonRound(area, ctx, fin(5500)); }
+      else if (r === 1) { go('klik', 2); klikRound(area, ctx, fin(5500)); }
+      else if (r === 2) { go('tangkap', 3); tangkapRound(area, ctx, fin(6000)); }
+      else if (r === 3) { go('petugas', 4); petugasRound(area, ctx, fin(5500)); }
+      else if (r === 4) { go('sisa', 4); sisaRound(area, ctx, fin(6000)); }
+      else if (r === 5) { go('bangun', 5); bangunRound(area, ctx, fin(6000)); }
+      else if (r === 6) { go('ulang', 5); ulangRound(area, ctx, fin(6000)); }
+      else if (r === 7) { go('uji', 6); ujiRound(area, ctx, fin(5500)); }
+      else if (r === 8) { go('bug', 6); bugRound(area, ctx, fin(6000)); }
+      else { go('bos', 'Bos'); bosRound(area, ctx, fin(7000)); }
     }
     render();
   },

@@ -4,8 +4,10 @@
 // scale the new mango, and how k changes the vote. Distances are squared for
 // ranking, the sort is stable, and a tied vote goes to the first-inserted label.
 
-import { el, onTap, button } from '../core/util.js';
-import { say, pickTeams, scoreBar, finishBoard, rowsChoose, pyCode, pyTracer, stepper, fmtNum } from './smp-kit.js';
+import { el, onTap, button, shake } from '../core/util.js';
+import { dnd } from '../core/kit.js';
+import { say, pickTeams, scoreBar, finishBoard, pyTracer, stepper, fmtNum } from './smp-kit.js';
+import { misiHead, fill, codeView, codeFill, rowsView, fillBoard, tileSlots, layar, play } from './misi-kit.js';
 import { runPy, pyRepr } from './mini-py.js';
 
 export const DATA = [[240, 2, 'matang'], [290, 3, 'matang'], [310, 2, 'matang'], [360, 4, 'matang'], [400, 3, 'matang'], [330, 6, 'matang'], [220, 8, 'belum'], [260, 7, 'belum'], [350, 9, 'belum'], [380, 7, 'belum'], [420, 8, 'belum'], [280, 9, 'belum']];
@@ -29,7 +31,6 @@ export function tebak(data, x, k) {
 const suaraText = (m) => `{${[...m].map(([k, v]) => `'${k}': ${v}`).join(', ')}}`;
 const namaList = (tet) => tet.map((t) => NAMA[t.i]).join(', ');
 const dec = (x, d = 2) => fmtNum(Math.round(x * 10 ** d) / 10 ** d, d);
-const opsi = (right, pool) => [right, ...[...new Set(pool)].filter((x) => x !== right)].slice(0, 4);
 
 // Scatter plot of the data with optional new mango, neighbour lines and labels.
 export function bidang({ x = null, k = 0, mode = 'gram', tet = null, onPick = null, cls = '' } = {}) {
@@ -50,6 +51,245 @@ export function bidang({ x = null, k = 0, mode = 'gram', tet = null, onPick = nu
 }
 const legenda = () => el('p', { class: 'mg-legenda' }, el('span', { class: 'mg-titik matang inline' }, '●'), ' matang  ', el('span', { class: 'mg-titik belum inline' }, '○'), ' belum  ★ mangga baru');
 
+// ---- Permainan: Sidang Tetangga ----
+// Every new mango is judged by the nearest sample mangoes, and the verdict is
+// the majority vote. Si Gram Raksasa (weight in grams) swamps the distance,
+// and Mangga Penyamar (M6) fools k = 1.
+const HEAD48 = {
+  peta: ['Peta Kebun', 'Tebak Q dan P dari gambar, temukan fitur pembeda, lalu tunjuk Mangga Penyamar.', 'Lihat beratku, ratusan gram!'],
+  rakit: ['Rakit Mesin Tebak', 'Seret kartu ke bagian kosong jarak, tetangga, dan tebak.', 'Mesinmu pasti macet!'],
+  sidang: ['Sidang Pertama untuk Q', 'Ukur jarak, dudukkan tiga tetangga terdekat, lalu ketuk putusannya.', 'Jarak ini milikku!'],
+  jinak: ['Jinakkan Si Gram Raksasa', 'Bagi berat dengan 50, lalu ketuk tiga tetangga terdekat Q.', 'Jangan kecilkan aku!'],
+  rudi: ['Rudi Lupa Menskalakan', 'Ketuk tetangga mangga baru Rudi, lalu perbaiki kodenya.', 'Mangga baru tetap pakai gram, hehe.'],
+  k: ['Berapa Tetangga yang Didengar?', 'Adili P dengan k = 1, 3, 5, dan 7.', 'Aku M6, matang tapi agak keras…'],
+  suara: ['Kotak Suara', 'Jatuhkan token setiap tetangga ke kotak suara, lalu ketuk putusan Hakim.', 'Kuncinya belum ada di dictionary!'],
+  seri: ['Suara Seri', 'k = 2: dua tetangga, dua label. Siapa yang menang?', 'Seri! Hakim pasti bingung.'],
+  duel: ['Duel Tebak k', 'Mangga baru (340, 5): tebak putusan sebelum layar menghitung.', 'Tebakanmu pasti meleset!'],
+  bos: ['Ujian Tinggal Satu', 'Susun uji_tinggal_satu, lalu uji setiap mangga tanpa dirinya sendiri.', 'Ujiannya kubuat curang!'],
+};
+const msg48 = (t) => el('p', { class: 'reveal info' }, t);
+const D2_48 = skala(DATA); const Q2 = [6, 8]; const P2 = [6.5, 7];
+
+// The orchard field from bidang(), with tappable mangoes and optional marks.
+function kebun({ x = null, mode = 'gram', pilih = [], tanda = {}, onTap: tap = null, k = 0 } = {}) {
+  const D = mode === 'gram' ? DATA : D2_48;
+  const box = bidang({ x, mode, k, tet: pilih.length || !k ? pilih.map((i) => ({ i, d: D[i] })) : null, cls: 'sn48-bidang' });
+  box.querySelectorAll('.mg-titik').forEach((t, i) => { t.dataset.m = String(i); if (tanda[i]) t.classList.add(tanda[i]); if (tap) { t.classList.add('ketuk'); onTap(t, () => tap(i)); } });
+  return box;
+}
+const palu = (opts, fn, want = '') => el('div', { class: 'sn48-tombol', 'data-want': want }, opts.map(([v, t]) => onTap(el('button', { type: 'button', class: 'sn48-pilih', 'data-v': v }, t), () => fn(v))));
+const PUTUSAN = [['matang', '🔨 matang'], ['belum', '🔨 belum']];
+
+// Cards dropped into named boxes; cards are [text, boxId or null, hint].
+function sortBoard48(ctx, { oops, msg, bins, cards, done }) {
+  let left = cards.filter((c) => c[1]).length;
+  const binEls = bins.map(([id, lab]) => el('div', { class: 'sn48-kursi', 'data-drop': id }, el('b', null, lab), el('div', { class: 'sn48-isi' })));
+  const tray = el('div', { class: 'sn48-baki' }, ctx.rand.shuffle(cards.map((c, i) => el('div', { class: 'sn48-kartu', 'data-drag': String(i) }, c[0]))));
+  const host = el('div', { class: 'sn48-kolom' }, el('div', { class: 'sn48-kursi-kursi' }, binEls), tray);
+  dnd(host, (chip, bin) => {
+    if (!bin.classList.contains('sn48-kursi') || chip.classList.contains('locked')) return; const c = cards[+chip.dataset.drag];
+    if (c[1] !== bin.dataset.drop) { oops(); shake(chip); say(msg, 'bad', c[2]); return; }
+    chip.classList.add('locked'); bin.lastChild.append(chip); ctx.sound.tap(); left--;
+    if (left) { say(msg, 'info', 'Tepat.'); return; }
+    tray.remove(); done();
+  });
+  return host;
+}
+
+// Misi 1: the orchard map.
+function petaRound(area, ctx, { oops, done }) {
+  const msg = msg48('Lihat gambarnya saja. Q tampak matang atau belum?'); const box = el('div', { class: 'sn48-kolom' }); const kanan = el('div', { class: 'sn48-kolom' });
+  let fase = 'Q';
+  const draw = () => fill(box, el('div', { class: 'sn48-dua' }, el('div', { class: 'sn48-kolom' }, kebun({ x: fase === 'P' ? P : fase === 'Q' ? Q : null, onTap: fase === 'M6' ? tunjuk : null }), legenda()), kanan));
+  const tebakan = () => fill(kanan, el('code', { class: 'sn48-bintang' }, fase === 'Q' ? '★ Q = (300, 8)' : '★ P = (325, 7)'), palu(PUTUSAN, jawab, 'belum'));
+  function jawab(v) {
+    if (v !== 'belum') { oops(); say(msg, 'bad', fase === 'Q' ? 'Q ada di tengah kelompok ○ di bagian atas.' : 'P dekat M6 yang matang, tetapi lebih banyak tetangga ○ di sekitarnya.'); return; }
+    ctx.sound.tap();
+    if (fase === 'Q') { fase = 'P'; draw(); tebakan(); say(msg, 'info', 'Belum. Sekarang P: ragu, tetapi cenderung apa?'); return; }
+    fase = 'fitur'; draw(); say(msg, 'info', 'Belum, walaupun ragu. Fitur mana yang memisahkan kedua kelompok?');
+    fill(kanan, fillBoard(ctx, { oops, msg, view: rowsView([['fitur pembeda: ', '_'], ['matang: kekerasan ', '_'], ['belum: kekerasan ', '_']]), chips: ['kekerasan', 'berat', '2–6', '7–9', '220–420'], want: ['kekerasan', '2–6', '7–9'],
+      hints: ['Berat kedua kelompok sama-sama tersebar dari kiri ke kanan.', 'Lihat ketinggian titik ●.', 'Lihat ketinggian titik ○.'], done: () => { fase = 'M6'; draw(); fill(kanan, el('b', { class: 'sn48-cari' }, '🕵️ Ketuk Mangga Penyamar')); say(msg, 'info', 'Satu mangga matang berada paling dekat dengan kelompok belum. Ketuk dia!'); } }));
+  }
+  function tunjuk(i) {
+    if (fase !== 'M6') return;
+    if (i !== 5) { oops(); say(msg, 'bad', 'Cari titik ● yang kekerasannya paling tinggi.'); return; }
+    fase = 'beres'; ctx.sound.tap(); say(msg, '', 'M6 (330 gram, kekerasan 6): matang tetapi agak keras. Mangga Penyamar ini akan mengecoh sidang nanti.'); done();
+  }
+  draw(); tebakan();
+  area.append(box, msg);
+}
+
+// Misi 2: assemble jarak, tetangga, tebak.
+function rakitRound(area, ctx, { oops, done }) {
+  const msg = msg48('Juru Ukur dan Juru Urut dulu: lengkapi jarak dan tetangga.'); const box = el('div', { class: 'sn48-kolom' }); const out = layar();
+  const tahapB = () => { say(msg, 'info', 'Sekarang Juru Suara: lengkapi tebak.');
+    fill(box, fillBoard(ctx, { oops, msg, view: codeFill(['def tebak(data, x, k):', '  suara = {}', '  for d in tetangga(data, x, k):', '    label = d[2]', '    suara[label] = (', ['      ', '_', ')'], '  return max(suara, key=suara.get)'], { labels: ['13', '14', '15', '16', '17', '', '18'] }),
+      chips: ['suara.get(label, 0) + 1', 'suara[label] + 1', '1'], want: ['suara.get(label, 0) + 1'], hints: ['Label yang belum pernah muncul belum punya kunci: pakai get dengan nilai awal 0.'],
+      done: () => { say(msg, 'info', 'Mesin dirakit. Sidang untuk q = (300, 8)…'); box.append(codeView(['q = (300, 8)', 'print(tebak(data, q, 1), tebak(data, q, 3))'], { labels: ['19', '20'] }), out);
+        play(out, runPy(KODE1).out, { end: () => { say(msg, '', 'Keluarannya matang matang, padahal Q tampak belum! Sidang berikutnya akan membongkar sebabnya.'); done(); } }); } })); };
+  fill(box, fillBoard(ctx, { oops, msg, view: codeFill(['def jarak(a, b):', '  return math.sqrt(', '    (a[0] - b[0]) ** 2', ['    + ', '_', ')'], 'def tetangga(data, x, k):', '  urut = sorted(data,', '    key=lambda d: jarak(d, x))', ['  return ', '_']], { labels: ['8', '9', '', '', '10', '11', '', '12'] }),
+    chips: ['(a[1] - b[1]) ** 2', '(a[1] - b[0]) ** 2', 'a[1] - b[1]', 'urut[:k]', 'urut[k]', 'data[:k]'], want: ['(a[1] - b[1]) ** 2', 'urut[:k]'],
+    hints: ['Fitur kedua (kekerasan) ada di indeks 1, dan selisihnya dikuadratkan.', 'Ambil k contoh pertama dari list yang sudah diurutkan.'], done: () => setTimeout(tahapB, 800) }));
+  area.append(box, msg);
+}
+
+// Misi 2b: the first trial for Q, without scaling.
+function sidangRound(area, ctx, { oops, done }) {
+  const msg = msg48('Juru Ukur: hitung kuadrat jarak M2 ke Q.'); const box = el('div', { class: 'sn48-kolom' });
+  const U = urutkan(DATA, Q); const T = tebak(DATA, Q, 3);
+  const putus = () => { say(msg, 'info', `Tiga tetangga duduk: ${namaList(T.tet)}. Hakim, ketuk putusannya!`);
+    box.append(palu(PUTUSAN, (v) => { if (v !== T.hasil) { oops(); say(msg, 'bad', `Hitung suaranya: ${T.tet.map((t) => `${NAMA[t.i]} ${t.d[2]}`).join(', ')}.`); return; }
+      ctx.sound.tap(); box.lastChild.remove(); say(msg, '', `Putusan ${T.hasil}, padahal Q tampak belum! Selisih berat ratusan gram menenggelamkan selisih kekerasan.`); done(); }, T.hasil)); };
+  const bangku = () => { say(msg, 'info', 'Juru Urut: dudukkan tiga mangga dengan kuadrat jarak terkecil.');
+    fill(box, sortBoard48(ctx, { oops, msg, bins: [['k1', '🥇 terdekat'], ['k2', '🥈 kedua'], ['k3', '🥉 ketiga']],
+      cards: U.map((t, p) => [`${NAMA[t.i]} · ${fmtNum(t.j2)}`, p < 3 ? `k${p + 1}` : null, p < 3 ? 'Urutkan dari yang terkecil.' : 'Masih ada yang lebih dekat: cari kuadrat jarak terkecil.']), done: putus })); };
+  fill(box, codeView(['kuadrat jarak = (berat − 300)² + (kekerasan − 8)²'], { labels: [''] }), fillBoard(ctx, { oops, msg, view: rowsView([['M2: (290 − 300)² + (3 − 8)²'], ['= ', '_', ' + ', '_', ' = ', '_']]), chips: ['100', '25', '125', '10', '5', '105'], want: ['100', '25', '125'],
+    hints: ['(−10)² = 100.', '(−5)² = 25.', '100 + 25.'], done: () => setTimeout(bangku, 800) }));
+  area.append(box, msg);
+}
+
+// Tap neighbours in order on a field; ends with onEnd().
+function tetanggaTap(ctx, { oops, msg, host, x, mode, urut, n, draw, onEnd }) {
+  const pilih = [];
+  const tap = (i) => {
+    if (pilih.length >= n) return;
+    if (i !== urut[pilih.length].i) { oops(); say(msg, 'bad', pilih.includes(i) ? 'Sudah dipilih.' : 'Ada mangga lain yang lebih dekat ke ★.'); return; }
+    pilih.push(i); ctx.sound.tap(); render();
+    if (pilih.length < n) { say(msg, 'info', `${NAMA[i]}: ${dec(urut[pilih.length - 1].j2)}. Berikutnya?`); return; }
+    onEnd(pilih);
+  };
+  const render = () => draw(kebun({ x, mode, pilih, onTap: pilih.length < n ? tap : null }));
+  render();
+}
+
+// Misi 3: tame the giant gram.
+function jinakRound(area, ctx, { oops, done }) {
+  const msg = msg48('Bagi berat mangga baru dengan 50, sama seperti data latih.'); const box = el('div', { class: 'sn48-kolom' }); const out = layar();
+  const fieldBox = el('div', { class: 'sn48-kolom' }); const kanan = el('div', { class: 'sn48-kolom' });
+  fill(fieldBox, kebun({ x: Q }));
+  const tap3 = () => { say(msg, 'info', 'Si Gram Raksasa jinak. Ketuk tiga tetangga terdekat Q, mulai dari yang paling dekat.');
+    tetanggaTap(ctx, { oops, msg, x: Q, mode: 'skala', urut: urutkan(D2_48, Q2), n: 3, draw: (f) => fill(fieldBox, f), onEnd: () => {
+      say(msg, 'info', 'Tiga tetangga, semuanya belum. Jalankan kodenya.'); fill(kanan, codeView(['data2 = skala(data)', 'q2 = (300 / 50, 8)', 'print(tebak(data2, q2, 1),', '      tebak(data2, q2, 3))'], { labels: ['26', '27', '29', ''] }), out);
+      play(out, runPy([...KODE1.slice(0, 18), ...KODE2]).out, { end: () => { say(msg, '', 'belum belum: sekarang putusan kode sama dengan mata. Selisih 50 gram setara selisih kekerasan 1.'); done(); } }); } }); };
+  fill(kanan, fillBoard(ctx, { oops, msg, view: rowsView([['q2 = (300 / 50, 8) = (', '_', ', 8)'], ['p2 = (325 / 50, 7) = (', '_', ', 7)']]), chips: ['6.0', '6.5', '300', '7.0'], want: ['6.0', '6.5'], hints: ['300 ÷ 50.', '325 ÷ 50.'],
+    done: () => { say(msg, 'info', 'Tarik tuas skala!'); kanan.append(onTap(el('button', { type: 'button', class: 'sn48-pilih sn48-tuas', 'data-v': 'skala' }, '⚖️ berat ÷ 50'), (e) => { const b = kanan.querySelector('.sn48-tuas'); if (!b) return; b.remove(); ctx.sound.good(); fill(kanan); tap3(); })); } }));
+  fill(box, el('div', { class: 'sn48-dua' }, fieldBox, kanan));
+  area.append(box, msg);
+}
+
+// Misi 3b: Rudi forgets to scale the new mango.
+function rudiRound(area, ctx, { oops, done }) {
+  const msg = msg48('Mangga baru Rudi sama persis dengan M1, tetapi beratnya tidak dibagi 50. ★ terlempar ke kanan!'); const box = el('div', { class: 'sn48-kolom' });
+  const fieldBox = el('div', { class: 'sn48-kolom' }); const kanan = el('div', { class: 'sn48-kolom' }); const T = tebak(D2_48, [240, 2], 1); const B = tebak(D2_48, [240 / 50, 2], 1);
+  fill(kanan, codeView(['data2 = skala(data)', 'q = (240, 2)', 'print(tebak(data2, q, 1))'], { warn: [1] }));
+  tetanggaTap(ctx, { oops, msg, x: [240, 2], mode: 'lupa', urut: urutkan(D2_48, [240, 2]), n: 3, draw: (f) => fill(fieldBox, f), onEnd: (p) => {
+    say(msg, 'info', `Tetangganya ${p.map((i) => NAMA[i]).join(', ')}: yang beratnya paling besar. Putusannya?`);
+    kanan.append(palu(PUTUSAN, (v) => { if (!kanan.querySelector('.sn48-tombol')) return; if (v !== T.hasil) { oops(); say(msg, 'bad', 'Hitung label ketiga tetangga itu.'); return; } ctx.sound.tap(); kanan.querySelector('.sn48-tombol').remove();
+      say(msg, 'info', `${T.hasil}, padahal sama dengan M1 yang matang! Perbaiki baris q.`);
+      kanan.append(fillBoard(ctx, { oops, msg, view: codeFill([['q = (240 / ', '_', ', 2)']]), chips: ['50', '1', '2'], want: ['50'], hints: ['Olah data baru persis seperti data latih.'],
+        done: () => { fill(fieldBox, kebun({ x: [240, 2], mode: 'skala', k: 1 })); say(msg, '', `Sekarang tetangganya M1 sendiri: ${B.hasil}. Uji program dengan contoh yang jawabannya sudah diketahui!`); done(); } })); }, T.hasil)); } });
+  fill(box, el('div', { class: 'sn48-dua' }, fieldBox, kanan));
+  area.append(box, msg);
+}
+
+// Misi 4: how many neighbours are heard.
+function kRound(area, ctx, { oops, done }) {
+  const msg = msg48('Ketuk putusan untuk P dengan k yang menyala.'); const box = el('div', { class: 'sn48-kolom' }); const KS = [1, 3, 5, 7]; let ki = 0; const hasil = [];
+  const T11 = tebak(D2_48, P2, 11);
+  const draw = () => {
+    const k = KS[Math.min(ki, KS.length - 1)]; const T = tebak(D2_48, P2, k);
+    fill(box, el('div', { class: 'sn48-dua' }, kebun({ x: P, mode: 'skala', k }), el('div', { class: 'sn48-kolom' }, el('div', { class: 'sn48-k' }, KS.map((x, j) => el('span', { class: j === ki ? 'aktif' : j < ki ? 'beres' : '' }, `k = ${x}`))),
+      el('div', { class: 'sn48-catat' }, hasil.map((h) => el('code', null, h))), ki < KS.length ? palu(PUTUSAN, jawab, T.hasil) : null)));
+  };
+  function jawab(v) {
+    if (ki >= KS.length) return; const k = KS[ki]; const T = tebak(D2_48, P2, k);
+    if (v !== T.hasil) { oops(); say(msg, 'bad', `Hitung garis putus-putus: ${T.tet.map((t) => `${NAMA[t.i]} ${t.d[2]}`).join(', ')}.`); return; }
+    const m = T.suara.get('matang') || 0; const b = T.suara.get('belum') || 0; hasil.push(`k = ${k}: ${m} lawan ${b} → ${T.hasil}`); ki++; ctx.sound.tap();
+    if (ki < KS.length) { draw(); say(msg, 'info', k === 1 ? 'k = 1 hanya mendengar M6. Naikkan k.' : 'Tepat.'); return; }
+    draw(); say(msg, 'info', 'Dua pertanyaan terakhir.');
+    box.querySelector('.sn48-dua > .sn48-kolom:last-child').append(fillBoard(ctx, { oops, msg, view: rowsView([['k = 1 terkecoh oleh ', '_'], ['k = 11: ', '_', ' matang lawan ', '_', ' belum']]), chips: ['M6', 'M10', String(T11.suara.get('matang')), String(T11.suara.get('belum')), '4'], want: ['M6', String(T11.suara.get('matang')), String(T11.suara.get('belum'))],
+      hints: ['Tetangga terdekat P yang matang.', 'Hanya satu mangga matang yang tidak ikut.', 'Hanya satu mangga belum yang tidak ikut.'], done: () => { say(msg, '', 'k = 1 mudah dikecoh satu contoh aneh. k = 3 atau 5 cukup kecil tetapi tidak terkecoh.'); done(); } }));
+  }
+  draw();
+  area.append(box, msg);
+}
+
+// Ballot box: one token per neighbour, in order.
+function kotakSuara(ctx, { oops, msg, T, onEnd }) {
+  let j = 0; const suara = new Map(); const kiri = el('div', { class: 'sn48-kolom' });
+  const host = el('div', { class: 'sn48-dua' }, kiri, el('div', { class: 'sn48-kolom' }, el('div', { class: 'sn48-baki' }, el('div', { class: 'sn48-token matang', 'data-drag': 'matang' }, '● matang'), el('div', { class: 'sn48-token belum', 'data-drag': 'belum' }, '○ belum')), el('div', { class: 'sn48-kotak', 'data-drop': 'kotak' }, el('b', null, '🗳️ suara'), el('code', null, '{}'))));
+  const draw = () => fill(kiri, el('div', { class: 'sn48-antre' }, T.tet.map((t, k) => el('span', { class: `sn48-org ${t.d[2]} ${k === j ? 'aktif' : k < j ? 'beres' : ''}` }, `${NAMA[t.i]} · ${t.d[2]}`))));
+  dnd(host, (tok, box) => {
+    if (j >= T.tet.length || box.dataset.drop !== 'kotak') return; const lab = T.tet[j].d[2];
+    if (tok.dataset.drag !== lab) { oops(); shake(tok); say(msg, 'bad', `${NAMA[T.tet[j].i]} berlabel ${lab}.`); return; }
+    suara.set(lab, (suara.get(lab) || 0) + 1); j++; ctx.sound.tap(); box.lastChild.textContent = suaraText(suara); draw();
+    if (j < T.tet.length) { say(msg, 'info', `suara = ${suaraText(suara)}`); return; }
+    host.querySelector('.sn48-baki').remove(); onEnd(host);
+  });
+  draw();
+  return host;
+}
+
+// Misi 5: the ballot box for tebak(data2, p2, 5).
+function suaraRound(area, ctx, { oops, done }) {
+  const msg = msg48('Seret token setiap tetangga ke kotak suara, berurutan dari yang terdekat.'); const box = el('div', { class: 'sn48-kolom' }); const T = tebak(D2_48, P2, 5);
+  const ke = runPy([...KODE1.slice(0, 16), '        suara[label] = suara[label] + 1', ...KODE1.slice(17, 18), ...KODE2.slice(0, 8), 'x = tebak(data2, p2, 5)']).error; const KE = `${ke.type}: ${ke.message}`;
+  fill(box, codeView(['tebak(data2, p2, 5)'], { labels: [''] }), kotakSuara(ctx, { oops, msg, T, onEnd: (host) => { say(msg, 'info', 'Kotak penuh. Hakim, max(suara, key=suara.get)?');
+    host.lastChild.append(palu(PUTUSAN, (v) => { const p = host.querySelector('.sn48-tombol'); if (!p) return; if (v !== T.hasil) { oops(); say(msg, 'bad', 'max memilih kunci dengan suara terbanyak.'); return; } ctx.sound.tap(); p.remove();
+      say(msg, 'info', `${T.hasil}. Bagaimana kalau baris 17 ditulis suara[label] = suara[label] + 1?`);
+      box.append(fillBoard(ctx, { oops, msg, view: rowsView([['putaran pertama berhenti dengan ', '_']]), chips: [KE, "KeyError: 'belum'", 'ValueError'], want: [KE], hints: ['Dictionary masih kosong saat tetangga pertama (M6, matang) datang.'],
+        done: () => { say(msg, '', 'get(label, 0) memberi 0 untuk label baru, jadi suara pertamanya tercatat 1.'); done(); } })); }, T.hasil)); } }));
+  area.append(box, msg);
+}
+
+// Misi 5b: a tie at k = 2.
+function seriRound(area, ctx, { oops, done }) {
+  const msg = msg48('k = 2 untuk p2. Jatuhkan dua token ke kotak suara.'); const box = el('div', { class: 'sn48-kolom' }); const T = tebak(D2_48, P2, 2); const T12 = tebak(D2_48, P2, 12);
+  fill(box, codeView(['tebak(data2, p2, 2)'], { labels: [''] }), kotakSuara(ctx, { oops, msg, T, onEnd: (host) => { say(msg, 'info', 'Seri! max mengembalikan kunci mana?');
+    host.lastChild.append(palu(PUTUSAN, (v) => { const p = host.querySelector('.sn48-tombol'); if (!p) return; if (v !== T.hasil) { oops(); say(msg, 'bad', 'Saat seri, max memilih kunci pertama yang dimasukkan ke dictionary: label tetangga terdekat.'); return; } ctx.sound.tap(); p.remove();
+      say(msg, 'info', `${T.hasil}: kunci pertama. Lalu k = 12, semua mangga ikut bersuara…`);
+      box.append(fillBoard(ctx, { oops, msg, view: rowsView([['k = 12: selalu ', '_', ' lawan ', '_'], ['jadi hasilnya sama dengan k = ', '_']]), chips: [String(T12.suara.get('matang')), String(T12.suara.get('belum')), '1', '12', '5'], want: [String(T12.suara.get('matang')), String(T12.suara.get('belum')), '1'],
+        hints: ['Ada 6 mangga matang di data.', 'Ada 6 mangga belum di data.', 'Saat seri, label tetangga terdekat yang menang.'], done: () => { say(msg, '', 'k besar tidak otomatis lebih baik. Pilih k ganjil yang cukup kecil.'); done(); } })); }, T.hasil)); } }));
+  area.append(box, msg);
+}
+
+// Misi 6: duel, predict before the screen counts.
+function duelRound(area, ctx, { oops, done }) {
+  const msg = msg48('Tim lain menaruh mangga baru (340, 5). Skalakan dulu.'); const box = el('div', { class: 'sn48-kolom' }); const X = [340, 5]; const KS = [1, 3, 5]; let ki = 0; const U = urutkan(D2_48, [6.8, 5]);
+  const fieldBox = el('div', { class: 'sn48-kolom' }); const kanan = el('div', { class: 'sn48-kolom' });
+  const tanya = () => { const k = KS[ki]; const T = tebak(D2_48, [6.8, 5], k); fill(fieldBox, kebun({ x: X, mode: 'skala', k: ki ? KS[ki - 1] : 0 }));
+    fill(kanan, el('div', { class: 'sn48-k' }, KS.map((x, j) => el('span', { class: j === ki ? 'aktif' : j < ki ? 'beres' : '' }, `k = ${x}`))), palu(PUTUSAN, (v) => {
+      if (v !== T.hasil) { oops(); say(msg, 'bad', `Bayangkan ${k} mangga terdekat dari ★.`); fill(fieldBox, kebun({ x: X, mode: 'skala', k })); return; }
+      ctx.sound.tap(); ki++; fill(fieldBox, kebun({ x: X, mode: 'skala', k }));
+      if (ki < KS.length) { say(msg, 'info', `k = ${k}: ${T.hasil}. Tebak k = ${KS[ki]}.`); setTimeout(tanya, 900); return; }
+      say(msg, 'info', 'Tiga tebakan tepat! Siapa tetangga terdekatnya?'); fill(kanan, fillBoard(ctx, { oops, msg, view: rowsView([['terdekat: ', '_', ', kuadrat jarak ', '_']]), chips: [NAMA[U[0].i], NAMA[U[1].i], dec(U[0].j2), dec(U[1].j2)], want: [NAMA[U[0].i], dec(U[0].j2)],
+        hints: ['Lihat angka di titik yang paling dekat.', '(6,6 − 6,8)² + (6 − 5)².'], done: () => { say(msg, '', 'Matang untuk k = 1, 3, dan 5: tebakan sebelum menghitung melatih intuisi jarak.'); done(); } })); }, T.hasil)); };
+  fill(kanan, fillBoard(ctx, { oops, msg, view: rowsView([['(340, 5) → (', '_', ', 5)']]), chips: ['6.8', '340', '6.5'], want: ['6.8'], hints: ['340 ÷ 50.'], done: () => { say(msg, 'info', 'Tebak putusannya sebelum garis muncul.'); tanya(); } }));
+  fill(fieldBox, kebun({ x: X, mode: 'skala' }));
+  fill(box, el('div', { class: 'sn48-dua' }, fieldBox, kanan));
+  area.append(box, msg);
+}
+
+// Misi Bos: leave-one-out test.
+export const LOO48 = (data, k) => data.filter((d, i) => tebak(data.filter((_, j) => j !== i), d, k).hasil === d[2]).length;
+function bosRound(area, ctx, { oops, done }) {
+  const msg = msg48('Ujian jujur: mangga yang diuji harus keluar dulu dari data latih.'); const box = el('div', { class: 'sn48-kolom' });
+  const hasil = D2_48.map((d, i) => tebak(D2_48.filter((_, j) => j !== i), d, 1).hasil === d[2]); const tanda = {}; let n = 0;
+  const benar = hasil.filter(Boolean).length; const salah = NAMA[hasil.indexOf(false)]; const mentah = LOO48(DATA, 1);
+  const fieldBox = el('div', { class: 'sn48-kolom' }); const kanan = el('div', { class: 'sn48-kolom' });
+  const uji = (i) => { if (tanda[i]) return; tanda[i] = hasil[i] ? 'lulus' : 'gagal'; n++; ctx.sound.tap(); fill(fieldBox, kebun({ mode: 'skala', tanda, onTap: n < 12 ? uji : null }));
+    say(msg, 'info', hasil[i] ? `${NAMA[i]} keluar, tetangga terdekatnya menebak benar. (${n}/12)` : `${NAMA[i]} keluar… tebakannya salah! (${n}/12)`);
+    if (n < 12) return;
+    say(msg, 'info', 'Semua diuji. Catat hasilnya.');
+    fill(kanan, fillBoard(ctx, { oops, msg, view: rowsView([['dengan skala, k = 1: ', '_', ' dari 12'], ['yang salah: ', '_'], ['tanpa skala, k = 1: ', '_', ' dari 12']]), chips: [String(benar), '12', salah, 'M2', String(mentah), '6'], want: [String(benar), salah, String(mentah)],
+      hints: ['Hitung titik yang lulus.', 'Mangga Penyamar.', 'Si Gram Raksasa membuat model lebih buruk daripada menebak asal.'], done: () => { say(msg, '', `Tanpa mengeluarkan mangga uji, k = 1 tampak 12 dari 12: setiap mangga menjadi tetangga dirinya sendiri. Sidang adil!`); done(); } })); };
+  fill(kanan, tileSlots(ctx, { oops, msg, build: ['def uji_tinggal_satu(data, k):', '  benar = 0', '  for i in range(len(data)):', ['l', 2], ['t', 2], ['b', 3], '  return benar'],
+    tiles: [['l', 'latih = data[:i] + data[i + 1:]'], ['t', 'if tebak(latih, data[i], k) == data[i][2]:'], ['b', 'benar = benar + 1'], ['x', 'latih = data', 'Mangga yang diuji harus dikeluarkan dulu.'], ['y', 'if tebak(data, data[i], k) == data[i][2]:', 'Dengan data, mangga itu menjadi tetangga dirinya sendiri.']],
+    onFull: () => { say(msg, 'info', 'Ketuk setiap mangga untuk mengujinya dengan 11 mangga lainnya (data2, k = 1).'); fill(fieldBox, kebun({ mode: 'skala', tanda, onTap: uji })); } }));
+  fill(box, el('div', { class: 'sn48-dua' }, fieldBox, kanan));
+  area.append(box, msg);
+}
+
 export default {
   id: 'sma-48-knn-kode',
   title: 'k-Tetangga Terdekat dalam Kode',
@@ -67,96 +307,31 @@ export default {
     { id: 'giliran', icon: '🎯', label: 'Tim Memilih k', desc: 'Satu tim memilih mangga baru dan k, tim lain menebak hasilnya sebelum layar menghitung', create: createTeams },
   ],
   create(root, ctx) {
-    const wrap = el('div', { class: 'act knn-kode' });
+    const wrap = el('div', { class: 'act knn-kode sn48-main' });
     root.append(wrap);
-    const D2 = skala(DATA); const q2 = [6, 8]; const p2 = [6.5, 7];
-    const kodeKosong = KODE1.map((x, i) => (KOSONG[i + 1] ? KOSONG[i + 1][1] : x));
     function render() {
       wrap.replaceChildren();
       const r = ctx.round;
       let solved = false;
-      const next = () => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, 2400); } };
-      if (r === 0) {
-        wrap.append(el('div', { class: 'mg-dua' }, el('div', null, bidang({ x: Q }), legenda()), bidang({ x: P })));
-        rowsChoose(wrap, ctx, { prompt: 'Dengan melihat gambar saja (kiri Q, kanan P)', cls: 'mg-isi', rows: [
-          ['q', 'Q (300 g, kekerasan 8)', ['belum', 'matang', 'tidak bisa ditebak'], 'belum'],
-          ['p', 'P (325 g, kekerasan 7)', ['belum, walaupun ragu karena dekat M6 yang matang', 'matang, pasti', 'belum, pasti'], 'belum, walaupun ragu karena dekat M6 yang matang'],
-          ['f', 'Fitur yang lebih membedakan', ['kekerasan: matang 2–6, belum 7–9; berat tersebar di kedua kelompok', 'berat: mangga matang lebih ringan', 'keduanya sama kuat', 'tidak ada'], 'kekerasan: matang 2–6, belum 7–9; berat tersebar di kedua kelompok'],
-          ['m', 'Mangga matang yang dekat kelompok belum', ['M6: mungkin varietas yang agak keras, alat ditekan di bagian keras, atau salah catat', 'M1: karena paling ringan', 'M5: karena paling berat', 'M9: karena paling keras'], 'M6: mungkin varietas yang agak keras, alat ditekan di bagian keras, atau salah catat']], done: next });
-      }
-      else if (r === 1) {
-        wrap.append(pyCode(kodeKosong, { labels: lab(1, 20), cls: 'mg-kecil', warn: [8, 11, 16] }));
-        rowsChoose(wrap, ctx, { prompt: 'Lengkapi baris 9, 12, dan 17', cls: 'mg-isi mg-mono', rows: [
-          ['l9', 'Baris 9', ['(a[1] - b[1]) ** 2', '(a[1] - b[0]) ** 2', '(a[2] - b[2]) ** 2', 'a[1] - b[1]'], '(a[1] - b[1]) ** 2'],
-          ['l12', 'Baris 12', ['urut[:k]', 'urut[k]', 'urut[k:]', 'data[:k]'], 'urut[:k]'],
-          ['l17', 'Baris 17', ['suara.get(label, 0) + 1', 'suara[label] + 1', '1', 'suara.get(label) + 1'], 'suara.get(label, 0) + 1'],
-          ['b', 'Baris 11 dan list data', ['semua contoh, dari yang terdekat ke x; data tidak berubah karena sorted membuat list baru', 'data diurutkan menurut berat dan ikut berubah', 'hanya k contoh, menurut label', 'data diurutkan menurut kekerasan'], 'semua contoh, dari yang terdekat ke x; data tidak berubah karena sorted membuat list baru'],
-          ['c', 'd punya 3 nilai, q hanya 2', ['jarak hanya memakai indeks 0 dan 1; label di indeks 2 tidak dihitung', 'Python mengisi nilai ketiga dengan 0', 'q otomatis diberi label', 'jarak tidak bisa dihitung'], 'jarak hanya memakai indeks 0 dan 1; label di indeks 2 tidak dihitung']], done: next });
-      }
-      else if (r === 2) {
-        const isi = [1, 2, 5, 7, 11];
-        wrap.append(el('div', { class: 'mg-dua' }, pyCode(KODE1.slice(7, 12), { labels: lab(8, 5), cls: 'mg-kecil' }), el('p', { class: 'mg-ket' }, 'Kuadrat jarak = (berat − 300)² + (kekerasan − 8)². Contoh M1: (−60)² + (−6)² = 3.636.')));
-        rowsChoose(wrap, ctx, { prompt: 'Kuadrat jarak ke Q', cls: 'mg-isi', rows: isi.map((i) => { const d = DATA[i]; const a = d[0] - 300; const b = d[1] - 8; const right = fmtNum(a * a + b * b);
-          return [`d${i}`, `${NAMA[i]} (${d[0]}, ${d[1]})`, opsi(right, [fmtNum(a * a - b * b), fmtNum(a * a), fmtNum((a + b) ** 2), fmtNum(a * a + b * b + 100)]), right]; }), done: next });
-      }
-      else if (r === 3) {
-        const U = urutkan(DATA, Q); const out = runPy(KODE1).out[0];
-        wrap.append(el('div', { class: 'mg-dua' }, bidang({ x: Q, k: 3 }), el('table', { class: 'mg-tabel' }, el('tr', null, ['Mangga', 'Kuadrat jarak'].map((h) => el('th', null, h))), DATA.map((d, i) => el('tr', null, el('td', null, NAMA[i]), el('td', null, fmtNum(jarak2(d, Q))))))));
-        rowsChoose(wrap, ctx, { prompt: 'Peringkat dan tebakan untuk Q tanpa skala', cls: 'mg-isi', rows: [
-          ...[0, 1, 2, 3].map((p) => [`r${p}`, `Peringkat ${p + 1}`, opsi(NAMA[U[p].i], [NAMA[U[(p + 1) % 12].i], NAMA[U[(p + 2) % 12].i], NAMA[U[p + 4].i]]), NAMA[U[p].i]]),
-          ['o', 'Keluaran baris 20', [out, 'belum belum', 'matang belum', 'belum matang'], out],
-          ['c', 'Mengapa model keliru?', ['kuadrat selisih berat ratusan sampai belasan ribu, kekerasan paling besar 36; jarak dikuasai berat', 'karena k terlalu kecil', 'karena data latih salah semua', 'karena math.sqrt tidak tepat'], 'kuadrat selisih berat ratusan sampai belasan ribu, kekerasan paling besar 36; jarak dikuasai berat']], done: next });
-      }
-      else if (r === 4) {
-        const R = runPy([...KODE1.slice(0, 18), ...KODE2.slice(0, 8)]).vars;
-        wrap.append(el('div', { class: 'mg-dua' }, pyCode(KODE2, { labels: lab(21, 9), cls: 'mg-kecil' }), el('table', { class: 'mg-tabel' }, el('tr', null, ['Mangga', 'Berat ÷ 50', 'Kekerasan'].map((h) => el('th', null, h))), D2.map((d, i) => el('tr', null, el('td', null, NAMA[i]), el('td', null, fmtNum(d[0], 1)), el('td', null, d[1]))))));
-        rowsChoose(wrap, ctx, { prompt: 'Setelah diskalakan: kuadrat jarak ke q2', cls: 'mg-isi', rows: [
-          ['q', 'q2 · p2', [`${pyRepr(R.q2)} · ${pyRepr(R.p2)}`, '(300, 8) · (325, 7)', '(6, 0.16) · (6.5, 0.14)', '(6.0, 0.16) · (6.5, 7)'], `${pyRepr(R.q2)} · ${pyRepr(R.p2)}`],
-          ...[1, 2, 7, 11].map((i) => { const right = dec(jarak2(D2[i], q2)); return [`d${i}`, `${NAMA[i]} (${fmtNum(D2[i][0], 1)}; ${D2[i][1]})`, opsi(right, [dec(Math.abs(D2[i][0] - 6) + Math.abs(D2[i][1] - 8)), dec((D2[i][0] - 6) ** 2), dec(jarak2(D2[i], q2) + 1), dec(jarak2(D2[i], p2))]), right]; })], done: next });
-      }
-      else if (r === 5) {
-        const T = tebak(D2, q2, 3); const out = runPy([...KODE1.slice(0, 18), ...KODE2]).out[0];
-        wrap.append(el('div', { class: 'mg-dua' }, bidang({ x: Q, k: 3, mode: 'skala' }), bidang({ x: Q, k: 3 })));
-        rowsChoose(wrap, ctx, { prompt: 'Kiri: setelah skala. Kanan: sebelum skala.', cls: 'mg-isi', rows: [
-          ['t', 'Tiga tetangga terdekat q2', opsi(namaList(T.tet), ['M2, M3, M12', 'M12, M8, M6', 'M9, M10, M11']), namaList(T.tet)],
-          ['o', 'Keluaran baris 29', [out, 'matang matang', 'belum matang', 'matang belum'], out],
-          ['w', 'Mengapa berat dibagi 50?', ['rentang berat 200 menjadi 4, sebanding dengan rentang kekerasan 7', 'agar berat menjadi kilogram', 'agar angkanya bulat', 'agar mangga ringan dianggap matang'], 'rentang berat 200 menjadi 4, sebanding dengan rentang kekerasan 7']], done: next });
-      }
-      else if (r === 6) {
-        const a = tebak(D2, Q, 1).hasil; const b = tebak(D2, [240, 2], 1); const sem = [[220, 1], [240, 2], [330, 2]].every((x) => [1, 3].every((k) => tebak(D2, x, k).hasil === 'belum'));
-        wrap.append(el('div', { class: 'mg-dua' }, bidang({ x: [240, 2], k: 3, mode: 'lupa' }), pyCode(['data2 = skala(data)', 'q = (300, 8)', 'print(tebak(data2, q, 1))', 'print(tebak(data2, (240, 2), 1))'], { cls: 'mg-kecil', warn: [1, 3] })));
-        rowsChoose(wrap, ctx, { prompt: 'Rudi lupa menskalakan mangga baru', cls: 'mg-isi', rows: [
-          ['a', 'tebak(data2, q, 1)', [a, 'matang', 'KeyError', 'None'].filter((v, i, z) => z.indexOf(v) === i), a],
-          ['b', 'tebak(data2, (240, 2), 1), padahal sama dengan M1', [b.hasil, 'matang', 'None', 'ValueError'].filter((v, i, z) => z.indexOf(v) === i), b.hasil],
-          ['t', 'Tetangga terdekatnya', opsi(namaList(urutkan(D2, [240, 2]).slice(0, 3)), ['M1, M2, M3', 'M7, M8, M12', 'M6, M9, M10']), namaList(urutkan(D2, [240, 2]).slice(0, 3))],
-          ['w', 'Mengapa program Rudi salah?', [`selisih berat lebih dari 200, jadi yang terdekat selalu mangga terberat; jawabannya ${sem ? 'selalu "belum"' : 'kacau'}, hasil pertama benar karena kebetulan`, 'karena k = 1 terlalu kecil', 'karena data2 salah', 'program Rudi benar'], `selisih berat lebih dari 200, jadi yang terdekat selalu mangga terberat; jawabannya ${sem ? 'selalu "belum"' : 'kacau'}, hasil pertama benar karena kebetulan`]], done: next });
-      }
-      else if (r === 7) {
-        wrap.append(bidang({ x: P, k: 7, mode: 'skala' }));
-        rowsChoose(wrap, ctx, { prompt: 'Pengaruh k untuk p2 = (6.5, 7)', cls: 'mg-isi', rows: [
-          ['m6', 'Kuadrat jarak M6 · M10', [`${dec(jarak2(D2[5], p2))} · ${dec(jarak2(D2[9], p2))}`, '1,21 · 1,01', '0,01 · 1,21', '1,01 · 0,21'], `${dec(jarak2(D2[5], p2))} · ${dec(jarak2(D2[9], p2))}`],
-          ...[1, 3, 5, 7].map((k) => { const T = tebak(D2, p2, k); const m = T.suara.get('matang') || 0; const b = T.suara.get('belum') || 0; const right = `${m} · ${b} · ${T.hasil}`; return [`k${k}`, `k = ${k}: suara matang · belum · tebakan`, opsi(right, [`${b} · ${m} · ${T.hasil === 'matang' ? 'belum' : 'matang'}`, `${m} · ${b} · ${T.hasil === 'matang' ? 'belum' : 'matang'}`, `${m + 1} · ${Math.max(0, b - 1)} · matang`]), right]; }),
-          ['c', 'Mengapa k = 1 mudah terkecoh?', ['hanya mendengar M6, satu contoh tak biasa yang langsung menentukan', 'karena k = 1 selalu menjawab matang', 'karena jaraknya dihitung salah', 'k = 1 tidak pernah terkecoh'], 'hanya mendengar M6, satu contoh tak biasa yang langsung menentukan']], done: next });
-      }
-      else if (r === 8) {
-        const T = tebak(D2, p2, 5);
-        wrap.append(el('div', { class: 'mg-dua' }, pyCode(KODE1.slice(12, 18), { labels: lab(13, 6), cls: 'mg-kecil', hl: [4] }), el('p', { class: 'mg-ket' }, `tebak(data2, p2, 5): tetangga ${namaList(T.tet)}`)));
-        const pool = (j) => [suaraText(T.jejak[j].suara), suaraText(T.jejak[Math.max(0, j - 1)].suara), suaraText(new Map([...T.jejak[j].suara].reverse())), j ? `{'${T.jejak[j].label}': 1}` : "{'belum': 1}", `{'matang': ${j + 1}}`];
-        const ke = runPy([...KODE1.slice(0, 16), '        suara[label] = suara[label] + 1', ...KODE1.slice(17, 18), ...KODE2.slice(0, 8), 'x = tebak(data2, p2, 5)']).error;
-        rowsChoose(wrap, ctx, { prompt: 'Isi suara setiap kali baris 17 selesai', cls: 'mg-isi mg-mono', rows: [
-          ...T.jejak.map((s, j) => [`s${j}`, `Putaran ${j + 1}: ${s.nama} (${s.label})`, opsi(suaraText(s.suara), pool(j)), suaraText(s.suara)]),
-          ['h', 'Nilai yang dikembalikan', [`'${T.hasil}'`, "'matang'", '4', "{'belum': 4}"].filter((v, i, z) => z.indexOf(v) === i), `'${T.hasil}'`],
-          ['g', 'Bila baris 17 ditulis suara[label] = suara[label] + 1', [`${ke.type}: ${ke.message}`, "KeyError: 'belum'", 'suara menjadi kosong', 'tidak ada bedanya'], `${ke.type}: ${ke.message}`]], done: next });
-      }
-      else {
-        const T2 = tebak(D2, p2, 2); const T12 = tebak(D2, p2, 12); const sama = [[220, 1], [300, 8], [325, 7], [420, 10], [340, 5], [260, 4]].every((x) => { const y = [x[0] / 50, x[1]]; return tebak(D2, y, 12).hasil === tebak(D2, y, 1).hasil; });
-        wrap.append(pyCode(['    return max(suara, key=suara.get)'], { labels: ['18'], cls: 'mg-kecil', hl: [0] }));
-        rowsChoose(wrap, ctx, { prompt: 'Suara seri dan memilih k', cls: 'mg-isi', rows: [
-          ['a', `k = 2: ${suaraText(T2.suara)}`, [`'${T2.hasil}': kunci pertama yang nilainya terbesar, yaitu label tetangga terdekat`, "'belum': karena paling banyak di data", 'ValueError karena seri', 'acak'], `'${T2.hasil}': kunci pertama yang nilainya terbesar, yaitu label tetangga terdekat`],
-          ['b', 'k = 12: suara matang · belum', [`${T12.suara.get('matang')} · ${T12.suara.get('belum')}`, '12 · 0', '7 · 5', '5 · 7'], `${T12.suara.get('matang')} · ${T12.suara.get('belum')}`],
-          ['c', 'tebak(data2, x, 12) dibanding tebak(data2, x, 1)', [sama ? 'selalu sama, karena suara selalu seri dan max memilih label tetangga terdekat' : 'berbeda', 'selalu berlawanan', 'selalu matang', 'selalu belum'], sama ? 'selalu sama, karena suara selalu seri dan max memilih label tetangga terdekat' : 'berbeda'],
-          ['d', 'Pelajaran memilih k', ['k ganjil yang cukup kecil agar tetangganya mirip dan cukup besar agar satu contoh aneh tidak menentukan, misalnya 3 atau 5', 'semakin besar k semakin baik', 'k = 1 selalu terbaik', 'k harus sama dengan banyak data'], 'k ganjil yang cukup kecil agar tetangganya mirip dan cukup besar agar satu contoh aneh tidak menentukan, misalnya 3 atau 5']], done: next });
-      }
+      const next = (wait = 5200) => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, wait); } };
+      const area = el('div', { class: 'sn48-area' });
+      let foe = null;
+      const go = (k, no) => {
+        const [judul, tujuan, ulah] = HEAD48[k];
+        foe = el('div', { class: 'sn48-musuh' }, el('b', null, k === 'k' ? '🥭 Mangga Penyamar' : '🏋️ Si Gram Raksasa'), el('span', null, ulah));
+        wrap.append(el('div', { class: 'sn48-kepala' }, misiHead(no, judul, tujuan, '⚖️'), foe), area);
+      };
+      const fin = (ms) => ({ oops: () => ctx.mistake(), done: () => { foe.classList.add('beres'); foe.lastChild.textContent = 'Sidang adil ✓'; next(ms); } });
+      if (r === 0) { go('peta', 1); petaRound(area, ctx, fin(5500)); }
+      else if (r === 1) { go('rakit', 2); rakitRound(area, ctx, fin(6000)); }
+      else if (r === 2) { go('sidang', 2); sidangRound(area, ctx, fin(6000)); }
+      else if (r === 3) { go('jinak', 3); jinakRound(area, ctx, fin(6000)); }
+      else if (r === 4) { go('rudi', 3); rudiRound(area, ctx, fin(6000)); }
+      else if (r === 5) { go('k', 4); kRound(area, ctx, fin(6000)); }
+      else if (r === 6) { go('suara', 5); suaraRound(area, ctx, fin(6000)); }
+      else if (r === 7) { go('seri', 5); seriRound(area, ctx, fin(6000)); }
+      else if (r === 8) { go('duel', 6); duelRound(area, ctx, fin(6000)); }
+      else { go('bos', 'Bos'); bosRound(area, ctx, fin(7000)); }
     }
     render();
   },

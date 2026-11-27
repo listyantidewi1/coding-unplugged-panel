@@ -5,8 +5,10 @@
 // Counting rule: a check is each evaluation of `a[j] > kunci`, a shift is each
 // run of `a[j + 1] = a[j]`.
 
-import { el, onTap, button } from '../core/util.js';
-import { pickTeams, scoreBar, finishBoard, rowsChoose, pyCode, pyTracer, stepper, fmtNum } from './smp-kit.js';
+import { el, onTap, button, shake } from '../core/util.js';
+import { dnd } from '../core/kit.js';
+import { say, pickTeams, scoreBar, finishBoard, pyCode, pyTracer, stepper, fmtNum } from './smp-kit.js';
+import { misiHead, fill, codeView, codeFill, rowsView, fillBoard, layar, play } from './misi-kit.js';
 import { runPy, makePyRunner, pyRepr } from './mini-py.js';
 
 export const SISIP = ['def urut_sisip(a):', '    for i in range(1, len(a)):', '        kunci = a[i]', '        j = i - 1', '        while j >= 0 and a[j] > kunci:', '            a[j + 1] = a[j]', '            j = j - 1', '        a[j + 1] = kunci', '    return a'];
@@ -48,6 +50,231 @@ export const WAKTU = [[1000, 26, 0.12, 0.06], [2000, 81, 0.25, 0.2], [4000, 415,
 export const SOAL6 = ['import bisect', 'masuk = [104, 101, 105, 102, 106, 103]', 'urut = sorted(masuk)', 'print(masuk, urut)', 'print(bisect.bisect_left(antrean, 114))', 'bisect.insort(antrean, 113)', 'print(len(antrean), antrean.index(113))'];
 export const POSISI = ['def posisi_sisip(a, x):', '    kiri = 0', '    kanan = len(a)', '    while kiri < kanan:', '        tengah = (kiri + kanan) // 2', '        if a[tengah] < x:', '            kiri = tengah + 1', '        else:', '            kanan = tengah', '    return kiri'];
 
+// ---- Permainan: Loket Kilat ----
+// Counter staff at a puskesmas sort queue numbers by insertion and find them
+// with left and right clips; Si Selisih Satu hides three off-by-one bugs.
+const HEAD44 = {
+  sisip: ['Sisipkan Kartu Antrean', 'Seret kartu kunci ke celah yang tepat. Setiap geseran satu token.', 'Nomor antrean datang acak!'],
+  pita: ['Pita Bagian Urut', 'Ketuk kartu terakhir yang sudah pasti urut.', 'Bagian mana yang sudah aman?'],
+  balap: ['Balap Data Hampir Urut', 'Ramalkan token dua deret, lalu lihat balapannya.', 'Data terbalik datang!'],
+  j114: ['Jepit Kiri dan Kanan', 'Buka kartu tengah, lalu geser jepit. Cari nomor 114.', 'Lima belas kartu tertutup!'],
+  j103: ['Nomor yang Tidak Ada', 'Cari nomor 103 dengan jepit kiri dan kanan.', 'Nomor 103 belum datang…'],
+  ab: ['Bongkar Bug A dan B', 'Pilih kartu uji yang membongkar bug, lalu ketuk baris yang diubah.', 'Dua baris pengurutan kuubah sedikit!'],
+  c: ['Bongkar Bug C', 'Pilih nomor uji yang membongkar bug pencarian biner, lalu perbaiki.', 'Pencarianku kadang melewatkan satu kartu!'],
+  sort: ['Kotak Peralatan Pustaka', 'Ramalkan sorted() dan sort(), lalu bongkar jebakan None.', 'masuk = masuk.sort() kelihatan benar…'],
+  bisect: ['Pakai bisect', 'Hitung bisect_left dan rakit fungsi ada().', 'bisect_left tidak pernah memberi -1!'],
+  bos: ['Penyisip Setengah Terbuka', 'Lengkapi posisi_sisip dengan rentang setengah terbuka.', 'kanan = len(a)? Berani?'],
+};
+const msg44 = (t) => el('p', { class: 'reveal info' }, t);
+const urutUrut = (a) => [...a].sort((x, y) => x - y);
+const sisipView = (id = 'benar', o = {}) => el('div', { class: 'lk44-kolom' }, el('small', null, 'def urut_sisip(a):'), codeView(sisipOf(id).slice(1), { labels: L1.slice(1), ...o }));
+const cariView = (id = 'benar', o = {}) => el('div', { class: 'lk44-kolom' }, el('small', null, 'def cari_biner(a, x):'), codeView(cariOf(id).slice(1, 9), { labels: L2.slice(1, 9), ...o }));
+const deret = (a, { cls = () => '', idx = true } = {}) => el('div', { class: 'lk44-deret' }, a.map((v, k) => el('div', { class: `lk44-kartu ${cls(k)}`, 'data-k': String(k) }, idx ? el('small', null, String(k)) : null, el('b', null, String(v)))));
+
+// Misi 1: be the insertion sort. Drag the key into its gap.
+export function posSisip(a, i) { let p = 0; while (p < i && a[p] <= a[i]) p++; return p; }
+function sisipRound(area, ctx, { oops, done }) {
+  const msg = msg44('Kartu kunci sudah diangkat. Seret ke celah di bagian kiri tempat ia harus disisipkan.'); const a = [...MASUK]; let i = 1; let geser = 0; let cek = 0;
+  const box = el('div', { class: 'lk44-kolom' }); const info = el('div', { class: 'lk44-token' }); const host = el('div', { class: 'lk44-kolom' });
+  const draw = () => {
+    fill(info, `i = ${i} · 🪙 geseran ${geser} · pemeriksaan ${cek}`);
+    const row = []; for (let p = 0; p <= a.length; p++) { if (p <= i && i < a.length) row.push(el('div', { class: 'lk44-celah', 'data-drop': String(p) }, '▾')); if (p < a.length) row.push(p === i ? el('div', { class: 'lk44-kartu kosong' }, el('small', null, String(p)), el('b', null, ' ')) : el('div', { class: `lk44-kartu ${p < i ? 'urut' : ''}` }, el('small', null, String(p)), el('b', null, String(a[p])))); }
+    fill(host, i < a.length ? el('div', { class: 'lk44-melayang' }, el('small', null, 'kunci = a[i]'), el('div', { class: 'lk44-kartu kunci', 'data-drag': 'kunci' }, el('b', null, String(a[i])))) : null, el('div', { class: 'lk44-deret' }, row));
+  };
+  dnd(host, (card, gap) => {
+    if (!gap.classList.contains('lk44-celah')) return; const p = +gap.dataset.drop; const want = posSisip(a, i);
+    if (p !== want) { oops(); shake(card); say(msg, 'bad', p < want ? `${a[p]} lebih kecil dari ${a[i]}: perulangan while berhenti sebelum sampai sini.` : `${a[p - 1]} lebih besar dari ${a[i]}, jadi ${a[p - 1]} harus digeser.`); return; }
+    const k = a[i]; const s = i - p; geser += s; cek += s + (p > 0 ? 1 : 0); a.splice(i, 1); a.splice(p, 0, k); ctx.sound.tap(); i++; draw();
+    if (i < a.length) { say(msg, 'info', s ? `${s} kartu digeser ke kanan. Kunci berikutnya.` : 'Tidak ada yang digeser: kunci sudah di tempatnya.'); return; }
+    say(msg, 'info', `Urut: ${pyRepr(a)}. Catat token loket.`);
+    box.append(fillBoard(ctx, { oops, msg, view: rowsView([['total geseran: ', '_'], ['total pemeriksaan a[j] > kunci: ', '_']]), chips: [String(geser), String(cek), '5', '15', '11'], want: [String(geser), String(cek)],
+      hints: ['1 + 0 + 2 + 0 + 3.', 'Satu pemeriksaan lagi setiap kali while berhenti karena a[j] <= kunci: 1 + 1 + 3 + 1 + 4.'], done: () => { say(msg, '', `${geser} geseran dan ${cek} pemeriksaan. Tanpa kunci, geseran pertama akan menimpa a[i].`); done(); } }));
+  });
+  draw();
+  fill(box, el('div', { class: 'lk44-dua' }, sisipView(), el('div', { class: 'lk44-kolom' }, host, info)));
+  area.append(box, msg);
+}
+
+// Misi 2: the sorted ribbon before line 3.
+export const PITA44 = [3, 5];
+function pitaRound(area, ctx, { oops, done }) {
+  const msg = msg44('Tepat sebelum baris 3 dengan i = 3. Ketuk kartu terakhir yang sudah pasti urut.'); const S = jalanSisip(MASUK); let q = 0; const box = el('div', { class: 'lk44-kolom' });
+  const stateAt = (i) => S.rows.find((x) => x.i === i - 1).a;
+  const draw = (lit = -1) => { const i = PITA44[Math.min(q, PITA44.length - 1)]; const a = stateAt(i);
+    fill(box, el('div', { class: 'lk44-soal' }, `i = ${i}: a = ${pyRepr(a)}`), el('div', { class: 'lk44-deret' }, a.map((v, k) => onTap(el('button', { type: 'button', class: `lk44-kartu ${k <= lit ? 'urut' : ''}`, 'data-k': String(k) }, el('small', null, String(k)), el('b', null, String(v))), () => tap(k)))), lit >= 0 ? el('div', { class: 'lk44-pita', style: { width: `${((lit + 1) / a.length) * 100}%` } }, `a[0] sampai a[${lit}]`) : null); };
+  function tap(k) {
+    if (q >= PITA44.length) return; const i = PITA44[q];
+    if (k !== i - 1) { oops(); say(msg, 'bad', k < i - 1 ? 'Masih ada kartu sesudahnya yang sudah pasti urut.' : `a[${k}] belum diproses: putaran i = ${i} baru akan dimulai.`); return; }
+    ctx.sound.tap(); q++;
+    if (q < PITA44.length) { draw(); say(msg, 'info', `Tepat: a[0] sampai a[${i - 1}]. Sekarang i = 5.`); return; }
+    draw(k); say(msg, 'info', 'Pita selalu menutup a[0] sampai a[i − 1]. Lengkapi invariannya.');
+    area.insertBefore(fillBoard(ctx, { oops, msg, view: rowsView([['sebelum baris 3, sudah urut: a[0] sampai a[', '_', ']'], ['saat i = 3, bagian kanan [102, 106, 103] ', '_'], ['di akhir, i = len(a), jadi pita menutup ', '_']]), chips: ['i - 1', 'tidak urut', 'seluruh list', 'i', 'urut', 'a[0] saja'], want: ['i - 1', 'tidak urut', 'seluruh list'],
+      hints: ['Kartu a[i] belum disisipkan.', '106 lalu 103: belum urut.', 'Invarian benar di awal, tetap benar setiap putaran, dan di akhir mencakup semuanya.'], done: () => { say(msg, '', 'Invarian: benar di awal (a[0] sendirian), tetap benar setiap putaran, jadi di akhir seluruh list urut.'); done(); } }), msg);
+  }
+  draw();
+  area.append(box, msg);
+}
+
+// Misi 3: nearly sorted against reversed data.
+function balapRound(area, ctx, { oops, done }) {
+  const msg = msg44('Ramalkan token pengurutan sisip untuk dua deret ini.'); const H = jalanSisip(HAMPIR); const T = jalanSisip(TERBALIK); const box = el('div', { class: 'lk44-kolom' });
+  const lane = (nm, a, g) => el('div', { class: 'lk44-lajur' }, el('b', null, nm), deret(a, { idx: false }), el('span', { class: 'lk44-token' }, g === null ? '🪙 ?' : `🪙 ${g}`));
+  fill(box, lane('hampir urut', HAMPIR, null), lane('terbalik', TERBALIK, null));
+  area.append(box, fillBoard(ctx, { oops, msg, view: rowsView([['hampir urut: geseran ', '_', ' · pemeriksaan ', '_'], ['terbalik: geseran ', '_', ' · pemeriksaan ', '_']]), chips: [String(H.geser), String(H.cek), String(T.geser), String(T.cek), '7', '56', '8'], want: [String(H.geser), String(H.cek), String(T.geser), String(T.cek)],
+    hints: ['Hanya 103 dan 106 yang salah tempat, masing-masing satu langkah.', 'Tujuh kunci, ditambah dua pemeriksaan untuk kunci yang digeser.', 'Setiap kunci harus digeser sampai ke depan: 1 + 2 + … + 7.', 'Setiap pemeriksaan berujung geseran; j habis sebelum ada pemeriksaan yang gagal.'],
+    done: () => { say(msg, 'info', 'Balapan dimulai!'); race(); } }), msg);
+  function race() {
+    let k = 0; const n = Math.max(H.rows.length, T.rows.length); let gh = 0; let gt = 0;
+    const tick = () => { if (!box.isConnected) return; if (k >= n) { finish(); return; } gh += H.rows[k]?.geser || 0; gt += T.rows[k]?.geser || 0;
+      fill(box, lane('hampir urut', H.rows[k]?.a || H.hasil, gh), lane('terbalik', T.rows[k]?.a || T.hasil, gt)); k++; setTimeout(tick, 380); };
+    tick();
+  }
+  function finish() {
+    say(msg, 'info', 'Tabel waktu lembar kerja (ms). Bila n digandakan, waktunya kira-kira dikali berapa?');
+    area.insertBefore(fillBoard(ctx, { oops, msg, view: rowsView([['data acak 26 → 81 → 415: kira-kira × ', '_'], ['hampir urut 0,12 → 0,25 → 0,56: kira-kira × ', '_']]), chips: ['4', '2', '1', '8'], want: ['4', '2'],
+      hints: ['Seperti versi bersarang: kuadrat.', 'Hampir tidak ada geseran: linear.'], done: () => { say(msg, '', 'Sisip cocok untuk nomor yang tiba hampir urut: hampir tidak ada yang digeser, dan nomor baru bisa disisipkan satu per satu.'); done(); } }), msg);
+  }
+}
+
+// Misi 4: left and right clips on fifteen closed cards.
+function jepitRound(area, ctx, { oops, done }, x) {
+  const msg = msg44(`Cari nomor ${x}. Ketuk kartu tengah = (kiri + kanan) // 2 untuk membukanya.`); const C = jalanCari(x); const a = ANTREAN;
+  let kiri = 0; let kanan = a.length - 1; let tengah = null; const buka = new Set(); let fase = 'tengah'; const log = [];
+  const box = el('div', { class: 'lk44-kolom' }); const left = el('div', { class: 'lk44-kolom' });
+  const draw = () => {
+    fill(left, cariView('benar', { hl: fase === 'tengah' ? [3] : [4, 6] }));
+    fill(box, el('div', { class: 'lk44-token' }, `kiri = ${kiri} · kanan = ${kanan}${tengah !== null ? ` · tengah = ${tengah}` : ''} · kartu dibuka: ${buka.size}`),
+      el('div', { class: 'lk44-deret tutup', 'data-fase': fase }, a.map((v, k) => onTap(el('button', { type: 'button', class: `lk44-kartu ${buka.has(k) ? 'buka' : 'tertutup'} ${k < kiri || k > kanan ? 'luar' : ''} ${k === tengah ? 'tengah' : ''}`, 'data-k': String(k) },
+        el('small', null, `${k === kiri ? '⟦' : ''}${k}${k === kanan ? '⟧' : ''}`), el('b', null, buka.has(k) ? String(v) : '?')), () => tapCard(k)))),
+      el('div', { class: 'lk44-tombol' }, (fase === 'tengah' ? [['habis', 'kiri > kanan: return -1']] : [['ketemu', 'a[tengah] == x: return tengah'], ['kiri', 'a[tengah] < x: kiri = tengah + 1'], ['kanan', 'a[tengah] > x: kanan = tengah - 1']]).map(([k, t]) => onTap(el('button', { type: 'button', class: 'lk44-pilih', 'data-v': k }, t), () => act(k)))),
+      el('div', { class: 'lk44-log' }, log.map((r) => el('span', null, r))));
+  };
+  function tapCard(k) {
+    if (fase !== 'tengah') return;
+    if (kiri > kanan) { oops(); say(msg, 'bad', 'kiri sudah melewati kanan: rentangnya kosong.'); return; }
+    const t = Math.floor((kiri + kanan) / 2);
+    if (k !== t) { oops(); say(msg, 'bad', `tengah = (${kiri} + ${kanan}) // 2 = ${t}.`); return; }
+    tengah = t; buka.add(t); fase = 'geser'; ctx.sound.tap(); log.push(`(${kiri}, ${kanan}, ${t}, ${a[t]})`); draw();
+    say(msg, 'info', `a[${t}] = ${a[t]}. Bandingkan dengan ${x}, lalu pilih langkahnya.`);
+  }
+  function act(k) {
+    if (fase === 'tengah') {
+      if (k !== 'habis') return;
+      if (kiri <= kanan) { oops(); say(msg, 'bad', 'Rentangnya belum kosong: buka kartu tengah dulu.'); return; }
+      return finish(-1);
+    }
+    const v = a[tengah]; const want = v === x ? 'ketemu' : v < x ? 'kiri' : 'kanan';
+    if (k !== want) { oops(); say(msg, 'bad', `Bandingkan ${v} dengan ${x}.`); return; }
+    ctx.sound.tap();
+    if (k === 'ketemu') return finish(tengah);
+    if (k === 'kiri') kiri = tengah + 1; else kanan = tengah - 1;
+    tengah = null; fase = 'tengah'; draw();
+    say(msg, 'info', kiri > kanan ? `kiri = ${kiri}, kanan = ${kanan}. Apa artinya?` : `Rentang tinggal indeks ${kiri} sampai ${kanan}. Buka kartu tengah berikutnya.`);
+  }
+  function finish(h) {
+    fase = 'selesai'; ctx.sound.good(); draw(); say(msg, 'info', `cari_biner(antrean, ${x}) = ${h}, ${buka.size} kartu dibuka. Catat hasilnya.`);
+    const last = x === 103;
+    area.insertBefore(fillBoard(ctx, { oops, msg, view: rowsView([['hasil: ', '_', ' · kartu dibuka: ', '_'], ...(last ? [['putaran paling banyak: 15 nomor ', '_', ', 1.000 nomor ', '_']] : [])]),
+      chips: last ? [C.keluaran, String(C.rows.length), '4', '10', '15', '2'] : [C.keluaran, String(C.rows.length), '10', '4', '-1'], want: last ? [C.keluaran, String(C.rows.length), '4', '10'] : [C.keluaran, String(C.rows.length)],
+      hints: ['Lihat langkah terakhir.', 'Hitung kartu yang terbuka.', '15 → 7 → 3 → 1.', 'Setiap putaran membuang separuh: 2¹⁰ = 1.024.'],
+      done: () => { say(msg, '', last ? 'Rentang kosong berarti 103 pasti tidak ada (invarian). Setiap putaran membuang separuh rentang.' : `Hanya ${buka.size} dari 15 kartu dibuka.`); done(); } }), msg);
+  }
+  draw();
+  area.append(el('div', { class: 'lk44-dua' }, left, box), msg);
+}
+
+// Misi 5: test cards against Si Selisih Satu.
+export const UJI_AB = [[104, 101, 105, 102, 106, 103], [101, 102, 103], [15, 12], [12, 15], [7]];
+export const BUG44 = { A: 0, B: 3 };
+function abRound(area, ctx, { oops, done }) {
+  const msg = msg44('Si Selisih Satu mengubah versi A. Ketuk kartu uji: layar menjalankan versi benar dan versi A.'); let v = 'A'; let fase = 'uji'; let tok = 0;
+  const left = el('div', { class: 'lk44-kolom' }); const right = el('div', { class: 'lk44-kolom' }); const log = el('div', { class: 'lk44-log' });
+  const draw = () => {
+    fill(left, el('b', null, `Versi ${v}`), sisipView(v, { cls: fase === 'baris' ? 'ketuk' : '', onLine: fase === 'baris' ? tapLine : null }));
+    fill(right, el('div', { class: 'lk44-token' }, `🪙 token uji: ${tok}`), el('div', { class: 'lk44-uji', 'data-v': v }, UJI_AB.map((t, k) => onTap(el('button', { type: 'button', class: 'lk44-kartu-uji', 'data-k': String(k) }, pyRepr(t)), () => uji(k)))), log);
+  };
+  function uji(k) {
+    if (fase !== 'uji') return; const t = UJI_AB[k]; tok++; const b = keluaranSisip(t, 'benar'); const s = keluaranSisip(t, v); const beda = b !== s;
+    log.append(el('span', { class: beda ? 'beda' : 'sama' }, `${pyRepr(t)} → benar ${b} | ${v} ${s} ${beda ? '✗' : '='}`)); ctx.sound.tap();
+    if (!beda) { oops(); say(msg, 'bad', 'Keluarannya sama: bug tidak terlihat, token terbuang. Pilih masukan yang lebih tajam.'); return; }
+    fase = 'baris'; draw(); say(msg, 'info', 'Bug terbongkar! Ketuk baris yang diubah Si Selisih Satu.');
+  }
+  function tapLine(i) {
+    if (fase !== 'baris') return;
+    if (i !== BUG44[v]) { oops(); say(msg, 'bad', v === 'A' ? 'Lihat keluarannya: anggota terakhir tidak pernah disisipkan.' : 'Lihat keluarannya: tidak ada nomor yang bisa pindah ke depan.'); return; }
+    ctx.sound.good();
+    if (v === 'A') { v = 'B'; fase = 'uji'; fill(log); draw(); say(msg, 'info', 'Baris 2: range(1, len(a) - 1) tidak pernah menjalankan i = len(a) - 1. Sekarang versi B.'); return; }
+    fase = 'beres'; draw(); say(msg, '', `Baris 5: j > 0 tidak pernah membandingkan dengan a[0]. Dua bug dengan ${tok} token uji.`); done();
+  }
+  draw();
+  area.append(el('div', { class: 'lk44-dua' }, left, right), msg);
+}
+
+export const UJI_C = [114, 111, 117, 125, 101, 120];
+function cRound(area, ctx, { oops, done }) {
+  const msg = msg44('Versi C: ketuk nomor uji. Layar mencari nomor itu di antrean dengan versi benar dan versi C.'); let fase = 'uji'; let tok = 0;
+  const left = el('div', { class: 'lk44-kolom' }); const right = el('div', { class: 'lk44-kolom' }); const log = el('div', { class: 'lk44-log' });
+  const draw = () => {
+    fill(left, el('b', null, 'Versi C'), cariView('C', { cls: fase === 'baris' ? 'ketuk' : '', onLine: fase === 'baris' ? tapLine : null }));
+    fill(right, el('div', { class: 'lk44-token' }, `🪙 token uji: ${tok}`), deret(ANTREAN, { idx: false }), el('div', { class: 'lk44-uji' }, UJI_C.map((x, k) => onTap(el('button', { type: 'button', class: 'lk44-kartu-uji', 'data-k': String(k) }, `cari ${x}`), () => uji(x)))), log);
+  };
+  function uji(x) {
+    if (fase !== 'uji') return; tok++; const b = jalanCari(x).keluaran; const s = jalanCari(x, 'C').keluaran; const beda = b !== s; ctx.sound.tap();
+    log.append(el('span', { class: beda ? 'beda' : 'sama' }, `cari ${x} → benar ${b} | C ${s} ${beda ? '✗' : '='}`));
+    if (!beda) { oops(); say(msg, 'bad', x === 125 ? 'Dua-duanya -1: 125 memang tidak ada.' : `${x} ketemu sebelum rentangnya menyusut menjadi satu kartu. Coba nomor di ujung.`); return; }
+    fase = 'baris'; draw(); say(msg, 'info', 'Bug terbongkar! Ketuk baris yang diubah.');
+  }
+  function tapLine(i) {
+    if (fase !== 'baris') return;
+    if (i !== 2) { oops(); say(msg, 'bad', 'Bugnya membuat pencarian berhenti terlalu cepat.'); return; }
+    fase = 'perbaiki'; ctx.sound.good(); draw(); say(msg, 'info', 'Baris 13: berhenti ketika kiri = kanan, padahal satu kartu itu belum dibuka. Perbaiki.');
+    left.append(fillBoard(ctx, { oops, msg, view: codeFill([['    while kiri ', '_', ' kanan:']], { labels: ['13'] }), chips: ['<=', '<', '>=', '!='], want: ['<='], hints: ['Rentang satu kartu (kiri = kanan) masih harus diperiksa.'],
+      done: () => { const F = ANTREAN.filter((x) => jalanCari(x, 'C').keluaran !== jalanCari(x).keluaran); say(msg, '', `Versi C gagal untuk ${F.length} dari 15 nomor (${F.join(', ')}). Uji selalu ujung pertama dan terakhir! Total ${tok} token uji.`); done(); } }));
+  }
+  draw();
+  area.append(el('div', { class: 'lk44-dua' }, left, right), msg);
+}
+
+// Misi 6: sorted(), sort() and bisect.
+function sortRound(area, ctx, { oops, done }) {
+  const msg = msg44('Ramalkan keluaran baris 25.'); const box = el('div', { class: 'lk44-kolom' }); const out = layar();
+  const R6 = runPy([`antrean = ${pyRepr(ANTREAN)}`, ...SOAL6], { limit: 2000 }); const E = runPy(['import bisect', `masuk = ${pyRepr(MASUK)}`, 'masuk = masuk.sort()', 'x = bisect.bisect_left(masuk, 103)'], { limit: 2000 });
+  const [o1, o2] = [pyRepr(MASUK), pyRepr(urutUrut(MASUK))];
+  fill(box, codeView(SOAL6.slice(0, 4), { labels: ['22', '23', '24', '25'] }), fillBoard(ctx, { oops, msg, view: rowsView([['print(masuk, urut) → ', '_', ' ', '_']]), chips: [o1, o2, 'None'], want: [o1, o2], hints: ['sorted membuat list baru; masuk tidak berubah.', 'urut berisi list baru yang sudah urut.'],
+    done: () => { say(msg, 'info', `${R6.out[0]}. Sekarang Si Selisih Satu menulis masuk = masuk.sort().`);
+      fill(box, codeView(['masuk = [104, 101, 105, 102, 106, 103]', 'masuk = masuk.sort()', 'x = bisect.bisect_left(masuk, 103)']), out, fillBoard(ctx, { oops, msg, view: rowsView([['setelah baris 2, masuk berisi ', '_'], ['baris 3 berhenti dengan ', '_']]), chips: ['None', o2, 'TypeError', 'IndexError'], want: ['None', 'TypeError'],
+        hints: ['sort() mengurutkan di tempat dan mengembalikan None.', 'bisect_left memanggil len(masuk), padahal masuk berisi None.'],
+        done: () => { play(out, [], { err: `${E.error.type}: ${E.error.message}`, end: () => { say(msg, '', 'Pakai masuk.sort() saja, atau urut = sorted(masuk). Jangan keduanya digabung.'); done(); } }); } })); } }));
+  area.append(box, msg);
+}
+
+function bisectRound(area, ctx, { oops, done }) {
+  const msg = msg44('bisect_left mengembalikan posisi sisip: indeks pertama yang isinya >= x.'); const box = el('div', { class: 'lk44-kolom' });
+  const bl = (x) => String(runPy(['import bisect', `x = bisect.bisect_left(${pyRepr(ANTREAN)}, ${x})`]).vars.x); const R6 = runPy([`antrean = ${pyRepr(ANTREAN)}`, ...SOAL6], { limit: 2000 });
+  const [d1, d2] = R6.out[2].split(' ');
+  fill(box, deret(ANTREAN), codeView(SOAL6.slice(4), { labels: ['26', '27', '28'] }), fillBoard(ctx, { oops, msg, view: rowsView([['bisect_left(antrean, 114) → ', '_'], ['bisect_left(antrean, 103) → ', '_'], ['bisect_left(antrean, 125) → ', '_'], ['baris 28 → ', '_', ' ', '_']]),
+    chips: [bl(114), bl(103), bl(125), d1, d2, '-1', '14', '10'], want: [bl(114), bl(103), bl(125), d1, d2], hints: ['114 ada di indeks 9.', '103 tidak ada; ia akan disisipkan sebelum 104 di indeks 2.', 'Lebih besar dari semuanya: posisi len(antrean).', 'insort menambah 113, jadi 16 anggota.', '113 disisipkan sebelum 114.'],
+    done: () => { say(msg, 'info', 'bisect_left tidak pernah -1. Rakit fungsi ada(a, x) yang benar.');
+      fill(box, fillBoard(ctx, { oops, msg, view: codeFill(['def ada(a, x):', '    i = bisect.bisect_left(a, x)', ['    return ', '_', ' and ', '_']]), chips: ['i < len(a)', 'a[i] == x', 'i != -1', 'a[i] > x', 'x in a'], want: ['i < len(a)', 'a[i] == x'],
+        hints: ['Untuk 125, i = 15 dan a[15] tidak ada: periksa batas dulu.', 'Posisi sisip belum tentu berisi x.'], done: () => { say(msg, '', 'ada(antrean, 114) True, ada(antrean, 125) False, ada(antrean, 103) False. Urutan and penting: batas diperiksa dulu.'); done(); } })); } }));
+  area.append(box, msg);
+}
+
+// Misi Bos: the half-open insertion finder.
+export const BOS44 = { atas: ['len(a)', '<'], bawah: ['tengah'] };
+function bosRound(area, ctx, { oops, done }) {
+  const msg = msg44('Rentang setengah terbuka: kiri ikut, kanan tidak. Lengkapi bagian atas.'); const box = el('div', { class: 'lk44-kolom' });
+  const P = [114, 103, 125, 101].map((x) => String(runPy([...POSISI, `x = posisi_sisip(${pyRepr(ANTREAN)}, ${x})`], { limit: 2000 }).vars.x));
+  fill(box, el('small', null, 'def posisi_sisip(a, x):'), fillBoard(ctx, { oops, msg, view: codeFill(['    kiri = 0', ['    kanan = ', '_'], ['    while kiri ', '_', ' kanan:'], '        tengah = (kiri + kanan) // 2'], { labels: ['2', '3', '4', '5'] }), chips: ['len(a)', 'len(a) - 1', '<', '<='], want: BOS44.atas,
+    hints: ['Kanan menunjuk satu lewat ujung: x bisa disisipkan di akhir.', 'Rentang [kiri, kanan) kosong ketika kiri = kanan.'],
+    done: () => { say(msg, 'info', 'Bagian bawah: bila a[tengah] >= x, tengah masih mungkin jawabannya.');
+      fill(box, el('small', null, 'def posisi_sisip(a, x): … (baris 6–10)'), fillBoard(ctx, { oops, msg, view: codeFill(['        if a[tengah] < x:', '            kiri = tengah + 1', '        else:', ['            kanan = ', '_'], '    return kiri'], { labels: ['6', '7', '8', '9', '10'] }), chips: ['tengah', 'tengah - 1', 'tengah + 1'], want: BOS44.bawah,
+        hints: ['a[tengah] bisa jadi posisi sisipnya, jadi jangan dibuang.'], done: () => { say(msg, 'info', 'Jalankan posisi_sisip pada antrean.');
+          fill(box, deret(ANTREAN), fillBoard(ctx, { oops, msg, view: rowsView([['114 → ', '_', ' · 103 → ', '_'], ['125 → ', '_', ' · 101 → ', '_']]), chips: [...P, '-1', '14', '1'], want: P, hints: ['Indeks 114.', 'Sebelum 104.', 'Setelah semuanya: len(antrean).', 'Indeks pertama.'],
+            done: () => { say(msg, '', `${P.join(', ')}: sama persis dengan bisect.bisect_left. Tanpa -1, tanpa selisih satu.`); done(); } })); } })); } }));
+  area.append(box, msg);
+}
+
 export default {
   id: 'sma-44-urut-cari-kode',
   title: 'Pengurutan Sisip dan Pencarian Biner',
@@ -65,97 +292,36 @@ export default {
     { id: 'giliran', icon: '🐞', label: 'Bongkar Selisih Satu', desc: 'Satu tim memilih perubahan selisih satu secara diam-diam, tim lain mengetik masukan uji sampai keluarannya berbeda', create: createTeams },
   ],
   create(root, ctx) {
-    const wrap = el('div', { class: 'act urut-cari' });
+    const wrap = el('div', { class: 'act lk44-main' });
     root.append(wrap);
     function render() {
       wrap.replaceChildren();
       const r = ctx.round;
       let solved = false;
-      const next = () => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, 2400); } };
-      const then = (fn) => () => { wrap.replaceChildren(); fn(); };
-      const sis = (extra = {}) => pyCode(SISIP, { labels: L1, cls: 'uc-kecil', ...extra });
-      const car = (extra = {}) => pyCode(CARI, { labels: L2, cls: 'uc-kecil', ...extra });
-      const S = jalanSisip(MASUK);
-      if (r === 0) {
-        wrap.append(sis(), listView(MASUK));
-        const wrongA = (k) => { const p = S.rows[k]; return [[...p.a].sort((x, y) => x - y), MASUK, S.rows[(k + 1) % 5].a].map(pyRepr).filter((x) => x !== pyRepr(p.a)); };
-        rowsChoose(wrap, ctx, { prompt: 'Telusuri urut_sisip([104, 101, 105, 102, 106, 103]): kunci · isi a setelah baris 8 · geseran', cls: 'uc-isi', rows: S.rows.map((p, k) => { const right = `${p.kunci} · ${pyRepr(p.a)} · ${p.geser}`; const ws = [...new Set(wrongA(k))].slice(0, 2).map((w, q) => `${p.kunci} · ${w} · ${q === 0 ? p.geser : p.geser + 1}`); return [`i${p.i}`, `i = ${p.i}`, [right, ...ws, `${MASUK[k]} · ${pyRepr(p.a)} · ${p.geser}`].slice(0, 4), right]; }), done: next });
-      }
-      else if (r === 1) {
-        wrap.append(sis());
-        rowsChoose(wrap, ctx, { prompt: 'Geseran, pemeriksaan, dan kunci', cls: 'uc-isi', rows: [
-          ['g', 'Total geseran', ['5', '6', '10', '15'], String(S.geser)],
-          ['c', 'a[j] > kunci diperiksa', ['6', '10', '11', '15'], String(S.cek)],
-          ['w', 'Pada i = 1, setelah satu geseran', ['j menjadi -1, jadi j >= 0 salah dan a[j] > kunci tidak diperiksa lagi', 'a[j] > kunci diperiksa dengan a[-1]', 'perulangan for berhenti', 'kunci berubah menjadi 104'], 'j menjadi -1, jadi j >= 0 salah dan a[j] > kunci tidak diperiksa lagi'],
-          ['k', 'Mengapa a[i] disimpan di kunci?', ['geseran pertama di baris 6 menimpa a[i]; tanpa kunci nilainya hilang', 'agar Python lebih cepat', 'karena a[i] tidak boleh dibaca dua kali', 'agar list tidak berubah'], 'geseran pertama di baris 6 menimpa a[i]; tanpa kunci nilainya hilang']], done: next });
-      }
-      else if (r === 2) {
-        const at = (i) => { const p = S.rows.find((x) => x.i === i - 1); return pyRepr(p.a.slice(0, i)); };
-        wrap.append(sis());
-        rowsChoose(wrap, ctx, { prompt: 'Invarian: setiap kali baris 3 akan dijalankan, bagian a[0] sampai … sudah urut', cls: 'uc-isi', rows: [
-          ['a', 'Bagian yang sudah urut', ['a[0] sampai a[i - 1]', 'a[0] sampai a[i]', 'a[i] sampai akhir', 'a[0] sampai a[j]'], 'a[0] sampai a[i - 1]'],
-          ['b3', 'Tepat sebelum baris 3, i = 3', [at(3), '[101, 102, 104]', '[104, 101, 105]', '[101, 104, 105, 102]'], at(3)],
-          ['b5', 'Tepat sebelum baris 3, i = 5', [at(5), '[101, 102, 103, 104, 105]', '[101, 102, 104, 105, 106, 103]', '[102, 104, 105, 106]'], at(5)],
-          ['c', 'Bagian kanan mulai a[i] juga selalu urut?', ['tidak: untuk i = 3 bagian kanan [102, 106, 103] tidak urut', 'ya, selalu', 'ya, kecuali di akhir', 'tidak, bagian kanan selalu terbalik'], 'tidak: untuk i = 3 bagian kanan [102, 106, 103] tidak urut'],
-          ['d', 'Mengapa invarian membuktikan list urut di akhir?', ['benar di awal (a[0] sendirian), tetap benar setiap putaran, dan di akhir mencakup a[0] sampai a[len(a) - 1]', 'karena perulangan selalu berhenti', 'karena sorted() dipanggil', 'karena kunci selalu terbesar'], 'benar di awal (a[0] sendirian), tetap benar setiap putaran, dan di akhir mencakup a[0] sampai a[len(a) - 1]']], done: next });
-      }
-      else if (r === 3) {
-        const H = jalanSisip(HAMPIR); const T = jalanSisip(TERBALIK);
-        wrap.append(timeTable());
-        rowsChoose(wrap, ctx, { prompt: 'Data hampir urut dan data terbalik', cls: 'uc-isi', rows: [
-          ['h', `${pyRepr(HAMPIR)} · geseran · pemeriksaan`, [`${H.geser} · ${H.cek}`, '0 · 8', '2 · 7', '4 · 11'], `${H.geser} · ${H.cek}`],
-          ['t', `${pyRepr(TERBALIK)} · geseran · pemeriksaan`, [`${T.geser} · ${T.cek}`, '28 · 35', '56 · 56', '7 · 7'], `${T.geser} · ${T.cek}`],
-          ['x', 'Bila n digandakan: data acak · data hampir urut', ['sekitar 4 kali · sekitar 2 kali lipat', 'sekitar 2 kali · sekitar 4 kali lipat', 'sekitar 2 kali · sekitar 2 kali lipat', 'sekitar 4 kali · sekitar 4 kali lipat'], 'sekitar 4 kali · sekitar 2 kali lipat'],
-          ['c', 'Mengapa sisip cocok untuk nomor yang tiba hampir urut?', ['nomor biasanya sudah di tempatnya, jadi hampir tidak perlu digeser, dan nomor baru bisa disisipkan satu per satu', 'karena sisip lebih cepat daripada sorted()', 'karena data hampir urut tidak perlu diurutkan', 'karena sisip tidak memakai perulangan'], 'nomor biasanya sudah di tempatnya, jadi hampir tidak perlu digeser, dan nomor baru bisa disisipkan satu per satu']], done: next });
-      }
-      else if (r === 4 || r === 5) {
-        const x = r === 4 ? 114 : 103; const C = jalanCari(x);
-        wrap.append(el('div', { class: 'uc-dua' }, car(), listView(ANTREAN, { idx: true })));
-        const rows = C.rows.map((p, k) => { const right = `${p.kiri} · ${p.kanan} · ${p.tengah} · ${p.nilai}`; const alt = [`${p.kiri} · ${p.kanan} · ${p.tengah + 1} · ${ANTREAN[p.tengah + 1] ?? '-'}`, `${p.kiri + 1} · ${p.kanan} · ${Math.floor((p.kiri + 1 + p.kanan) / 2)} · ${ANTREAN[Math.floor((p.kiri + 1 + p.kanan) / 2)]}`, `${p.kiri} · ${p.kanan + 1} · ${Math.floor((p.kiri + p.kanan + 1) / 2)} · ${ANTREAN[Math.floor((p.kiri + p.kanan + 1) / 2)]}`]; return [`p${k}`, `Putaran ${k + 1}`, [right, ...[...new Set(alt)].filter((a) => a !== right)].slice(0, 4), right]; });
-        rows.push(['h', `Hasil cari_biner(antrean, ${x})`, [C.keluaran, ...['9', '-1', '10', '3', '2'].filter((v) => v !== C.keluaran).slice(0, 3)], C.keluaran]);
-        rowsChoose(wrap, ctx, { prompt: `cari_biner(antrean, ${x}): kiri · kanan · tengah · a[tengah]`, cls: 'uc-isi', rows, done: next });
-      }
-      else if (r === 6) {
-        wrap.append(car());
-        rowsChoose(wrap, ctx, { prompt: 'Invarian: bila x ada di list, x berada di antara a[kiri] dan a[kanan]', cls: 'uc-isi', rows: [
-          ['b', 'Mengapa boleh mengembalikan -1 ketika kiri > kanan?', ['rentangnya kosong, padahal menurut invarian x harus di rentang itu, jadi x pasti tidak ada', 'karena -1 adalah indeks terakhir', 'karena perulangan sudah 4 kali', 'karena x lebih kecil dari a[0]'], 'rentangnya kosong, padahal menurut invarian x harus di rentang itu, jadi x pasti tidak ada'],
-          ['c', 'Putaran paling banyak · 15 nomor · 1.000 nomor', ['4 · 10', '15 · 1.000', '8 · 500', '3 · 9'], '4 · 10'],
-          ['w', 'Mengapa 10 untuk 1.000 nomor?', ['setiap putaran membuang separuh rentang, dan 2¹⁰ = 1.024', 'karena 1.000 dibagi 100', 'karena list dibagi 10 bagian', 'karena log₁₀ 1.000 = 3'], 'setiap putaran membuang separuh rentang, dan 2¹⁰ = 1.024']], done: next });
-      }
-      else if (r === 7) {
-        const A = keluaranSisip(MASUK, 'A'); const B = keluaranSisip(MASUK, 'B'); const C120 = jalanCari(120, 'C').keluaran; const C101 = jalanCari(101, 'C').keluaran;
-        wrap.append(el('div', { class: 'uc-dua' }, pyCode(SISIP.map((x, i) => (i === 1 ? `${x}  # A: range(1, len(a) - 1)` : i === 4 ? `${x}  # B: j > 0` : x)), { labels: L1, cls: 'uc-kecil', warn: [1, 4] }), pyCode(CARI.map((x, i) => (i === 3 ? `${x}  # C: kiri < kanan` : x)), { labels: L2, cls: 'uc-kecil', warn: [3] })));
-        rowsChoose(wrap, ctx, { prompt: 'Tiga kesalahan selisih satu: keluaran yang salah dan penyebabnya', cls: 'uc-isi', rows: [
-          ['a', `Versi A, urut_sisip(${pyRepr(MASUK)})`, [`${A} · i = 5 tidak pernah dijalankan, anggota terakhir tidak disisipkan`, `${B} · a[0] tidak pernah dibandingkan`, '[101, 102, 103, 104, 105, 106] · tidak ada bug', `${A} · kunci hilang`], `${A} · i = 5 tidak pernah dijalankan, anggota terakhir tidak disisipkan`],
-          ['b', `Versi B, urut_sisip(${pyRepr(MASUK)})`, [`${B} · j > 0 tidak pernah membandingkan dengan a[0], jadi tidak ada nomor yang bisa ke depan`, `${A} · i = 5 tidak dijalankan`, '[101, 102, 103, 104, 105, 106] · tidak ada bug', `${B} · range berhenti terlalu cepat`], `${B} · j > 0 tidak pernah membandingkan dengan a[0], jadi tidak ada nomor yang bisa ke depan`],
-          ['c', 'Versi C, cari_biner(antrean, 120) · cari_biner(antrean, 101)', [`${C120} · ${C101}: berhenti ketika kiri = kanan, padahal satu anggota itu belum diperiksa`, '14 · 0: tidak ada bug', '-1 · 0: hanya 120 yang salah', 'IndexError · -1: kanan terlalu besar'], `${C120} · ${C101}: berhenti ketika kiri = kanan, padahal satu anggota itu belum diperiksa`]], done: next });
-      }
-      else if (r === 8) {
-        const R6 = runPy([`antrean = ${pyRepr(ANTREAN)}`, ...SOAL6], { limit: 2000 }); const E = runPy(['import bisect', `masuk = ${pyRepr(MASUK)}`, 'masuk = masuk.sort()', 'x = bisect.bisect_left(masuk, 103)'], { limit: 2000 });
-        rowsChoose(wrap, ctx, { prompt: 'Menguji batas, sorted() dan list.sort()', cls: 'uc-isi', rows: [
-          ['a', 'Versi C benar untuk 114. Mengapa uji itu tidak cukup?', ['114 ditemukan sebelum rentang menyusut menjadi satu anggota, jadi bugnya tidak sempat terlihat', 'karena 114 tidak ada di list', 'karena versi C memang benar', 'karena 114 terlalu besar'], '114 ditemukan sebelum rentang menyusut menjadi satu anggota, jadi bugnya tidak sempat terlihat'],
-          ['b', 'Masukan yang selalu perlu ada di kasus uji list', ['anggota pertama dan terakhir, list kosong, list satu anggota, nilai di luar semua isi', 'hanya nilai di tengah list', 'hanya list yang panjang', 'hanya list yang sudah urut'], 'anggota pertama dan terakhir, list kosong, list satu anggota, nilai di luar semua isi'],
-          ['o', 'Keluaran baris 25', [R6.out[0], `${pyRepr([...MASUK].sort((x, y) => x - y))} ${pyRepr([...MASUK].sort((x, y) => x - y))}`, `${pyRepr(MASUK)} ${pyRepr(MASUK)}`, `${pyRepr(MASUK)} None`], R6.out[0]],
-          ['s', 'masuk = masuk.sort() lalu bisect.bisect_left(masuk, 103)', [`masuk berisi None · ${E.error.type}: ${E.error.message}`, 'masuk urut · 2', 'masuk berisi None · -1', `masuk urut · ${E.error.type}: ${E.error.message}`], `masuk berisi None · ${E.error.type}: ${E.error.message}`]], done: next });
-      }
-      else {
-        const R6 = runPy([`antrean = ${pyRepr(ANTREAN)}`, ...SOAL6], { limit: 2000 }); const bl = (x) => runPy(['import bisect', `x = bisect.bisect_left(${pyRepr(ANTREAN)}, ${x})`]).vars.x;
-        const P = [114, 103, 125, 101].map((x) => runPy([...POSISI, `x = posisi_sisip(${pyRepr(ANTREAN)}, ${x})`], { limit: 2000 }).vars.x);
-        rowsChoose(wrap, ctx, { prompt: 'bisect pada daftar antrean', cls: 'uc-isi', rows: [
-          ['c', 'bisect_left untuk 114 · 103 · 125', [[114, 103, 125].map(bl).join(' · '), '9 · -1 · -1', '9 · 2 · 14', '10 · 3 · 15'], [114, 103, 125].map(bl).join(' · ')],
-          ['f', 'return pada fungsi ada(a, x)', ['i < len(a) and a[i] == x', 'a[i] == x', 'i != -1', 'x in a[i]'], 'i < len(a) and a[i] == x'],
-          ['d', 'Keluaran baris 28', [R6.out[2], '15 9', '16 10', '16 8'], R6.out[2]],
-          ['e', 'Kapan memakai sorted() dan bisect?', ['untuk program yang sungguh dipakai; menulis sendiri untuk belajar atau kebutuhan khusus', 'tidak pernah, selalu tulis sendiri', 'hanya untuk list pendek', 'hanya bila list belum urut'], 'untuk program yang sungguh dipakai; menulis sendiri untuk belajar atau kebutuhan khusus']],
-        done: then(() => { wrap.append(pyCode(POSISI, { cls: 'uc-kecil' })); rowsChoose(wrap, ctx, { prompt: 'Tantangan: rentang setengah terbuka', cls: 'uc-isi', rows: [
-          ['p', 'posisi_sisip untuk 114 · 103 · 125 · 101', [P.join(' · '), '9 · -1 · -1 · 0', '9 · 2 · 14 · 0', '10 · 3 · 15 · 1'], P.join(' · ')],
-          ['w', 'Mengapa kanan = len(a) dan kiri < kanan benar di sini?', ['invariannya berbeda: jawaban di rentang kiri sampai sebelum kanan, jadi rentang kosong berarti kiri = kanan', 'karena bisect selalu benar', 'karena list antrean urut', 'karena tengah tidak pernah dikurangi'], 'invariannya berbeda: jawaban di rentang kiri sampai sebelum kanan, jadi rentang kosong berarti kiri = kanan']], done: next }); }) });
-      }
+      const next = (wait = 5200) => { if (!solved) { solved = true; if (ctx.solved()) setTimeout(render, wait); } };
+      const area = el('div', { class: 'lk44-area' });
+      let foe = null;
+      const go = (k, no) => {
+        const [judul, tujuan, ulah] = HEAD44[k];
+        foe = el('div', { class: 'lk44-musuh' }, el('b', null, '😈 Si Selisih Satu'), el('span', null, ulah));
+        wrap.append(el('div', { class: 'lk44-kepala' }, misiHead(no, judul, tujuan, '🎫'), foe), area);
+      };
+      const fin = (ms) => ({ oops: () => ctx.mistake(), done: () => { foe.classList.add('beres'); foe.lastChild.textContent = 'Selisih satu terbongkar ✓'; next(ms); } });
+      if (r === 0) { go('sisip', 1); sisipRound(area, ctx, fin(5500)); }
+      else if (r === 1) { go('pita', 2); pitaRound(area, ctx, fin(6000)); }
+      else if (r === 2) { go('balap', 3); balapRound(area, ctx, fin(6000)); }
+      else if (r === 3) { go('j114', 4); jepitRound(area, ctx, fin(5500), 114); }
+      else if (r === 4) { go('j103', 4); jepitRound(area, ctx, fin(6000), 103); }
+      else if (r === 5) { go('ab', 5); abRound(area, ctx, fin(6000)); }
+      else if (r === 6) { go('c', 5); cRound(area, ctx, fin(6500)); }
+      else if (r === 7) { go('sort', 6); sortRound(area, ctx, fin(6000)); }
+      else if (r === 8) { go('bisect', 6); bisectRound(area, ctx, fin(6000)); }
+      else { go('bos', 'Bos'); bosRound(area, ctx, fin(7000)); }
     }
     render();
   },
 };
 
-const timeTable = () => el('table', { class: 'uc-tabel' }, el('tr', null, ['n', 'urut_sisip, data acak', 'urut_sisip, hampir urut', 'sorted(), data acak'].map((h) => el('th', null, h))), WAKTU.map(([n, ...t]) => el('tr', null, el('td', null, fmtNum(n)), ...t.map((x) => el('td', null, `${fmtNum(x, 2)} ms`)))));
 
 // List as boxes; marks: sorted part, kunci above, pointers j / kiri / kanan / tengah, grey outside the search range.
 export function listView(a, { idx = false, urut = -1, j = null, kunci = null, kiri = null, kanan = null, tengah = null, cari = false } = {}) {
